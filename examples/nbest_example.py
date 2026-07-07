@@ -268,7 +268,7 @@ def main():
     print("  1. Train with --store-distributions to enable n-best")
     print("  2. Use confidence scores to flag uncertain predictions")
     print("  3. N-best provides alternatives for ambiguous words")
-    print("  4. Oracle accuracy with n-best is typically 95-99%")
+    print("  4. Oracle accuracy (any candidate correct) upper-bounds 1-best")
     print("\nFor more examples, see docs/NBEST_USAGE.md")
 
 

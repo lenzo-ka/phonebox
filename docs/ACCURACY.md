@@ -1,74 +1,89 @@
-# Understanding G2P Accuracy Metrics
+# Understanding G2P Accuracy
 
-## Two Types of Accuracy
+Phonebox reports two very different things, and it matters which one you mean.
 
-### 1. Pure G2P Accuracy (~95%)
-**What it measures:** Decision tree model quality alone
-**How:** Disables exceptions dictionary, tests only g2p predictions
-**Typical:** 95-97% phoneme-level accuracy
+## Pure G2P (generalization)
+
+**What it measures:** the decision-tree model alone, on words it did *not* see
+in training — i.e. how well it generalizes grapheme→phoneme patterns.
+
+**How:** disable the exceptions dictionary and predict from the tree only.
+
+**Measured on CMUdict** (`G2PDecisionTree`, 133k-entry train split, held-out
+2,000-word test, single best pronunciation; see
+[`G2P_EVAL.md`](G2P_EVAL.md#measured-cmudict-results-11-decision-tree)):
+
+| Phones | PER% | pos% |
+|--------|-----:|-----:|
+| with stress   | 12.96 | 81.8 |
+| stress stripped | 11.36 | 81.8 |
+
+- **PER%** = phone error rate (edit distance / phone count).
+- **pos%** = position accuracy, the per-position phone match rate — the accuracy
+  of the underlying letter→phone classifier the tree is trained to be. See
+  [why pos% is meaningful](G2P_EVAL.md#why-position-accuracy-pos).
 
 ```python
-# Test pure model
+# Pure model (no dictionary fallback)
 g2p.use_dict_fallback = False
-accuracy = test(g2p)  # ~95%
 ```
 
-**This measures:**
-- How well the model learns grapheme-to-phoneme patterns
-- Generalization to unseen words
-- Algorithm quality
+This is the number to compare across G2P implementations, because it reflects
+algorithm quality rather than dictionary coverage.
 
-### 2. Hybrid Accuracy (~99.5%)
-**What it measures:** Combined dict + g2p system
-**How:** Uses exceptions dictionary first, falls back to g2p
-**Typical:** 99-99.5% accuracy
+## Hybrid (memorize + generalize)
+
+**What it measures:** the production path — look the word up in an exceptions
+dictionary first, and fall back to the tree only for words not in it.
+
+**How:** `use_dict_fallback = True` (the default). The exceptions table is saved
+inside the model.
 
 ```python
-# Test hybrid system
-g2p.use_dict_fallback = True  # Default
-accuracy = test(g2p)  # ~99.5%
+# Hybrid system (default)
+g2p.use_dict_fallback = True
 ```
 
-**This measures:**
-- Real-world performance
-- What users actually experience
-- Combined system quality
+The exceptions dictionary holds correct pronunciations from the training
+dictionary, so the hybrid system effectively **memorizes the training entries
+and generalizes (via the tree) to the rest**. On any word the dictionary
+covers, output is exact; on the remainder it is the pure-g2p tree.
 
-## Why Hybrid is High
+This is not cheating — it is the sensible design for a lexicon-backed G2P. But
+its headline accuracy is a function of **coverage**, so it is not comparable to
+a pure-g2p number and depends entirely on the test set and dictionary.
 
-The exceptions dictionary contains **correct pronunciations from the training dictionary**:
+### Why real-text accuracy is high — and where it isn't
 
-- **26,673 words** (in en_US model) have exact pronunciations
-- These are words the g2p model mispronounced during training
-- They're stored as lookups (instant, 100% accurate for those words)
+On running text, most tokens are common words the dictionary already covers, so
+the *effective* error rate on real text is much lower than the pure-g2p rate:
+coverage does most of the work. The errors that remain are dominated by
+**genuine pronunciation ambiguity** — homographs / heteronyms such as *read*,
+*lead*, *bass*, *live*, *wind*, *tear* — where the correct phones depend on
+meaning or context that spelling alone does not carry. No orthography-only G2P
+(tree or neural) resolves those without additional context, so they set a floor
+on achievable accuracy.
 
-**Hybrid accuracy is high by design** - it's not cheating, it's smart engineering.
+## Comparison to neural G2P
 
-## What Matters for Different Use Cases
-
-### Research / Algorithm Development
-→ **Pure g2p accuracy** (95-97%)
-- Measures algorithm quality
-- Comparable across implementations
-- Shows model learning capability
-
-### Production / User-Facing
-→ **Hybrid accuracy** (99-99.5%)
-- What users experience
-- Real-world performance
-- Includes system optimizations
+Neural sequence-to-sequence G2P is generally **more accurate** than a decision
+tree and more robust to spelling variation. Phonebox trades that accuracy for a
+small, fast, interpretable, dependency-free model. Pick the decision tree when
+size, speed, determinism, or deployability matter more than the last few points
+of accuracy; pick neural when accuracy is paramount. (Published neural results
+are cited in [`BENCHMARKS.md`](BENCHMARKS.md).)
 
 ## Generalization & Pruning
 
-Phonebox has two complementary anti-overfitting knobs:
+Phonebox has two complementary anti-overfitting knobs.
 
 ### Pre-pruning (always on)
 
 The splitter refuses to grow branches that lack support:
 
-- `min_samples_split` - skip splits below this row count
-- `min_samples_leaf` - reject splits that would create a too-small leaf
-- `min_confidence` - skip a split that doesn't sharpen the leaf distribution
+- `min_samples_split` — skip splits below this row count
+- `min_samples_leaf` — reject splits that would create a too-small leaf
+- `min_confidence` — skip a split that doesn't sharpen the leaf distribution
   enough to justify the extra node
 
 Tune these in your YAML config or pass them to `DecisionTree(...)`. They run
@@ -85,7 +100,7 @@ overfitting because the validation rows weren't used to choose splits.
 # CLI: prune with a 5% validation hold-out
 phonebox model build en_US dict.txt -o model.g2p.gz --prune
 
-# Custom split, plus a 5% held-out test slice for honest accuracy
+# Custom split, plus a 5% held-out test slice for honest measurement
 phonebox model build en_US dict.txt -o model.g2p.gz \
   --prune --validation-split 0.05 --test-split 0.05
 
@@ -110,49 +125,43 @@ validation_split: 0.05
 test_split: 0.05
 ```
 
-Pruning typically trades a small drop in training-fit accuracy for a
-matching gain on truly unseen words, and shrinks the tree as a bonus.
+Pruning typically trades a small drop in training-fit for a matching gain on
+truly unseen words, and shrinks the tree as a bonus.
 
 ## Multiple Pronunciations
 
-Some words have multiple correct pronunciations:
-- `tomato` → T AH M EY T OW or T AH M AA T OW
-- `either` → IY DH ER or AY DH ER
+Some words have several correct pronunciations:
 
-**How we handle it:**
-- Exceptions dict picks pronunciation **closest to g2p prediction**
-- Provides consistency (same model always gives same output)
-- May not capture all variants (limitation)
+- `tomato` → `T AH M EY T OW` or `T AH M AA T OW`
+- `either` → `IY DH ER` or `AY DH ER`
 
-For full multi-pronunciation support, would need:
-- N-best lists
-- Pronunciation confidence scores
-- Or separate handling of homographs
+How phonebox handles it:
 
-## Measuring Your Model
+- The exceptions dictionary picks the pronunciation **closest to the g2p
+  prediction**, for a deterministic single output.
+- It does not, on its own, capture all variants. For that, use the n-best API
+  (`pronounce_nbest`) or handle homographs with external context.
+
+## Measuring your own model
 
 ```python
 from phonebox import G2P
 
-g2p = G2P(model='model.g2p.gz')
+g2p = G2P(model="model.g2p.gz")
 
-# Check hybrid vs pure
-print(f"Exceptions loaded: {len(g2p._dt.exceptions):,}")
-print(f"Coverage: ~{100 * len(g2p._dt.exceptions) / 135000:.1f}% from dict")
-print(f"Fallback: ~{100 - (100 * len(g2p._dt.exceptions) / 135000):.1f}% from g2p")
+n_exc = len(g2p._dt.exceptions)
+print(f"Exceptions memorized: {n_exc:,}")
 
-# Test on words
-test_words = ['hello', 'world', 'test']
-for word in test_words:
-    in_dict = word in g2p._dt.exceptions
-    source = "dict" if in_dict else "g2p"
-    print(f"{word}: {source}")
+# Evaluate pure vs hybrid on a held-out list you control, and report PER/pos%
+# so the numbers are reproducible (see phonebox/eval/g2p_compare.py).
 ```
 
-## Bottom Line
+## Bottom line
 
-- **Pure g2p: ~95%** - measures model quality
-- **Hybrid: ~99.5%** - what users get
-- **Pruning fights overfitting** - opt-in via `--prune`, recommended on real data
-- **Exceptions are smart** - not cheating, good engineering
-- **Both metrics matter** - for different purposes
+- **Pure g2p** (generalization): measured PER ≈ 11–13% / pos% ≈ 82% on held-out
+  CMUdict — this is the algorithm's quality.
+- **Hybrid** (memorize + generalize): exact on covered words, tree elsewhere;
+  effective real-text accuracy is high because coverage is high.
+- **Ambiguity** sets a floor: homographs need context no spelling-only model has.
+- **Neural G2P is more accurate**; the decision tree wins on size, speed,
+  determinism, interpretability, and zero dependencies.

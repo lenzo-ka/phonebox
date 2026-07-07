@@ -1,15 +1,18 @@
 # Phonebox: Grapheme-to-Phoneme Conversion
 
-Fast and accurate grapheme-to-phoneme (G2P) conversion using decision trees and
+Fast, lightweight grapheme-to-phoneme (G2P) conversion using decision trees and
 EM alignment. The package also includes **MultigramG2P** (n:m joint Viterbi) in
 the library; 1:1 CLI commands use the decision tree path.
 
-CMUdict / PocketSphinx workflows typically reach high phoneme accuracy on held-out
-English; IPA locale benchmarks are in [`docs/G2P_EVAL.md`](docs/G2P_EVAL.md).
+Decision-tree G2P is fast, compact, and interpretable; it trades some accuracy
+for those properties, and neural G2P methods will generally score better.
+CMUdict / PocketSphinx workflows are the main English use case; measured phone
+error rates and IPA locale benchmarks are in
+[`docs/G2P_EVAL.md`](docs/G2P_EVAL.md).
 
 ## Features
 
-- **High Accuracy**: Strong phoneme accuracy on CMUdict (see docs/BENCHMARKS.md)
+- **Measured accuracy**: reported phone error rates on CMUdict (see docs/BENCHMARKS.md); neural G2P methods can be more accurate
 - **Compact Models**: < 1MB model size for typical 1:1 trees
 - **MultigramG2P**: n:m joint EM + Viterbi decode (`MultigramG2P` in Python API)
 - **Zero Dependencies**: Bundled Python executable works standalone

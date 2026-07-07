@@ -5,7 +5,7 @@ Available presets:
 - pocketsphinx: CMU Arpabet, PocketSphinx compatible (default)
 - xsampa: X-SAMPA phoneset, multilingual
 - fast: Quick training for experimentation
-- accurate: Maximum accuracy for production
+- accurate: Thorough training (more EM iterations); slower, higher-quality
 
 Usage:
     from phonebox.configs import get_builtin_config

@@ -1,7 +1,7 @@
 """
 Phonebox: grapheme-to-phoneme conversion package.
 
-A fast and accurate grapheme-to-phoneme conversion system using
+A fast, lightweight grapheme-to-phoneme conversion system using
 decision trees, EM alignment, and optional joint multigram (n:m) models.
 """
 

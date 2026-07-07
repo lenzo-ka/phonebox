@@ -47,7 +47,7 @@ def main():
     parser = argparse.ArgumentParser(
         prog="phonebox",
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        description="""Fast and accurate grapheme-to-phoneme conversion.
+        description="""Fast, lightweight grapheme-to-phoneme conversion.
 
 Quick Start:
   recipe       Build complete G2P from dictionary (one command)

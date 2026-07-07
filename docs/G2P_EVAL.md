@@ -56,10 +56,58 @@ de_DE). Compare scripts read this via `Vectorizer.multigram_config()`.
 | **WERr%** | Word “hit” if pred matches gold **or** any lexicon variant |
 | **PER%** | Phone error rate: normalized Levenshtein edit distance / phone count |
 | **PERr%** | PER with locale-specific phone equivalence (eval only) |
-| **pos%** | Position-wise phone match rate (phoneme accuracy) |
+| **pos%** | Position accuracy: per-position phone match rate (see below) |
 
-These differ from `docs/ACCURACY.md` / `docs/BENCHMARKS.md` (CMUdict, hybrid
-on/off, different splits). See frozen baseline:
+### Why position accuracy (pos%)
+
+A 1:1 decision tree is, at heart, a *per-position classifier*: for each letter,
+in its context window, it predicts exactly one phone (or `∅` for a silent
+letter). **pos%** measures exactly that — the fraction of positions where the
+predicted phone is correct, compared slot-by-slot with no re-alignment,
+normalized by the longer of the predicted/gold lengths. It is the accuracy of
+the thing the model is actually trained to do, before epsilon-removal and
+joining collapse the output into the final phone string.
+
+- **pos%** answers *"how good is the underlying letter→phone classifier?"* — one
+  wrong phone costs exactly one position, so it degrades gracefully.
+- **PER%** answers *"how wrong is the final phone string?"* — via edit distance,
+  where a single insertion or deletion can shift and penalize the whole tail.
+
+Because a 1:1 model's output is inherently letter-aligned, pos% is an honest
+accuracy for it. For n:m models, where predicted and gold lengths diverge, PER%
+is the better lens; treat pos% as informative only there.
+
+## Measured CMUdict results (1:1 decision tree)
+
+Pure G2P — **no** exceptions dictionary — `G2PDecisionTree` trained on a
+133,166-entry train split of CMUdict and evaluated on a held-out 2,000-word
+slice (`seed 42`, single best pronunciation). Inline `#` comments are stripped
+by `parse_dict_line`.
+
+| Phones | PER% | WER% | pos% |
+|--------|-----:|-----:|-----:|
+| with stress (`AH0`/`AH1`/`AH2` kept) | 12.96 | 53.8 | 81.8 |
+| stress stripped (`0/1/2` removed)    | 11.36 | 44.9 | 81.8 |
+
+Reproduce (with stress):
+
+```bash
+phonebox compare locale --lexicon data/cmudict/cmudict.dict \
+    --locale en_US --phoneset cmu --skip-multigram --parallel-align
+```
+
+For the stress-stripped row, strip the trailing `0/1/2` from each phone first
+(pos% is unchanged because the position of every phone is the same; only the
+stress distinctions that PER/WER counted disappear).
+
+These are **pure-generalization** numbers on unseen words. Production use adds an
+exceptions dictionary that is consulted first and falls back to the tree — i.e.
+it *memorizes the training entries and generalizes to the rest*, so real-world
+error on in-vocabulary words is lower (bounded below by these figures). The
+exceptions table is saved in the model; see `docs/ACCURACY.md`.
+
+These numbers differ from other docs that use different splits or the
+hybrid (dict + tree) path. See frozen baseline:
 [`G2P_COMPARE_BASELINE.md`](G2P_COMPARE_BASELINE.md).
 
 ## Library API (n:m)

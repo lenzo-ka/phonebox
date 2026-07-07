@@ -198,8 +198,8 @@ def oracle_accuracy(g2p, test_data, n=5):
 
     return correct / total
 
-# Oracle accuracy is typically 95-99% with n=5
-# vs 85-92% for 1-best accuracy
+# Oracle accuracy (a hit if any of the n candidates is correct) upper-bounds
+# 1-best by construction; measure it on your own held-out set to choose n.
 ```
 
 ## Model Format
