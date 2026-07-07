@@ -1,0 +1,8 @@
+{
+  "supplement": {
+    "phonemic_geminates": false,
+    "collapse_geminates": false,
+    "vowel_like": null,
+    "split_token": {}
+  }
+}

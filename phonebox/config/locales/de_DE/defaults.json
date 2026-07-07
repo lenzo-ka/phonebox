@@ -1,0 +1,13 @@
+{
+  "supplement": {
+    "phonemic_geminates": false,
+    "collapse_geminates": true,
+    "vowel_like": [
+      "a", "e", "i", "o", "u",
+      "y", "ø", "œ", "ɛ", "ɔ", "ə",
+      "ɪ", "ʊ", "ʏ", "ɐ", "æ", "ɑ",
+      "aɪ", "aʊ", "ɔʏ", "eɪ", "õ", "ɑ̃"
+    ],
+    "split_token": {}
+  }
+}

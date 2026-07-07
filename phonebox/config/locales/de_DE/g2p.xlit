@@ -1,0 +1,13 @@
+# de_DE: standard German keeps ä ö ü (phonemic — completely different
+# vowels from a o u), ß (eszett, a regular letter category Ll), and the
+# few accented loanword letters (é à etc., though those are rare). Both
+# lexicon and OOV inputs are NFC by construction.
+#
+# Apostrophe and hyphen survive `[^-.'[:L:]]` and are passed through to
+# the G2P, which learns to align them to epsilon for elisions ("abgelös't",
+# "kommt's") and compound boundaries ("hand-eingabe").
+
+:: NFC ;
+:: Any-Lower ;
+:: Null ;
+:: [^-.'[:L:]] Remove ;

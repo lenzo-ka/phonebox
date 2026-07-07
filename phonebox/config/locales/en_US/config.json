@@ -1,0 +1,64 @@
+{
+  "join": {
+    "letters": [
+      "s h",
+      "c h",
+      "t h",
+      "p h",
+      "w h",
+      "n g",
+      "c k"
+    ],
+    "xsampa": [
+      "j \"u",
+      "j %u",
+      "j u",
+      "j \"U",
+      "j %U",
+      "j U",
+      "j \"oU",
+      "j %oU",
+      "j oU",
+      "j @",
+      "k s",
+      "k S",
+      "g z",
+      "@ l",
+      "@ m",
+      "@ n",
+      "t s",
+      "I z",
+      "m @ k"
+    ],
+    "cmu": [
+      "Y UW",
+      "Y UH",
+      "Y OW",
+      "Y @",
+      "K SH",
+      "K S",
+      "G Z",
+      "AH L",
+      "AH M",
+      "AH N",
+      "T S",
+      "IH Z",
+      "M AH K"
+    ],
+    "ipa": [
+      "j u",
+      "j ʊ",
+      "j oʊ",
+      "j ə",
+      "k s",
+      "k ʃ",
+      "ɡ z",
+      "ə l",
+      "ə m",
+      "ə n",
+      "t s",
+      "ɪ z",
+      "m ə k"
+    ]
+  }
+}

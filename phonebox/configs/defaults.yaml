@@ -1,0 +1,82 @@
+# Complete Default Configuration
+# All parameters explicitly listed with their default values
+# Use this as reference or starting point for custom configs
+
+# =============================================================================
+# Locale and Phoneset
+# =============================================================================
+
+locale: en_US           # Language locale
+phoneset: cmu           # Phoneset: 'cmu' (CMU Arpabet) or 'xsampa' (X-SAMPA)
+
+# =============================================================================
+# Preprocessing Options
+# =============================================================================
+
+remove_stress: false    # Remove stress markers from phonemes (0,1,2)
+remove_accents: false   # Remove accents from letters (café → cafe)
+                        # Note: Auto-enabled to true when phoneset='cmu'
+filter_non_letters: false  # Keep only letters, hyphens, apostrophes, periods
+cased: false            # Case-insensitive (lowercase everything)
+
+# =============================================================================
+# Training Backend
+# =============================================================================
+
+trainer: native         # Trainer: 'native' (Python) or 'sklearn' (2.1x faster)
+
+# =============================================================================
+# EM Alignment Parameters
+# =============================================================================
+
+max_iterations: 100     # Maximum EM iterations (typically converges in 10-30)
+max_combinations: 0     # Max alignment combinations (0 = unlimited)
+                        # Set to 4096 for memory-constrained or very long words
+min_change_ratio: 0.0   # Stop when change ratio drops below this (0 = run until convergence)
+
+# =============================================================================
+# Decision Tree Parameters
+# =============================================================================
+
+min_samples_split: 2    # Minimum samples required to split a node
+min_samples_leaf: 1     # Minimum samples required in a leaf node
+store_distributions: true  # Store probability distributions for n-best/confidence
+min_confidence: 0.95    # Store only best class when above this probability
+criterion: entropy      # Split criterion: 'entropy' or 'gini'
+
+# =============================================================================
+# Train/Validation/Test Splits
+# =============================================================================
+
+validation_split: 0.05  # Validation set for pruning (5%)
+test_split: 0.05        # Test set for evaluation (5%)
+                        # Train automatically gets remainder (90%)
+prune: false            # Enable pruning using validation data
+
+# =============================================================================
+# Advanced Options
+# =============================================================================
+
+parallel_align: true    # Parallel EM alignment (faster but can have macOS issues)
+norm_xlit: false        # Apply normalizing transliteration (ICU-based)
+use_dict_fallback: true # Use exceptions dictionary for hybrid lookup
+min_dist_entropy: 0.1   # Minimum entropy to store distribution
+
+# =============================================================================
+# Paths (Required - no defaults)
+# =============================================================================
+
+# dictionary: path/to/dict.txt    # Input pronunciation dictionary
+# output: path/to/model.jsonl.gz  # Output model file
+
+# =============================================================================
+# Notes
+# =============================================================================
+
+# This file shows ALL available parameters with their defaults.
+# Most users should start with a preset (pocketsphinx, xsampa, fast, accurate)
+# and only override specific values.
+#
+# To use:
+#   phonebox model build --config phonebox:defaults \
+#     --dict mydict.txt --output model.jsonl.gz

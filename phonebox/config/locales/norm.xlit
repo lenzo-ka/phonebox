@@ -1,0 +1,36 @@
+:: Fullwidth-Halfwidth ;
+:: Latin ;
+:: NFC ;
+
+[‘’❛❜‛`‚\u275f\u02BC] > \' ;
+[:Pd:] > \- ;
+
+\u1F670 > et ;
+Æ > Ae ;
+æ > ae ;
+Œ > Oe ;
+œ > oe ;
+ᵫ > ue ;
+Ꜩ > Tz ;
+ꜩ > tz ;
+Ꜳ > Aa ;
+ꜳ > aa ;
+Ꜵ > Ao ;
+ꜵ > ao ;
+Ꜷ > Au ;
+ꜷ > au ;
+Ꜹ > Av ;
+ꜹ > av ;
+Ꜻ > Av ;
+ꜻ > av ;
+Ꝏ > Oo ;
+ꝏ > oo ;
+Ꝡ > Vy ;
+ꝡ > vy ;
+ﬀ > ff ;
+ﬁ > fi ;
+ﬂ > fl ;
+ﬃ > ffi ;
+ﬄ > ffl ;
+ﬅ > ft ;
+ﬆ > st ;

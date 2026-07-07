@@ -1,0 +1,25 @@
+{
+  "join": {
+    "letters": [
+      "s c h",
+      "t s c h",
+      "c h",
+      "c k",
+      "p f",
+      "p h",
+      "q u",
+      "e u",
+      "ä u",
+      "a u",
+      "a i",
+      "e i",
+      "i e"
+    ],
+    "ipa": [
+      "t s"
+    ]
+  },
+  "multigram": {
+    "max_letter_span": 3
+  }
+}

@@ -1,0 +1,30 @@
+# Development dependencies
+# Install with: pip install -r requirements-dev.txt
+
+# Core dependencies (from requirements.txt)
+-r requirements.txt
+
+# Testing
+pytest>=7.0
+pytest-cov>=4.0
+pytest-xdist>=3.0  # for parallel testing
+
+# Code quality (ruff handles linting + formatting)
+ruff>=0.4.0
+mypy>=1.0
+
+# Pre-commit hooks
+pre-commit>=3.0
+
+# Documentation
+sphinx>=5.0
+sphinx-rtd-theme>=1.0
+myst-parser>=0.18
+
+# Visualization (optional)
+graphviz>=0.20
+matplotlib>=3.5.0
+
+# Development tools
+ipython>=8.0
+ipdb>=0.13

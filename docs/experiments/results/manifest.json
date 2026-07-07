@@ -1,0 +1,261 @@
+[
+  {
+    "label": "it_IT_baseline",
+    "path": "docs/experiments/results/it_IT_baseline.json",
+    "locale": "it_IT",
+    "lexicon": "it_ipa.tsv",
+    "experiment_label": "it_IT_baseline",
+    "train_normalize_policy": null,
+    "n_entries": 21561,
+    "n_test": 2000,
+    "n_multi_pron": 631,
+    "baseline_model": "/Volumes/hacks/dev/duolingo/scratch-speech-lab/projects/phonetic-decoding/build/g2p/it-it/it-it-ipa.g2p.gz",
+    "use_exceptions": false,
+    "phone_equiv": true,
+    "results": [
+      {
+        "model": "G2PDecisionTree",
+        "train_s": 0.10176587104797363,
+        "wer_pct": 32.25,
+        "wer_relaxed_pct": 15.200000000000003,
+        "per_pct": 5.160054381411445,
+        "per_equiv_pct": 2.7561488073167717,
+        "pos_acc_pct": 95.12421208750463,
+        "n_test": 2000
+      },
+      {
+        "model": "MultigramG2P",
+        "train_s": 31.507245779037476,
+        "wer_pct": 31.55,
+        "wer_relaxed_pct": 12.3,
+        "per_pct": 4.915600074197737,
+        "per_equiv_pct": 2.3743275830087183,
+        "pos_acc_pct": 96.09225251963149,
+        "n_test": 2000
+      }
+    ],
+    "per_delta_pp": 0.24445430721370798
+  },
+  {
+    "label": "it_IT_spelling_gated",
+    "path": "docs/experiments/results/it_IT_spelling_gated.json",
+    "locale": "it_IT",
+    "lexicon": "it_ipa.tsv",
+    "experiment_label": "it_IT_spelling_gated",
+    "train_normalize_policy": "spelling_gated",
+    "n_entries": 21561,
+    "n_test": 2000,
+    "n_multi_pron": 631,
+    "baseline_model": "/Volumes/hacks/dev/duolingo/scratch-speech-lab/projects/phonetic-decoding/build/g2p/it-it/it-it-ipa.g2p.gz",
+    "use_exceptions": false,
+    "phone_equiv": true,
+    "results": [
+      {
+        "model": "G2PDecisionTree",
+        "train_s": 0.10318899154663086,
+        "wer_pct": 32.25,
+        "wer_relaxed_pct": 15.200000000000003,
+        "per_pct": 5.160054381411445,
+        "per_equiv_pct": 2.7561488073167717,
+        "pos_acc_pct": 95.12421208750463,
+        "n_test": 2000
+      },
+      {
+        "model": "MultigramG2P",
+        "train_s": 28.45473599433899,
+        "wer_pct": 34.150000000000006,
+        "wer_relaxed_pct": 12.7,
+        "per_pct": 5.237123601063501,
+        "per_equiv_pct": 2.3990601619983924,
+        "pos_acc_pct": 96.04897050639956,
+        "n_test": 2000
+      }
+    ],
+    "per_delta_pp": -0.07706921965205549
+  },
+  {
+    "label": "it_IT_collapse_open",
+    "path": "docs/experiments/results/it_IT_collapse_open.json",
+    "locale": "it_IT",
+    "lexicon": "it_ipa.tsv",
+    "experiment_label": "it_IT_collapse_open",
+    "train_normalize_policy": "collapse_open",
+    "n_entries": 21561,
+    "n_test": 2000,
+    "n_multi_pron": 631,
+    "baseline_model": "/Volumes/hacks/dev/duolingo/scratch-speech-lab/projects/phonetic-decoding/build/g2p/it-it/it-it-ipa.g2p.gz",
+    "use_exceptions": false,
+    "phone_equiv": true,
+    "results": [
+      {
+        "model": "G2PDecisionTree",
+        "train_s": 0.10645794868469238,
+        "wer_pct": 32.25,
+        "wer_relaxed_pct": 15.200000000000003,
+        "per_pct": 5.160054381411445,
+        "per_equiv_pct": 2.7561488073167717,
+        "pos_acc_pct": 95.12421208750463,
+        "n_test": 2000
+      },
+      {
+        "model": "MultigramG2P",
+        "train_s": 28.407104015350342,
+        "wer_pct": 35.25,
+        "wer_relaxed_pct": 12.7,
+        "per_pct": 5.379335930254127,
+        "per_equiv_pct": 2.3990601619983924,
+        "pos_acc_pct": 96.04897050639956,
+        "n_test": 2000
+      }
+    ],
+    "per_delta_pp": -0.21928154884268203
+  },
+  {
+    "label": "pt_BR_baseline",
+    "path": "docs/experiments/results/pt_BR_baseline.json",
+    "locale": "pt_BR",
+    "lexicon": "pt_ipa.tsv",
+    "experiment_label": "pt_BR_baseline",
+    "train_normalize_policy": null,
+    "n_entries": 66144,
+    "n_test": 2000,
+    "n_multi_pron": 147,
+    "baseline_model": "/Volumes/hacks/dev/duolingo/scratch-speech-lab/projects/phonetic-decoding/build/g2p/pt-br/pt-br-ipa.g2p.gz",
+    "use_exceptions": false,
+    "phone_equiv": true,
+    "results": [
+      {
+        "model": "G2PDecisionTree",
+        "train_s": 0.11472606658935547,
+        "wer_pct": 14.3,
+        "wer_relaxed_pct": 12.2,
+        "per_pct": 2.45498077830984,
+        "per_equiv_pct": 2.0705469751129697,
+        "pos_acc_pct": 96.84359614217307,
+        "n_test": 2000
+      },
+      {
+        "model": "MultigramG2P",
+        "train_s": 60.78136706352234,
+        "wer_pct": 22.550000000000004,
+        "wer_relaxed_pct": 13.4,
+        "per_pct": 4.286291953093409,
+        "per_equiv_pct": 2.4396818978298964,
+        "pos_acc_pct": 96.94028844857797,
+        "n_test": 2000
+      }
+    ],
+    "per_delta_pp": -1.8313111747835689
+  },
+  {
+    "label": "pt_BR_surface_final",
+    "path": "docs/experiments/results/pt_BR_surface_final.json",
+    "locale": "pt_BR",
+    "lexicon": "pt_ipa.tsv",
+    "experiment_label": "pt_BR_surface_final",
+    "train_normalize_policy": "surface_final",
+    "n_entries": 66144,
+    "n_test": 2000,
+    "n_multi_pron": 147,
+    "baseline_model": "/Volumes/hacks/dev/duolingo/scratch-speech-lab/projects/phonetic-decoding/build/g2p/pt-br/pt-br-ipa.g2p.gz",
+    "use_exceptions": false,
+    "phone_equiv": true,
+    "results": [
+      {
+        "model": "G2PDecisionTree",
+        "train_s": 0.11471891403198242,
+        "wer_pct": 14.3,
+        "wer_relaxed_pct": 12.2,
+        "per_pct": 2.45498077830984,
+        "per_equiv_pct": 2.0705469751129697,
+        "pos_acc_pct": 96.84359614217307,
+        "n_test": 2000
+      },
+      {
+        "model": "MultigramG2P",
+        "train_s": 61.66111516952515,
+        "wer_pct": 22.650000000000002,
+        "wer_relaxed_pct": 13.449999999999996,
+        "per_pct": 4.286291953093409,
+        "per_equiv_pct": 2.4464213505863324,
+        "pos_acc_pct": 96.93354899582154,
+        "n_test": 2000
+      }
+    ],
+    "per_delta_pp": -1.8313111747835689
+  },
+  {
+    "label": "pt_BR_do_du",
+    "path": "docs/experiments/results/pt_BR_do_du.json",
+    "locale": "pt_BR",
+    "lexicon": "pt_ipa.tsv",
+    "experiment_label": "pt_BR_do_du",
+    "train_normalize_policy": "do_du",
+    "n_entries": 66144,
+    "n_test": 2000,
+    "n_multi_pron": 147,
+    "baseline_model": "/Volumes/hacks/dev/duolingo/scratch-speech-lab/projects/phonetic-decoding/build/g2p/pt-br/pt-br-ipa.g2p.gz",
+    "use_exceptions": false,
+    "phone_equiv": true,
+    "results": [
+      {
+        "model": "G2PDecisionTree",
+        "train_s": 0.11312103271484375,
+        "wer_pct": 14.3,
+        "wer_relaxed_pct": 12.2,
+        "per_pct": 2.45498077830984,
+        "per_equiv_pct": 2.0705469751129697,
+        "pos_acc_pct": 96.84359614217307,
+        "n_test": 2000
+      },
+      {
+        "model": "MultigramG2P",
+        "train_s": 62.55191898345947,
+        "wer_pct": 22.650000000000002,
+        "wer_relaxed_pct": 13.449999999999996,
+        "per_pct": 4.286291953093409,
+        "per_equiv_pct": 2.4464213505863324,
+        "pos_acc_pct": 96.93354899582154,
+        "n_test": 2000
+      }
+    ],
+    "per_delta_pp": -1.8313111747835689
+  },
+  {
+    "label": "pt_BR_citation_expand",
+    "path": "docs/experiments/results/pt_BR_citation_expand.json",
+    "locale": "pt_BR",
+    "lexicon": "pt_ipa.tsv",
+    "experiment_label": "pt_BR_citation_expand",
+    "train_normalize_policy": "citation_expand",
+    "n_entries": 66144,
+    "n_test": 2000,
+    "n_multi_pron": 147,
+    "baseline_model": "/Volumes/hacks/dev/duolingo/scratch-speech-lab/projects/phonetic-decoding/build/g2p/pt-br/pt-br-ipa.g2p.gz",
+    "use_exceptions": false,
+    "phone_equiv": true,
+    "results": [
+      {
+        "model": "G2PDecisionTree",
+        "train_s": 0.11337113380432129,
+        "wer_pct": 14.3,
+        "wer_relaxed_pct": 12.2,
+        "per_pct": 2.45498077830984,
+        "per_equiv_pct": 2.0705469751129697,
+        "pos_acc_pct": 96.84359614217307,
+        "n_test": 2000
+      },
+      {
+        "model": "MultigramG2P",
+        "train_s": 63.074097871780396,
+        "wer_pct": 35.150000000000006,
+        "wer_relaxed_pct": 12.9,
+        "per_pct": 6.099615825301611,
+        "per_equiv_pct": 2.358967446249242,
+        "pos_acc_pct": 97.03444092471524,
+        "n_test": 2000
+      }
+    ],
+    "per_delta_pp": -3.644635046991771
+  }
+]

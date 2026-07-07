@@ -1,0 +1,52 @@
+# Pre-commit hooks for phonebox
+# Install: pip install pre-commit && pre-commit install
+
+repos:
+  # Basic file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: ^(build/|\.eggs/)
+      - id: end-of-file-fixer
+        exclude: ^(build/|\.eggs/)
+      - id: check-yaml
+      - id: check-toml
+      - id: check-json
+      - id: check-added-large-files
+        args: ['--maxkb=500']
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+
+  # Python code quality - Ruff (fast linter and formatter)
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.14.11
+    hooks:
+      - id: ruff
+        args: [--fix]
+        exclude: ^build/
+      - id: ruff-format
+        exclude: ^build/
+
+  # Type checking with mypy
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.15.0
+    hooks:
+      - id: mypy
+        additional_dependencies: [types-PyYAML]
+        exclude: ^build/
+        args: [--no-strict-optional, --ignore-missing-imports]
+
+# Exclude certain paths globally
+exclude: |
+  (?x)^(
+      build/|
+      \.eggs/|
+      \.git/|
+      \.mypy_cache/|
+      \.ruff_cache/|
+      __pycache__/|
+      \.pytest_cache/
+  )$

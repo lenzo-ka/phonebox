@@ -1,0 +1,35 @@
+{
+  "locale": "it_IT",
+  "lexicon": "it_ipa.tsv",
+  "experiment_label": "it_IT_collapse_open",
+  "train_normalize_policy": "collapse_open",
+  "n_entries": 21561,
+  "n_test": 2000,
+  "n_multi_pron": 631,
+  "baseline_model": "/Volumes/hacks/dev/duolingo/scratch-speech-lab/projects/phonetic-decoding/build/g2p/it-it/it-it-ipa.g2p.gz",
+  "use_exceptions": false,
+  "phone_equiv": true,
+  "results": [
+    {
+      "model": "G2PDecisionTree",
+      "train_s": 0.10645794868469238,
+      "wer_pct": 32.25,
+      "wer_relaxed_pct": 15.200000000000003,
+      "per_pct": 5.160054381411445,
+      "per_equiv_pct": 2.7561488073167717,
+      "pos_acc_pct": 95.12421208750463,
+      "n_test": 2000
+    },
+    {
+      "model": "MultigramG2P",
+      "train_s": 28.407104015350342,
+      "wer_pct": 35.25,
+      "wer_relaxed_pct": 12.7,
+      "per_pct": 5.379335930254127,
+      "per_equiv_pct": 2.3990601619983924,
+      "pos_acc_pct": 96.04897050639956,
+      "n_test": 2000
+    }
+  ],
+  "per_delta_pp": -0.21928154884268203
+}

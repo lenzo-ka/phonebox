@@ -1,0 +1,28 @@
+# PocketSphinx / CMUdict Style Configuration
+# Optimized for English CMU Arpabet phoneset
+
+locale: en_US
+phoneset: cmu
+
+# Preprocessing (PocketSphinx standard)
+remove_stress: true         # No stress markers in output
+remove_accents: true        # Normalize café → cafe
+filter_non_letters: true    # Keep only letters, hyphens, apostrophes
+cased: false                # Lowercase all words
+
+# Training (optimized for speed)
+trainer: sklearn        # 2.1x faster than native
+parallel_align: false   # Disable for macOS compatibility
+
+# EM Alignment
+max_iterations: 100
+max_combinations: 0     # Unlimited
+
+# Decision Tree
+min_samples_split: 2
+min_samples_leaf: 1
+store_distributions: true  # Enable confidence scores
+
+# Dictionary (override on command line)
+# dictionary: data/cmudict/cmudict_nostress.dict
+# output: models/en_US_nostress.jsonl.gz

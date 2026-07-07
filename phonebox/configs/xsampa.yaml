@@ -1,0 +1,27 @@
+# X-SAMPA Configuration
+# For multilingual phonetic transcription
+
+locale: en_US
+phoneset: xsampa
+
+# Preprocessing
+remove_stress: false    # Preserve stress in X-SAMPA
+remove_accents: false   # Preserve all diacritics
+cased: false            # Lowercase
+
+# Training
+trainer: native         # Better for non-English
+parallel_align: false
+
+# EM Alignment
+max_iterations: 100
+max_combinations: 4096  # Limit for complex words
+
+# Decision Tree
+min_samples_split: 2
+min_samples_leaf: 1
+store_distributions: true
+
+# Dictionary (override on command line)
+# dictionary: data/my_dict.txt
+# output: models/my_model.jsonl.gz

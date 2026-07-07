@@ -1,0 +1,148 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "phonebox"
+version = "0.1.0"
+description = "Fast and accurate grapheme-to-phoneme conversion using decision trees"
+readme = "README.md"
+authors = [
+    {name = "Kevin Lenzo (lenzo-ka)"},
+]
+license = {text = "MIT"}
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Text Processing :: Linguistic",
+    "Typing :: Typed",
+]
+keywords = ["g2p", "grapheme-to-phoneme", "pronunciation", "phonetics", "speech", "nlp", "phonebox"]
+requires-python = ">=3.9"
+dependencies = [
+    "cartlet>=0.5.0",
+    # icukit ships prebuilt PyICU wheels for macOS arm64 / Linux / Windows
+    # so installing phonebox does NOT require a system-level ICU build.
+    # Without this, our locale `g2p.xlit` files silently no-op and the
+    # trainer ingests un-normalised letters — surprised us once already
+    # with French (cf. the (N) variant leak into exception keys).
+    "icukit>=0.1.2",
+]
+
+[project.optional-dependencies]
+icu = [
+    # Legacy escape hatch for environments that prefer linking against a
+    # system ICU. Same surface API (`import icu`) — but on modern macOS
+    # the Xcode toolchain breaks the build, so we default to icukit above.
+    "PyICU>=2.11",
+]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "ruff>=0.4.0",
+    "mypy>=1.0",
+    "pre-commit>=3.0",
+]
+docs = [
+    "sphinx>=5.0",
+    "sphinx-rtd-theme>=1.0",
+    "myst-parser>=0.18",
+]
+viz = [
+    "graphviz>=0.20",
+    "matplotlib>=3.5.0",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/lenzo-ka/phonebox"
+"Bug Reports" = "https://github.com/lenzo-ka/phonebox/issues"
+"Source" = "https://github.com/lenzo-ka/phonebox"
+
+[project.scripts]
+phonebox = "phonebox.cli.main:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["phonebox*"]
+exclude = ["tests*", "docs*", "examples*"]
+
+[tool.setuptools.package-data]
+phonebox = ["py.typed"]
+"phonebox.config.locales" = ["**/*.json", "**/*.xlit"]
+"phonebox.configs" = ["*.yaml"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"phonebox/core/multigram_align.py" = ["E741"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = false
+warn_unused_ignores = true
+disallow_untyped_defs = false
+check_untyped_defs = true
+strict_optional = false
+exclude = ["venv/", "build/", ".eggs/"]
+
+[[tool.mypy.overrides]]
+module = [
+    "icu",
+    "yaml",
+    "graphviz",
+    "matplotlib.*",
+    "cartlet",
+    "tomllib",
+    "tomli",
+    "tomli_w",
+]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["phonebox.core.em_align", "phonebox.core.vectorizer"]
+check_untyped_defs = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_functions = ["test_*"]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+]
+# Run fast tests first, slow tests last
+addopts = [
+    "-v",
+    "--strict-markers",
+    "--tb=short",
+]
+
+[tool.coverage.run]
+source = ["phonebox"]
+branch = true
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+]

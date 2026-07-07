@@ -1,0 +1,12 @@
+# pt_BR: Brazilian Portuguese keeps all vowel diacritics (á à â ã, é ê,
+# í, ó ô õ, ú, ü) and the cedilla on ç — every one is phonemic in either
+# vowel quality (á /a/ vs â /ɐ/), stress, or marks nasalization (ã, õ).
+# Both lexicon and OOV inputs are NFC by construction.
+#
+# Apostrophe and hyphen survive `[^-.'[:L:]]` and pass to the G2P; the
+# trained model learns them as letter tokens (mostly silent / epsilon).
+
+:: NFC ;
+:: Any-Lower ;
+:: Null ;
+:: [^-.'[:L:]] Remove ;

@@ -1,0 +1,25 @@
+# High Accuracy Configuration
+# Optimized for best possible accuracy
+
+locale: en_US
+phoneset: cmu
+
+# Preprocessing
+remove_stress: true
+remove_accents: true
+cased: false
+
+# Training (native for precision)
+trainer: native         # More careful splitting
+parallel_align: false
+
+# EM Alignment (thorough)
+max_iterations: 200     # Extra iterations
+max_combinations: 0     # Unlimited
+
+# Decision Tree (allow fine details)
+min_samples_split: 2    # Split freely
+min_samples_leaf: 1     # Detailed leaves
+store_distributions: true  # Full probability info
+
+# Use for production models where accuracy matters most

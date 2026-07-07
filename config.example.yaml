@@ -1,0 +1,23 @@
+# Phonebox Configuration Example
+# Use with: phonebox model build -c config.yaml
+
+# Language and phoneset
+locale: en_US
+phoneset: cmu
+
+# Dictionary source
+dictionary: data/cmudict/cmudict.dict
+
+# Output model
+output: models/my_model.g2p.gz
+
+# Preprocessing
+remove_stress: true    # Remove stress markers (for PocketSphinx)
+cased: false           # Case-sensitive (false = lowercase)
+
+# Training
+trainer: sklearn       # sklearn (faster) or native
+max_iterations: 100    # EM alignment iterations
+
+# Model options
+store_distributions: true  # Enable n-best and confidence scores

@@ -1,0 +1,30 @@
+# es_MX: strip non-phonemic diacritics but preserve ñ and ü.
+#
+# Spanish accents (á é í ó ú) only mark stress and are not phonemic, so we
+# drop them. ñ and ü, on the other hand, ARE phonemic (/ɲ/ and the /w/
+# trigger in gue/gui). We protect them with PUA placeholders before doing
+# NFD + combining-mark removal, then restore them afterwards. Finally we
+# drop any non-letter / non-{-.'} characters and lowercase.
+#
+# The bare `:: Null ;` between the restoration rules and the next filter
+# directive is intentional: ICU compound rule chains need a no-op
+# transliterator there to flush the conversion rules so that the trailing
+# `:: Any-Lower ;` actually runs.
+
+\u00F1 > \uE001 ;
+\u00D1 > \uE002 ;
+\u00FC > \uE003 ;
+\u00DC > \uE004 ;
+
+:: NFD ;
+:: [:M:] Remove ;
+:: NFC ;
+
+\uE001 > \u00F1 ;
+\uE002 > \u00D1 ;
+\uE003 > \u00FC ;
+\uE004 > \u00DC ;
+
+:: Null ;
+:: [^-.'[:L:]] Remove ;
+:: Any-Lower ;

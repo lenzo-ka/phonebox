@@ -1,0 +1,35 @@
+{
+  "locale": "pt_BR",
+  "lexicon": "pt_ipa.tsv",
+  "experiment_label": "pt_BR_do_du",
+  "train_normalize_policy": "do_du",
+  "n_entries": 66144,
+  "n_test": 2000,
+  "n_multi_pron": 147,
+  "baseline_model": "/Volumes/hacks/dev/duolingo/scratch-speech-lab/projects/phonetic-decoding/build/g2p/pt-br/pt-br-ipa.g2p.gz",
+  "use_exceptions": false,
+  "phone_equiv": true,
+  "results": [
+    {
+      "model": "G2PDecisionTree",
+      "train_s": 0.11312103271484375,
+      "wer_pct": 14.3,
+      "wer_relaxed_pct": 12.2,
+      "per_pct": 2.45498077830984,
+      "per_equiv_pct": 2.0705469751129697,
+      "pos_acc_pct": 96.84359614217307,
+      "n_test": 2000
+    },
+    {
+      "model": "MultigramG2P",
+      "train_s": 62.55191898345947,
+      "wer_pct": 22.650000000000002,
+      "wer_relaxed_pct": 13.449999999999996,
+      "per_pct": 4.286291953093409,
+      "per_equiv_pct": 2.4464213505863324,
+      "pos_acc_pct": 96.93354899582154,
+      "n_test": 2000
+    }
+  ],
+  "per_delta_pp": -1.8313111747835689
+}

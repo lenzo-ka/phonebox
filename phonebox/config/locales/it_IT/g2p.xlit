@@ -1,0 +1,23 @@
+# it_IT: Italian orthography.
+#
+# Phonemic accents map to distinct grapheme letters (IPA symbols as
+# orthography) so the G2P learns è→/ɛ/, ò→/ɔ/; é and ó stay as e/o.
+# Plain e/o remain ambiguous (open vs closed not marked in spelling).
+# Apostrophe dropped; hyphen kept.
+#
+# Both lexicon and OOV inputs are NFC by construction.
+
+:: NFC ;
+
+\u00E8 > \u025B ;
+\u00C8 > \u025B ;
+\u00E9 > e ;
+\u00C9 > e ;
+\u00F2 > \u0254 ;
+\u00D2 > \u0254 ;
+\u00F3 > o ;
+\u00D3 > o ;
+
+:: Any-Lower ;
+:: Null ;
+:: [^-.[:L:]] Remove ;

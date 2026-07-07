@@ -1,0 +1,14 @@
+# fr_FR: keep French diacritics (grave, acute, circumflex, diaeresis,
+# cedilla, tilde), drop anything else. French accents ARE phonemic
+# (é /e/ vs è /ɛ/ vs ê /ɛ/ vs e /ə/, ç /s/, ï marks separate syllable),
+# unlike Spanish — so we cannot just strip [:M:] as the default xlit does.
+#
+# Inputs are NFC by construction (both lexicon and OOV files), but we
+# normalise defensively. The `:: Null ;` no-op before the trailing
+# filter/lower stages is the ICU compound-rule flush trick we needed in
+# the Spanish locale.
+
+:: NFC ;
+:: Any-Lower ;
+:: Null ;
+:: [^-.'[:L:]] Remove ;

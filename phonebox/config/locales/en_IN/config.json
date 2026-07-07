@@ -1,0 +1,32 @@
+{
+  "join": {
+    "letters": [],
+    "xsampa": [],
+    "cmu": [
+      "ax r",
+      "ax m",
+      "g z",
+      "k s",
+      "k sh",
+      "m ax k",
+      "t s",
+      "y ax",
+      "y ua",
+      "y uh",
+      "y uw"
+    ],
+    "ipa": [
+      "ə ɾ",
+      "ə m",
+      "ɡ z",
+      "k s",
+      "k ʃ",
+      "m ə k",
+      "t s",
+      "j ə",
+      "j uə",
+      "j ʊ",
+      "j u"
+    ]
+  }
+}

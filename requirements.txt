@@ -1,0 +1,5 @@
+# Core dependencies
+cartlet>=0.5.0
+
+# Optional dependencies
+PyICU>=2.11  # Only needed for --norm-xlit (ICU transliteration)

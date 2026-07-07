@@ -1,0 +1,6 @@
+:: NFD ;
+:: [:M:] Remove ;  # remove accents, diacritics
+:: NFC ;
+
+:: [^-.'[:L:]] remove ;  # remove anything that's not a letter, hyphen, period, or apostrophe
+:: Any-Lower ;

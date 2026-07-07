@@ -1,0 +1,25 @@
+# Fast Training Configuration
+# Optimized for quick iteration and experimentation
+
+locale: en_US
+phoneset: cmu
+
+# Preprocessing
+remove_stress: true
+remove_accents: true
+cased: false
+
+# Training (fastest options)
+trainer: sklearn        # 2.1x faster
+parallel_align: false   # Simple, reliable
+
+# EM Alignment (minimal iterations)
+max_iterations: 10      # Quick convergence
+max_combinations: 1024  # Limit complexity
+
+# Decision Tree (smaller trees)
+min_samples_split: 10   # Faster splits
+min_samples_leaf: 5     # Prune aggressively
+store_distributions: false  # Skip for speed
+
+# Use for quick prototyping, not production
