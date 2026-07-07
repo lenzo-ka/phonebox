@@ -17,8 +17,6 @@ classifiers = [
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -27,7 +25,7 @@ classifiers = [
     "Typing :: Typed",
 ]
 keywords = ["g2p", "grapheme-to-phoneme", "pronunciation", "phonetics", "speech", "nlp", "phonebox"]
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 dependencies = [
     "cartlet>=0.5.0",
     # icukit ships prebuilt PyICU wheels for macOS arm64 / Linux / Windows
@@ -82,7 +80,7 @@ phonebox = ["py.typed"]
 
 [tool.ruff]
 line-length = 88
-target-version = "py39"
+target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM"]
@@ -95,7 +93,7 @@ ignore = ["E501"]
 quote-style = "double"
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.11"
 warn_return_any = false
 warn_unused_ignores = true
 disallow_untyped_defs = false
@@ -110,8 +108,6 @@ module = [
     "graphviz",
     "matplotlib.*",
     "cartlet",
-    "tomllib",
-    "tomli",
     "tomli_w",
 ]
 ignore_missing_imports = true

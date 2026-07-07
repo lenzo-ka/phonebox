@@ -25,7 +25,12 @@ def collect_phone_substitutions(
                 subs[(expected[i], pred[i])] += 1
         if len(expected) != len(pred):
             subs[("__len__", str(len(expected)))] += 1
-    wrong.sort(key=lambda t: (-sum(1 for a, b in zip(t[1], t[2]) if a != b), t[0]))
+    wrong.sort(
+        key=lambda t: (
+            -sum(1 for a, b in zip(t[1], t[2], strict=False) if a != b),
+            t[0],
+        )
+    )
     return subs, wrong[:max_examples]
 
 
@@ -66,7 +71,9 @@ def audit_normalize_delta(
         new_phones = apply_train_normalize(locale, policy, word, phones)
         if new_phones != phones:
             changed += 1
-            phone_changes += sum(1 for a, b in zip(phones, new_phones) if a != b)
+            phone_changes += sum(
+                1 for a, b in zip(phones, new_phones, strict=False) if a != b
+            )
             phone_changes += abs(len(phones) - len(new_phones))
     return {
         "train_entries": len(train_raw),

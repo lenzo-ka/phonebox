@@ -124,7 +124,9 @@ def phones_match(
         return True
     if phone_equiv is None or len(pred) != len(expected):
         return False
-    return all(_phone_eq(a, b, phone_equiv) for a, b in zip(pred, expected))
+    return all(
+        _phone_eq(a, b, phone_equiv) for a, b in zip(pred, expected, strict=True)
+    )
 
 
 def edit_distance(

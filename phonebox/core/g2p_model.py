@@ -16,7 +16,7 @@ from __future__ import annotations
 import hashlib
 import math
 from collections import Counter, defaultdict
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from time import time
 from typing import Any, cast
@@ -594,7 +594,7 @@ class G2PDecisionTree:
         final_phonemes = []
         final_confidences = []
 
-        for phone, conf in zip(raw_phonemes, raw_confidences):
+        for phone, conf in zip(raw_phonemes, raw_confidences, strict=True):
             uncooked = self.vectorizer.uncook([phone])
             for p in uncooked:
                 final_phonemes.append(p)
@@ -763,7 +763,9 @@ class G2PDecisionTree:
 
         for candidate in candidates:
             # Count matching phonemes
-            matches = sum(1 for p, c in zip(predicted, candidate) if p == c)
+            matches = sum(
+                1 for p, c in zip(predicted, candidate, strict=False) if p == c
+            )
             length_penalty = abs(len(predicted) - len(candidate))
             score = float(matches) - (LENGTH_PENALTY_WEIGHT * length_penalty)
 
@@ -821,7 +823,7 @@ class G2PDecisionTree:
         """
         # Build metadata with ACTUAL config used during training
         metadata = self.vectorizer.export_config()
-        export_time = datetime.now(timezone.utc)
+        export_time = datetime.now(UTC)
 
         # Capture complete training configuration
         metadata["training_config"] = {

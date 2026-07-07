@@ -90,16 +90,8 @@ def _load_yaml(path: Path) -> dict[str, Any]:
 
 
 def _load_toml(path: Path) -> dict[str, Any]:
-    """Load TOML config."""
-    try:
-        import tomllib  # Python 3.11+
-    except ImportError:
-        try:
-            import tomli as tomllib  # Fallback for 3.9-3.10
-        except ImportError as e:
-            raise ImportError(
-                "tomli required for Python <3.11: pip install tomli"
-            ) from e
+    """Load TOML config (tomllib is stdlib on the supported Python >= 3.11)."""
+    import tomllib
 
     with open(path, "rb") as f:
         return tomllib.load(f)
