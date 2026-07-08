@@ -192,7 +192,7 @@ Based on research from CMU:
 
 ## License
 
-MIT License - see LICENSE file.
+BSD 2-Clause License - see LICENSE file.
 
 ## Author
 
