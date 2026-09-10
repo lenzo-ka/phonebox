@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import os
 import sys
-import tempfile
 
 
 def setup_bundle_command(subparsers):
@@ -35,37 +34,19 @@ Library usage:
 def handle_bundle(args):
     """Handle 'phonebox bundle' command."""
     from ...bundler import bundle_g2p
-    from ...core.g2p_model import G2PDecisionTree
-
-    model_path = args.model
-    output_path = args.output
-
-    # Convert to .cart format if needed (cartlet's bundler requires .cart)
-    needs_conversion = not model_path.endswith(".cart")
-
-    if needs_conversion:
-        print(f"Converting {model_path} to .cart for bundling...", file=sys.stderr)
-
-        dt = G2PDecisionTree(model=model_path)
-
-        with tempfile.NamedTemporaryFile(suffix=".cart", delete=False) as tmp:
-            cart_path = tmp.name
-
-        dt._cart.export(cart_path, store_distributions=dt._cart.store_distributions)
-        model_path = cart_path
 
     try:
-        print(f"Bundling -> {output_path}", file=sys.stderr)
-        bundle_g2p(model_path, output_path)
-        print(f"Done: Created {output_path}", file=sys.stderr)
+        print(f"Bundling -> {args.output}", file=sys.stderr)
+        bundle_g2p(args.model, args.output)
+        print(f"Done: Created {args.output}", file=sys.stderr)
 
-        module_name = os.path.splitext(os.path.basename(output_path))[0]
+        module_name = os.path.splitext(os.path.basename(args.output))[0]
         print("\nUsage:", file=sys.stderr)
-        print(f'  CLI:     python {output_path} "Hello, world!"', file=sys.stderr)
+        print(f'  CLI:     python {args.output} "Hello, world!"', file=sys.stderr)
         print(f"  Library: from {module_name} import G2PPredictor", file=sys.stderr)
         print("           g2p = G2PPredictor.from_embedded()", file=sys.stderr)
         print("           g2p.pronounce_text('Hello, world!')", file=sys.stderr)
         return 0
-    finally:
-        if needs_conversion:
-            os.unlink(cart_path)
+    except Exception as error:
+        print(f"Error: {error}", file=sys.stderr)
+        return 1

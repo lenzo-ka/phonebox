@@ -21,6 +21,7 @@ from ..constants import (
     FILE_ENCODING,
     JOIN_CHAR,
 )
+from ..portable_normalization import join_seq, make_join_re
 
 # Per-phoneset stress markers; applied only when ``remove_stress=True``.
 # Add more known phonesets here as needed. Unknown phonesets get no-op
@@ -40,32 +41,6 @@ try:
     HAS_ICU = True
 except ImportError:
     HAS_ICU = False
-
-
-def make_join_re(join_list: list[str]) -> re.Pattern[str] | None:
-    """Compile a regex that matches any space-separated joining sequence.
-
-    Returns None when the list is empty so callers can short-circuit.
-    """
-    if not join_list:
-        return None
-    items = sorted(join_list, key=len, reverse=True)
-    items = [re.escape(x) for x in items]
-    # The trailing boundary is a lookahead so it is not consumed: adjacent
-    # join groups sharing a delimiter space (``"a b c d"`` with ``"a b"`` and
-    # ``"c d"``) both match in a single left-to-right ``sub`` pass.
-    return re.compile(r" (" + r"|".join(items) + r")(?= )")
-
-
-def join_seq(
-    regex: re.Pattern[str] | None, seq: list[str], join_char: str
-) -> list[str]:
-    """Collapse adjacent tokens in *seq* matched by *regex* using *join_char*."""
-    if not regex:
-        return list(seq)
-    as_str = " " + " ".join(seq) + " "
-    joined = regex.sub(lambda m: " " + m.group(1).replace(" ", join_char), as_str)
-    return joined.split()
 
 
 class Vectorizer:

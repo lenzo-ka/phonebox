@@ -1,0 +1,302 @@
+"""Compile saved letter preprocessing into a standard-library program."""
+
+import re
+import unicodedata
+
+
+class PortableNormalizationError(ValueError):
+    """Raised when saved preprocessing cannot be reproduced portably."""
+
+
+def make_join_re(join_list):
+    """Compile the token-boundary matcher shared by training and inference."""
+    if not join_list:
+        return None
+    items = [re.escape(item) for item in sorted(join_list, key=len, reverse=True)]
+    return re.compile(r" (" + r"|".join(items) + r")(?= )")
+
+
+def join_seq(regex, seq, join_char):
+    """Collapse matched token sequences with the configured join marker."""
+    if not regex:
+        return list(seq)
+    as_str = " " + " ".join(seq) + " "
+    joined = regex.sub(
+        lambda match: " " + match.group(1).replace(" ", join_char), as_str
+    )
+    return joined.split()
+
+
+def compile_metadata_preprocessing(metadata):
+    """Compile a present snapshot; reserve ``None`` for legacy metadata."""
+    if "letter_preprocessing" not in metadata:
+        return None
+    program = compile_letter_preprocessing(metadata["letter_preprocessing"])
+    liaison_pad = metadata.get("liaison_pad")
+    if liaison_pad is not None and (
+        not isinstance(liaison_pad, str) or len(liaison_pad) != 1
+    ):
+        raise PortableNormalizationError(
+            "letter preprocessing liaison_pad must be one character or null"
+        )
+    program["liaison_pad"] = liaison_pad
+    return program
+
+
+_NORMAL_FORMS = {"NFC", "NFD", "NFKC", "NFKD"}
+_UNICODE_SCALAR_RE = re.compile(r"\\u([0-9A-Fa-f]{4})")
+_SHIPPED_FILTERS = {
+    "[^-.'[:l:]] remove": "-.'",
+    "[^-.[:l:]] remove": "-.",
+}
+_SUPPORTED_RULE_SHAPES = {
+    (),
+    ("NFC",),
+    ("Any-Lower",),
+    ("NFD", "Mark-Remove", "NFC", "Filter", "Any-Lower"),
+    ("NFC", "Any-Lower", "Null", "Filter"),
+    ("NFC", "Replacements", "Any-Lower", "Null", "Filter"),
+    (
+        "NFC",
+        "Replacements",
+        "NFD",
+        "Mark-Remove",
+        "NFC",
+        "Replacements",
+        "Null",
+        "Filter",
+        "Any-Lower",
+    ),
+}
+
+
+def _exact_scalar(value):
+    """Return one literal scalar from the narrow supported ICU syntax."""
+    escaped = _UNICODE_SCALAR_RE.fullmatch(value)
+    if escaped:
+        scalar = chr(int(escaped.group(1), 16))
+        return scalar if not 0xD800 <= ord(scalar) <= 0xDFFF else None
+    if len(value) == 1 and value.isalpha():
+        return value
+    return None
+
+
+def _rule_statements(rules):
+    uncommented = "\n".join(line.split("#", 1)[0] for line in rules.splitlines())
+    return [
+        statement.strip() for statement in uncommented.split(";") if statement.strip()
+    ]
+
+
+def _compile_rules(rules, label):
+    operations: list[dict[str, object]] = []
+    unsupported = []
+    replacements: dict[str, str] = {}
+    shape = []
+
+    def flush_replacements():
+        if replacements:
+            operations.append({"op": "map_chars", "map": dict(replacements)})
+            replacements.clear()
+            shape.append("Replacements")
+
+    for statement in _rule_statements(rules or ""):
+        if statement.startswith("::"):
+            flush_replacements()
+            directive = statement[2:].strip()
+            if directive in _NORMAL_FORMS:
+                operations.append({"op": "normalize", "form": directive})
+                shape.append(directive)
+            elif directive == "Any-Lower":
+                operations.append({"op": "lower"})
+                shape.append(directive)
+            elif directive == "Null":
+                shape.append(directive)
+            elif directive.lower() == "[:m:] remove":
+                operations.append({"op": "remove_mark_characters"})
+                shape.append("Mark-Remove")
+            else:
+                keep = _SHIPPED_FILTERS.get(directive.lower())
+                if keep is not None:
+                    operations.append(
+                        {"op": "filter", "categories": ["L"], "keep": keep}
+                    )
+                    shape.append("Filter")
+                else:
+                    unsupported.append(f"{label}: {statement}")
+            continue
+
+        if statement.count(">") == 1:
+            source, replacement = (part.strip() for part in statement.split(">", 1))
+            source_scalar = _exact_scalar(source)
+            replacement_scalar = _exact_scalar(replacement)
+            if source_scalar is not None and replacement_scalar is not None:
+                if source_scalar in replacements:
+                    unsupported.append(
+                        f"{label}: duplicate replacement source {source_scalar!r}"
+                    )
+                    continue
+                replacements[source_scalar] = replacement_scalar
+                continue
+        unsupported.append(f"{label}: {statement}")
+    flush_replacements()
+    if not unsupported and tuple(shape) not in _SUPPORTED_RULE_SHAPES:
+        unsupported.append(f"{label}: unsupported directive order")
+    return operations, unsupported
+
+
+def compile_letter_preprocessing(snapshot):
+    """Compile a version-1 raw preprocessing snapshot or raise on unsupported rules."""
+    if not isinstance(snapshot, dict):
+        raise PortableNormalizationError("letter_preprocessing must be an object")
+    if snapshot.get("version") != 1:
+        raise PortableNormalizationError(
+            f"unsupported letter_preprocessing version: {snapshot.get('version')!r}"
+        )
+
+    source = snapshot.get("source")
+    if not isinstance(source, dict):
+        raise PortableNormalizationError(
+            "letter_preprocessing.source must be an object"
+        )
+    for key in ("norm_rules", "g2p_rules"):
+        if key not in source:
+            raise PortableNormalizationError(
+                f"letter_preprocessing.source.{key} is required"
+            )
+
+    operations: list[dict[str, object]] = []
+    join_char = snapshot.get("join_char")
+    if not isinstance(join_char, str) or len(join_char) > 1:
+        raise PortableNormalizationError(
+            "letter_preprocessing.join_char must contain at most one character"
+        )
+    if join_char:
+        operations.append({"op": "replace", "source": join_char, "replacement": ""})
+
+    cased = snapshot.get("cased")
+    remove_accents = snapshot.get("remove_accents")
+    filter_non_letters = snapshot.get("filter_non_letters")
+    if not all(
+        isinstance(value, bool) for value in (cased, remove_accents, filter_non_letters)
+    ):
+        raise PortableNormalizationError(
+            "letter_preprocessing case/accent/filter flags must be booleans"
+        )
+    if not cased:
+        operations.append({"op": "scalar_lower"})
+    if remove_accents:
+        operations.append({"op": "remove_accents"})
+    if filter_non_letters:
+        operations.append({"op": "normalize", "form": "NFD"})
+        operations.append(
+            {"op": "filter", "categories": ["L", "Mn", "Mc"], "keep": "-.'"}
+        )
+        operations.append({"op": "normalize", "form": "NFC"})
+
+    unsupported = []
+    for key in ("norm_rules", "g2p_rules"):
+        rules = source.get(key)
+        if rules is not None and not isinstance(rules, str):
+            raise PortableNormalizationError(
+                f"letter_preprocessing.source.{key} must be a string or null"
+            )
+        compiled, rejected = _compile_rules(rules, key)
+        operations.extend(compiled)
+        unsupported.extend(rejected)
+    if unsupported:
+        details = "; ".join(unsupported)
+        raise PortableNormalizationError(
+            f"letter preprocessing uses unsupported ICU rules: {details}"
+        )
+
+    joins = snapshot.get("letter_joins")
+    if not isinstance(joins, list) or not all(isinstance(item, str) for item in joins):
+        raise PortableNormalizationError(
+            "letter_preprocessing.letter_joins must be a list of strings"
+        )
+
+    rewrites = snapshot.get("spelling_rewrites")
+    if not isinstance(rewrites, dict) or not all(
+        isinstance(key, str) and len(key) == 1 and isinstance(value, str)
+        for key, value in rewrites.items()
+    ):
+        raise PortableNormalizationError(
+            "letter_preprocessing.spelling_rewrites must map characters to strings"
+        )
+    if rewrites:
+        for rewrite_source in rewrites:
+            cooked_source = _join_letters(
+                list(_apply_operations(rewrite_source, operations)), joins, join_char
+            )
+            if cooked_source != [rewrite_source]:
+                raise PortableNormalizationError(
+                    "letter_preprocessing spelling rewrite source changes during "
+                    f"cooking: {rewrite_source!r}"
+                )
+        operations.append({"op": "map_chars", "map": dict(rewrites)})
+    return {
+        "version": 1,
+        "operations": operations,
+        "cased": cased,
+        "join_char": join_char,
+        "letter_joins": list(joins),
+        "liaison_pad": None,
+    }
+
+
+def _apply_operations(text, operations):
+    for operation in operations:
+        op = operation.get("op")
+        if op == "normalize":
+            form = operation.get("form")
+            if form not in _NORMAL_FORMS:
+                raise PortableNormalizationError(
+                    f"unsupported normalization form: {form!r}"
+                )
+            text = unicodedata.normalize(form, text)
+        elif op == "replace":
+            text = text.replace(operation["source"], operation["replacement"])
+        elif op == "scalar_lower":
+            text = "".join(character.lower() for character in text)
+        elif op == "lower":
+            text = text.lower()
+        elif op == "remove_accents":
+            text = unicodedata.normalize("NFD", text)
+            text = "".join(ch for ch in text if unicodedata.category(ch) != "Mn")
+            text = unicodedata.normalize("NFC", text)
+        elif op == "remove_mark_characters":
+            text = "".join(
+                ch for ch in text if not unicodedata.category(ch).startswith("M")
+            )
+        elif op == "filter":
+            categories = tuple(operation["categories"])
+            keep = operation["keep"]
+            text = "".join(
+                ch
+                for ch in text
+                if unicodedata.category(ch).startswith(categories) or ch in keep
+            )
+        elif op == "map_chars":
+            mapping = operation["map"]
+            text = "".join(mapping.get(ch, ch) for ch in text)
+        else:
+            raise PortableNormalizationError(f"unsupported portable operation: {op!r}")
+    return text
+
+
+def _join_letters(letters, joins, join_char):
+    return join_seq(make_join_re(joins), letters, join_char)
+
+
+def apply_portable_preprocessing(text, program):
+    """Apply a validated portable program and return cooked letter tokens."""
+    if not isinstance(program, dict) or program.get("version") != 1:
+        raise PortableNormalizationError("invalid portable preprocessing program")
+    liaison_pad = program.get("liaison_pad")
+    if liaison_pad is not None:
+        text += liaison_pad
+    cooked = _apply_operations(text, program.get("operations", []))
+    return _join_letters(
+        list(cooked), program.get("letter_joins", []), program.get("join_char", "")
+    )

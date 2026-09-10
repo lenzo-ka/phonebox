@@ -13,6 +13,31 @@ phonebox model build en_US dictionary.txt -o model.g2p.gz --remove-stress
 phonebox bundle model.g2p.gz -o g2p.py
 ```
 
+The model carries the letter normalization used during training, including
+Unicode normalization, locale spelling rules, and configured grapheme joins.
+The bundle compiles those saved rules into a small standard-library program;
+it does not read locale files at runtime. Older models without saved
+preprocessing retain the legacy lowercase-and-join behavior.
+When both the snapshot and older outer metadata contain the same preprocessing
+fields, the snapshot is authoritative, matching full-library model loading.
+Saved scalar liaison padding is also applied before the snapshot operations.
+
+The portable rule language intentionally supports the transformations used by
+the shipped locale G2P rules: Unicode normalization, exact character
+replacement, combining-mark removal, lowercase conversion, and Unicode-letter
+filtering. If a model used another ICU feature, such as arbitrary script
+transliteration, `phonebox bundle` exits with an error naming the unsupported
+rule. The full phonebox library can still load that model with ICU; bundling
+never substitutes an approximate transformation.
+
+Portable category filtering and casing use the Unicode Character Database in
+the Python runtime. ICU and Python may ship different Unicode versions, so
+characters added or reclassified between those versions can behave differently
+from training. Use the same Unicode data version for strict parity, or validate
+the input repertoire before deployment. The bundle cannot enforce this from
+older model snapshots because they do not record the training ICU/Unicode
+version.
+
 ## Python Bundle
 
 ```bash
