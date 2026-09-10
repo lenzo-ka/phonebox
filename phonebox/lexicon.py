@@ -4,6 +4,11 @@ from __future__ import annotations
 
 import re
 
+_STRESS_PATTERNS = {
+    "cmu": re.compile(r"[012]"),
+    "xsampa": re.compile(r'["%]'),
+}
+
 
 def parse_dict_line(line: str) -> tuple[str, list[str]] | None:
     """Parse a whitespace-separated word and pronunciation with comments."""
@@ -16,3 +21,9 @@ def parse_dict_line(line: str) -> tuple[str, list[str]] | None:
     if len(parts) < 2:
         return None
     return re.sub(r"\(\d+\)$", "", parts[0]), parts[1:]
+
+
+def strip_phone_stress(phone: str, phoneset: str) -> str:
+    """Strip stress defined by a known phoneset; preserve unknown tags."""
+    pattern = _STRESS_PATTERNS.get(phoneset)
+    return pattern.sub("", phone) if pattern is not None else phone

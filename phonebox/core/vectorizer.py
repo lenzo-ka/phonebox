@@ -21,7 +21,7 @@ from ..constants import (
     FILE_ENCODING,
     JOIN_CHAR,
 )
-from ..lexicon import parse_dict_line
+from ..lexicon import parse_dict_line, strip_phone_stress
 from ..locale_resolution import (
     canonical_locale,
     orthographic_compatibility,
@@ -29,14 +29,6 @@ from ..locale_resolution import (
 )
 from ..portable_normalization import join_seq, make_join_re
 from .legacy_preprocessing import known_legacy_g2p_rules
-
-# Per-phoneset stress markers; applied only when ``remove_stress=True``.
-# Add more known phonesets here as needed. Unknown phonesets get no-op
-# stress stripping (the phoneset is just a tag, see DEFAULT_PHONESET).
-_STRESS_STRIPPERS: dict[str, re.Pattern[str]] = {
-    "cmu": re.compile(r"[012]"),
-    "xsampa": re.compile(r'["%]'),
-}
 
 logger = get_logger(__name__)
 
@@ -475,25 +467,35 @@ class Vectorizer:
 
         return list(self.next_letter_vector(letters, g2p=True))
 
-    def next_letter_vector(self, letters: str | list[str], g2p: bool = False):
+    def next_letter_vector(
+        self, letters: str | list[str], g2p: bool = False, cooked: bool = False
+    ):
         """Yield one padded context window (width letters) per cooked letter."""
-        letters = self.cook_letters(letters, g2p=g2p)
+        letters = list(letters) if cooked else self.cook_letters(letters, g2p=g2p)
         lett_count = len(letters)  # Use cooked length
         lets = self.padding + letters + self.padding  # Use cooked letters
 
         for n in range(lett_count):
             yield lets[n : n + self.width]
 
-    def next_vector(self, letters: list[str], phones: list[str]):
+    def next_vector(
+        self, letters: list[str], phones: list[str], letters_cooked: bool = False
+    ):
         """Iterator for output letter/phone vectors"""
-        for n, vec in enumerate(self.next_letter_vector(letters, g2p=True)):
+        for n, vec in enumerate(
+            self.next_letter_vector(letters, g2p=True, cooked=letters_cooked)
+        ):
             if self.target_position == "first":
                 yield [phones[n]] + vec
             else:  # "last"
                 yield vec + [phones[n]]
 
     def letters_and_phones(
-        self, line: str, letters_spaced: bool = False, phones_cooked: bool = False
+        self,
+        line: str,
+        letters_spaced: bool = False,
+        phones_cooked: bool = False,
+        letters_cooked: bool = False,
     ) -> tuple[list[str] | None, list[str] | None]:
         """Get lists of letters and phones from dictionary line.
 
@@ -501,6 +503,7 @@ class Vectorizer:
             line: Dictionary or alignment line
             letters_spaced: If True, letters are space-separated (alignment format)
             phones_cooked: If True, skip cooking phones (already cooked in alignment files)
+            letters_cooked: If True, skip cooking letters (already cooked in alignments)
         """
 
         line = ud.normalize("NFC", line.strip())
@@ -515,8 +518,13 @@ class Vectorizer:
             if parsed is None:
                 return None, None
             letters_str, phones = parsed
+            letters = (
+                list(letters_str)
+                if letters_cooked
+                else self.cook_letters(list(letters_str), g2p=True)
+            )
             cooked = phones if phones_cooked else self.cook_phones(phones)
-            return self.cook_letters(list(letters_str), g2p=True), cooked
+            return letters, cooked
         if "\t" in line:
             parts = line.split("\t")
             if len(parts) < 2:
@@ -529,7 +537,8 @@ class Vectorizer:
             letters_str, phones_str = parts
 
         letters_list = letters_str.split(" ") if letters_spaced else list(letters_str)
-        letters_list = self.cook_letters(letters_list, g2p=True)
+        if not letters_cooked:
+            letters_list = self.cook_letters(letters_list, g2p=True)
 
         phones_list = phones_str.split()
         if not phones_cooked:
@@ -541,14 +550,14 @@ class Vectorizer:
         """Accumulate counts and return next alignment vector"""
         # Alignment files have pre-cooked phones (already aligned 1:1 with letters)
         letters, phones = self.letters_and_phones(
-            alignment, letters_spaced=True, phones_cooked=True
+            alignment, letters_spaced=True, phones_cooked=True, letters_cooked=True
         )
         for L in letters:
             self.counts["letters"][L] += 1
         for P in phones:
             self.counts["phones"][P] += 1
 
-        for vector in self.next_vector(letters, phones):
+        for vector in self.next_vector(letters, phones, letters_cooked=True):
             yield " ".join(vector)
 
     def cook_letters(self, letters: str | list[str], g2p: bool = False) -> list[str]:
@@ -661,9 +670,7 @@ class Vectorizer:
             # Strip phoneset-specific stress markers; unknown phonesets pass
             # through unchanged (the caller asked for stripping but we have
             # no rule for this phoneset).
-            stripper = _STRESS_STRIPPERS.get(self.phoneset_name)
-            if stripper is not None:
-                cooked = [stripper.sub("", p) for p in cooked]
+            cooked = [strip_phone_stress(p, self.phoneset_name) for p in cooked]
 
         return self.join_seq(self.phon_join_re, cooked)
 

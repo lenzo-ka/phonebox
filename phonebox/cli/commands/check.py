@@ -41,6 +41,7 @@ from collections import Counter
 from pathlib import Path
 
 from ...constants import DICT_ENCODING, FILE_ENCODING
+from ...lexicon import parse_dict_line
 
 
 def setup_check_command(subparsers):
@@ -113,17 +114,14 @@ def handle_check(args) -> int:
 
     with lex_path.open(encoding=DICT_ENCODING) as f:
         for line in f:
-            line = line.rstrip("\n")
-            if not line or line.startswith(("#", ";;;")):
+            parsed = parse_dict_line(line)
+            if parsed is None:
                 continue
-            parts = line.split("\t")
-            if len(parts) < 2:
-                continue
-            word, phones_str = parts[0], parts[1]
+            word, phones = parsed
             n_entries += 1
             if ud.normalize("NFC", word) != word and len(word_not_nfc) < 20:
                 word_not_nfc.append(word)
-            for p in phones_str.split():
+            for p in phones:
                 lex_phone_counts[p] += 1
                 if (
                     p not in spec_raw_set

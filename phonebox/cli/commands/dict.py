@@ -51,6 +51,9 @@ Examples:
     process_parser.add_argument("dictionary", type=Path)
     process_parser.add_argument("-o", "--output", required=True, type=Path)
     process_parser.add_argument("--remove-stress", action="store_true")
+    process_parser.add_argument(
+        "--phoneset", default="cmu", help="Phoneset stress syntax (default: cmu)"
+    )
     process_parser.add_argument("--lowercase", action="store_true")
     process_parser.add_argument(
         "--phone-map",
@@ -115,6 +118,7 @@ def handle_dict_process(args):
     try:
         Dictionary(args.dictionary).process(
             remove_stress=args.remove_stress,
+            phoneset=args.phoneset,
             lowercase=args.lowercase,
             phone_mapping=mapping,
             output=args.output,

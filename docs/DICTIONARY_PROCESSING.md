@@ -4,8 +4,9 @@
 line parser. A line contains a word, optional numeric variant suffix, and phones
 separated by arbitrary whitespace; `#` starts an inline comment.
 
-Processing applies lowercase and stress options, then an optional literal phone
-mapping or Python `phone_transform`. Deduplication happens after those operations.
+Processing applies lowercase and an optional literal phone mapping or Python
+`phone_transform`, then optional phoneset-specific stress removal. Deduplication
+happens after those operations.
 For each word, the first distinct pronunciation is written under the bare spelling
 and later distinct pronunciations use dense `(2)`, `(3)`, … suffixes in first
 occurrence order.
@@ -36,5 +37,7 @@ processed = Dictionary("input.dict").process(
 
 For a context-dependent mapping, pass `phone_transform` instead: a callable that
 receives a list of phones and returns a nonempty list of phones. Stress stripping
-is optional (`remove_stress=True` or `--remove-stress`) and runs before the mapping.
+is optional (`remove_stress=True` or `--remove-stress`) and uses the selected
+phoneset's syntax (`phoneset="cmu"` or `--phoneset cmu`). Unknown phoneset tags
+preserve phone tokens.
 Input and output must be different files.

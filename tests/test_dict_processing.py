@@ -54,6 +54,18 @@ class TestParseDictLine:
         assert "".join(letters) == "word"
         assert cooked == ["W", "ER1", "D"]
 
+    def test_dictionary_letters_cooked_flag_controls_rewrites(self):
+        vectorizer = Vectorizer(
+            locale="default",
+            phoneset_name="cmu",
+            cased=True,
+            spelling_rewrites={"a": "b"},
+        )
+        raw_letters, _ = vectorizer.letters_and_phones("a AH")
+        cooked_letters, _ = vectorizer.letters_and_phones("a AH", letters_cooked=True)
+        assert raw_letters == ["b"]
+        assert cooked_letters == ["a"]
+
     def test_variant_markers(self):
         """Test handling of variant markers like (2)."""
         word, phones = parse_dict_line("word(2) W ER D")
@@ -162,6 +174,27 @@ class TestDictionaryProcessing:
             "read(2) R EH D",
         ]
 
+    def test_phone_mapping_precedes_stress_and_deduplication(self, tmp_path):
+        source = tmp_path / "input.dict"
+        source.write_text("read R IY1 D\nread(2) R X1 D\n")
+        processed = Dictionary(source).process(
+            phone_mapping={"IY1": "X1"},
+            remove_stress=True,
+            phoneset="cmu",
+            output=tmp_path / "output.dict",
+        )
+        assert processed.path.read_text() == "read R X D\n"
+
+    def test_unknown_phoneset_preserves_trailing_digits(self, tmp_path):
+        source = tmp_path / "input.dict"
+        source.write_text("word TONE1 X2 A3\n")
+        processed = Dictionary(source).process(
+            remove_stress=True,
+            phoneset="custom",
+            output=tmp_path / "output.dict",
+        )
+        assert processed.path.read_text() == "word TONE1 X2 A3\n"
+
     def test_phone_mapping_requires_phone_list(self, tmp_path):
         input_file = tmp_path / "input.dict"
         input_file.write_text("word W ER D\n")
@@ -221,6 +254,38 @@ class TestDictionaryProcessing:
             == 0
         )
         assert output.read_text() == "read R IY D\n"
+
+    def test_check_cli_uses_shared_whitespace_comment_grammar(self, tmp_path, capsys):
+        lexicon = tmp_path / "input.dict"
+        phoneset = tmp_path / "phones.json"
+        lexicon.write_text("word(2)   W BAD # note\n")
+        phoneset.write_text('["W"]')
+        assert (
+            main(
+                [
+                    "check",
+                    "--lexicon",
+                    str(lexicon),
+                    "--phoneset",
+                    str(phoneset),
+                    "--strict",
+                ]
+            )
+            == 1
+        )
+        output = capsys.readouterr().out
+        assert "lexicon: 1 entries" in output
+        assert "BAD" in output
+
+    def test_alignment_letters_are_not_recooked(self):
+        vectorizer = Vectorizer(
+            locale="default",
+            phoneset_name="cmu",
+            cased=True,
+            spelling_rewrites={"a": "b", "b": "c"},
+        )
+        vector = next(vectorizer.next_alignment_vector("b\tAH1"))
+        assert vector.split()[vectorizer.width // 2] == "b"
 
     def test_process_default_output_path(self, tmp_path):
         """Test default output path generation."""

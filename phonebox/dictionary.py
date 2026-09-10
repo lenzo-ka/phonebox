@@ -6,7 +6,6 @@ Dictionary class for managing pronunciation dictionaries.
 from __future__ import annotations
 
 import json
-import re
 import urllib.error
 import urllib.request
 from collections import defaultdict
@@ -16,7 +15,7 @@ from typing import Any, TextIO
 
 from .constants import DICT_ENCODING, DOWNLOAD_TIMEOUT_SECONDS
 from .core.decision_tree import DecisionTree
-from .lexicon import parse_dict_line
+from .lexicon import parse_dict_line, strip_phone_stress
 from .utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -28,7 +27,7 @@ CMUDICT_REPO = "https://raw.githubusercontent.com/cmusphinx/cmudict/master"
 
 def strip_stress(phoneme: str) -> str:
     """Remove stress markers from a phoneme."""
-    return re.sub(r"[012]$", "", phoneme)
+    return strip_phone_stress(phoneme, "cmu")
 
 
 def phone_mapping_transform(
@@ -138,6 +137,7 @@ class Dictionary:
         deduplicate: bool,
         sort_output: bool,
         phone_transform: Callable[[list[str]], list[str]] | None,
+        phoneset: str,
     ) -> int:
         """Internal method to normalize dictionary."""
         word_pronunciations: dict[str, list[str]] = defaultdict(list)
@@ -152,8 +152,6 @@ class Dictionary:
             if lowercase:
                 base_word = base_word.lower()
 
-            if remove_stress:
-                phonemes = [strip_stress(p) for p in phonemes]
             if phone_transform is not None:
                 phonemes = phone_transform(phonemes)
                 if (
@@ -164,6 +162,8 @@ class Dictionary:
                     raise TypeError(
                         "phone_transform must return a list of nonempty strings"
                     )
+            if remove_stress:
+                phonemes = [strip_phone_stress(p, phoneset) for p in phonemes]
 
             pronunciation = " ".join(phonemes)
 
@@ -192,6 +192,7 @@ class Dictionary:
         output: str | Path | None = None,
         phone_transform: Callable[[list[str]], list[str]] | None = None,
         phone_mapping: Mapping[str, str | list[str]] | None = None,
+        phoneset: str = "cmu",
     ) -> Dictionary:
         """
         Process dictionary with various transformations.
@@ -207,6 +208,8 @@ class Dictionary:
             phone_mapping: Literal phone replacements. Each value is one phone
                 or a nonempty list of phones. Mutually exclusive with
                 ``phone_transform``.
+            phoneset: Phoneset tag selecting stress syntax. Unknown tags preserve
+                phone tokens when ``remove_stress`` is enabled.
 
         Returns:
             New Dictionary instance pointing to processed file
@@ -246,6 +249,7 @@ class Dictionary:
                 deduplicate=deduplicate,
                 sort_output=sort_output,
                 phone_transform=phone_transform,
+                phoneset=phoneset,
             )
 
         return Dictionary(path=output, dict_format=self.dict_format, locale=self.locale)
