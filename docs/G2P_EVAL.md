@@ -152,9 +152,11 @@ they never saved.
 Italian folds acute and grave accents on `a`, `i`, and `u` to their base
 letters because the current phones are segmental and do not recover lexical
 stress. The vowel-quality spellings remain distinct: `è→ɛ`, `é→e`, `ò→ɔ`, and
-`ó→o`. Snapshot-absent Italian models use the frozen policy from immediately
-before the a/i/u folding change; current training saves the new rules. This is
-a targeted vocabulary-coverage result rather than a broad accuracy claim.
+`ó→o`. Snapshot-absent CART models and legacy multigram CLI reconstruction use
+the frozen policy from immediately before the a/i/u folding change. Direct old
+MultigramG2P library inference retains its documented lowercase, per-character
+behavior. Current training saves the new rules. This is a targeted
+vocabulary-coverage result rather than a broad accuracy claim.
 
 1:1 inference: `phonebox pronounce -m tree-only.g2p.gz` (no sidecar).
 

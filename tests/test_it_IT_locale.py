@@ -4,12 +4,16 @@ from __future__ import annotations
 
 import gzip
 import json
+import subprocess
+import sys
 import unicodedata
 
 import pytest
 
 from phonebox import G2P
+from phonebox.bundler import bundle_g2p
 from phonebox.core.vectorizer import Vectorizer
+from phonebox.runner import G2PRunner
 
 JOIN = "\u208a"
 
@@ -89,6 +93,46 @@ def test_public_g2p_folds_accented_aiu_to_trained_plain_spellings(tmp_path):
         assert g2p.pronounce(word) == phones
         assert g2p.pronounce(word.upper()) == phones
         assert g2p.pronounce(unicodedata.normalize("NFD", word)) == phones
+
+
+def test_italian_accented_words_match_runner_and_bundle(tmp_path):
+    dictionary = tmp_path / "italian-accents-deployment.dict"
+    dictionary.write_text(
+        "citta tʃ i t t a\ncosi k o z i\npiu p j u\nlagumina l a ɡ u m i n a\n",
+        encoding="utf-8",
+    )
+    g2p = G2P.train(
+        dictionary,
+        locale="it_IT",
+        phoneset="ipa",
+        use_dict_fallback=False,
+        verbose=False,
+    )
+    cart_path = tmp_path / "italian-accents.cart"
+    model_path = tmp_path / "italian-accents.g2p.gz"
+    bundle_path = tmp_path / "italian-accents.py"
+    g2p._dt.export(str(cart_path), include_exceptions=False)
+    g2p._dt.export(str(model_path), include_exceptions=False)
+    runner = G2PRunner(str(cart_path))
+    bundle_g2p(str(model_path), str(bundle_path))
+
+    expected = {
+        "città": ["tʃ", "i", "t", "t", "a"],
+        "così": ["k", "o", "z", "i"],
+        "più": ["p", "j", "u"],
+        "lagúmina": ["l", "a", "ɡ", "u", "m", "i", "n", "a"],
+    }
+    for word, phones in expected.items():
+        for variant in (word, unicodedata.normalize("NFD", word)):
+            assert g2p.pronounce(variant) == phones
+            assert runner.pronounce(variant) == phones
+            result = subprocess.run(
+                [sys.executable, "-S", str(bundle_path), variant],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            assert result.stdout.strip().partition("\t")[2].split() == phones
 
 
 def test_it_snapshot_and_known_legacy_policy_remain_distinct(tmp_path):
