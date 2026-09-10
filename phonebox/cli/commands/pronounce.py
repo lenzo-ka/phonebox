@@ -98,7 +98,6 @@ def handle_pronounce(args):
             )
             return 1
         from ...core.multigram_g2p import MultigramG2P
-        from ...core.vectorizer import Vectorizer
 
         try:
             mg = MultigramG2P.load(model_path)
@@ -114,11 +113,12 @@ def handle_pronounce(args):
         locale = args.locale or mg.locale
         phoneset = args.phoneset or mg.phoneset_name or "ipa"
         vec = None
-        if locale:
+        if mg.preprocessor is None and locale:
+            from ...core.vectorizer import Vectorizer
+
             vec = Vectorizer(locale=locale, phoneset_name=phoneset, remove_stress=False)
-            if mg.preprocessor is None:
-                vec._use_legacy_locale_preprocessing()
-        if locale is None:
+            vec._use_legacy_locale_preprocessing()
+        if mg.preprocessor is None and locale is None:
             print(
                 "Warning: no locale in model metadata; using per-character letters "
                 "(pass --locale for joined graphemes)",

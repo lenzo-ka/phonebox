@@ -20,7 +20,7 @@ import json
 import os
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, cast
 
@@ -63,7 +63,7 @@ def _write_locale_doc(
     lines = [
         f"# G2P experiments: {locale}",
         "",
-        f"Updated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}",
+        f"Updated: {datetime.now(UTC).strftime('%Y-%m-%d %H:%M UTC')}",
         "",
         "Baseline numbers (unaltered lexicon, seed 42) are frozen in "
         "[`G2P_COMPARE_BASELINE.md`](../G2P_COMPARE_BASELINE.md).",
@@ -308,7 +308,7 @@ def main() -> int:
     index_lines = [
         "# G2P experiments (it_IT, pt_BR)",
         "",
-        f"Last run: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}",
+        f"Last run: {datetime.now(UTC).strftime('%Y-%m-%d %H:%M UTC')}",
         "",
         "Frozen pre-experiment metrics: [`G2P_COMPARE_BASELINE.md`](../G2P_COMPARE_BASELINE.md).",
         "",

@@ -48,9 +48,9 @@ def _normalize_help_aliases(argv: list[str]) -> list[str]:
         return argv
     if argv[0] == "help":
         return [*argv[1:], "--help"] if len(argv) > 1 else ["--help"]
-    if "help" in argv:
-        index = argv.index("help")
-        return [*argv[:index], *argv[index + 1 :], "--help"]
+    command_groups = {"compare", "dict", "model"}
+    if argv[0] in command_groups and len(argv) > 1 and argv[1] == "help":
+        return [argv[0], *argv[2:], "--help"]
     return argv
 
 

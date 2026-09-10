@@ -20,7 +20,7 @@ import os
 import random
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from phonebox.core.vectorizer import Vectorizer
@@ -90,7 +90,7 @@ def main() -> int:
     lines = [
         "# n:m sweep: letter span × LM order",
         "",
-        f"Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}",
+        f"Generated: {datetime.now(UTC).strftime('%Y-%m-%d %H:%M UTC')}",
         "",
         "## Setup",
         "",

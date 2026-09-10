@@ -83,7 +83,7 @@ def demo_confidence_scoring(g2p):
         phones, confidences = g2p.pronounce_with_confidence(word)
 
         print(f"{word:10}", end="  ")
-        for phone, conf in zip(phones, confidences):
+        for phone, conf in zip(phones, confidences, strict=True):
             # Color code by confidence
             if conf >= 0.9:
                 marker = "+"  # High confidence

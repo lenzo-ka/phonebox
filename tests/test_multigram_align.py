@@ -124,7 +124,7 @@ def test_loglikelihood_is_monotone_nondecreasing():
     history = aligner.loglik_history
     assert len(history) > 1
     # Allow a tiny epsilon for floating-point noise from per-column scaling
-    for prev, curr in zip(history, history[1:]):
+    for prev, curr in zip(history, history[1:], strict=False):
         assert curr >= prev - 1e-6, (
             f"LL decreased: prev={prev:.4f} curr={curr:.4f} (history={history})"
         )

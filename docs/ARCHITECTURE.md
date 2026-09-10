@@ -124,8 +124,8 @@ The CLI uses a unified `phonebox` command with subcommands:
 |---------|---------|---------|
 | `phonebox recipe` | Build G2P from dictionary (one-shot) | `phonebox recipe cmudict pocketsphinx -o g2p.py` |
 | `phonebox pronounce` | Get pronunciations | `phonebox pronounce hello world -m model.g2p.gz` |
-| `phonebox normalize` | Preview text normalization | `phonebox normalize "Hello, world!"` |
-| `phonebox bundle` | Bundle model into standalone runner | `phonebox bundle model.g2p.gz -o g2p.py` |
+| `phonebox normalize` | Preview model-independent text tokenization | `phonebox normalize "Hello, world!"` |
+| `phonebox bundle` | Bundle a decision-tree model into a standalone runner | `phonebox bundle model.g2p.gz -o g2p.py` |
 | `phonebox model build` | Build complete model | `phonebox model build en_US dict.txt -o model.g2p.gz` |
 | `phonebox model train` | Train from aligned data | `phonebox model train en_US --alignments aligned.txt -o model.g2p.gz` |
 | `phonebox model benchmark` | Benchmark performance | `phonebox model benchmark model.g2p.gz` |
@@ -187,7 +187,7 @@ Dictionary Sources
 
 ### `core/` (Core Algorithms)
 - Self-contained implementations
-- Dependencies: cartlet (decision trees), PyICU (optional, transliteration)
+- Runtime dependencies: cartlet (decision trees) and icukit (locale transliteration)
 - Reusable components
 
 ### `cli/` (Command-Line Tools)

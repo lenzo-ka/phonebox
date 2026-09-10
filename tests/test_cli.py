@@ -127,6 +127,13 @@ class TestCLIHelp:
         assert result.returncode == 0
         assert "--output" in result.stdout
 
+    @pytest.mark.parametrize(
+        "arguments", [["normalize", "help"], ["normalize", "--", "help"]]
+    )
+    def test_literal_help_operand_is_not_rewritten(self, arguments, capsys):
+        assert main(arguments) == 0
+        assert capsys.readouterr().out == "help\n"
+
 
 class TestPronounceCommand:
     """Test g2p pronounce command."""
