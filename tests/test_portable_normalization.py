@@ -110,6 +110,13 @@ def test_icu_mark_removal_removes_all_mark_categories_without_decomposition():
     assert apply_portable_preprocessing("a\u0903", program) == ["a"]
 
 
+def test_filter_flag_recomposes_preserved_marks_like_vectorizer():
+    program = compile_letter_preprocessing(
+        _snapshot(None, cased=True, filter_non_letters=True)
+    )
+    assert apply_portable_preprocessing("e\u0301", program) == ["é"]
+
+
 @pytest.mark.parametrize(
     "rules",
     [
@@ -120,6 +127,8 @@ def test_icu_mark_removal_removes_all_mark_categories_without_decomposition():
         ":: [^a-z[:L:]] Remove ;",
         ". > x ;",
         "a > 'b' ;",
+        "\\u0061b > c ;",
+        ":: [^'-\\.[:L:]] Remove ;",
     ],
 )
 def test_unsupported_icu_invalidates_the_whole_program(rules):

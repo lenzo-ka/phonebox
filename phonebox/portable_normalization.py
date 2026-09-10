@@ -9,8 +9,11 @@ class PortableNormalizationError(ValueError):
 
 
 _NORMAL_FORMS = {"NFC", "NFD", "NFKC", "NFKD"}
-_UNICODE_SCALAR_RE = re.compile(r"\\u([0-9A-Fa-f]{4,6})")
-_FILTER_RE = re.compile(r"^\[\^([\\.'-]*)\[:L:\]\]\s+Remove$", re.IGNORECASE)
+_UNICODE_SCALAR_RE = re.compile(r"\\u([0-9A-Fa-f]{4})")
+_SHIPPED_FILTERS = {
+    "[^-.'[:l:]] remove": "-.'",
+    "[^-.[:l:]] remove": "-.",
+}
 
 
 def _exact_scalar(value):
@@ -19,7 +22,7 @@ def _exact_scalar(value):
     if escaped:
         scalar = chr(int(escaped.group(1), 16))
         return scalar if not 0xD800 <= ord(scalar) <= 0xDFFF else None
-    if len(value) == 1 and not value.isspace() and value not in "[]().*+?{}|^$\\'\"":
+    if len(value) == 1 and value.isalpha():
         return value
     return None
 
@@ -54,9 +57,8 @@ def _compile_rules(rules, label):
             elif directive.lower() == "[:m:] remove":
                 operations.append({"op": "remove_mark_characters"})
             else:
-                match = _FILTER_RE.fullmatch(directive)
-                if match:
-                    keep = match.group(1).replace("\\-", "-")
+                keep = _SHIPPED_FILTERS.get(directive.lower())
+                if keep is not None:
                     operations.append(
                         {"op": "filter", "categories": ["L"], "keep": keep}
                     )
@@ -114,9 +116,11 @@ def compile_letter_preprocessing(snapshot):
     if remove_accents:
         operations.append({"op": "remove_accents"})
     if filter_non_letters:
+        operations.append({"op": "normalize", "form": "NFD"})
         operations.append(
             {"op": "filter", "categories": ["L", "Mn", "Mc"], "keep": "-.'"}
         )
+        operations.append({"op": "normalize", "form": "NFC"})
 
     unsupported = []
     for key in ("norm_rules", "g2p_rules"):
