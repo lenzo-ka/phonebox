@@ -2,14 +2,17 @@
 #
 # Spanish accents (á é í ó ú) only mark stress and are not phonemic, so we
 # drop them. ñ and ü, on the other hand, ARE phonemic (/ɲ/ and the /w/
-# trigger in gue/gui). We protect them with PUA placeholders before doing
-# NFD + combining-mark removal, then restore them afterwards. Finally we
-# drop any non-letter / non-{-.'} characters and lowercase.
+# trigger in gue/gui). We NFC-normalize first so canonically equivalent
+# decomposed spellings are protected with the same PUA placeholders. We then
+# use NFD + combining-mark removal, restore ñ and ü, remove unwanted
+# characters, and lowercase.
 #
 # The bare `:: Null ;` between the restoration rules and the next filter
 # directive is intentional: ICU compound rule chains need a no-op
 # transliterator there to flush the conversion rules so that the trailing
 # `:: Any-Lower ;` actually runs.
+
+:: NFC ;
 
 \u00F1 > \uE001 ;
 \u00D1 > \uE002 ;
