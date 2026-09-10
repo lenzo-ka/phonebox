@@ -57,9 +57,12 @@ phonebox pronounce hello world -m model.g2p.gz
 # Preview text normalization
 phonebox normalize "Hello, world!"
 
-# Bundle existing model
+# Bundle an existing decision-tree model
 phonebox bundle model.g2p.gz -o g2p.py
 ```
+
+Standalone bundling supports decision-tree models; use `phonebox pronounce` or
+the full library for multigram models.
 
 ## Step-by-Step Training (for debugging)
 

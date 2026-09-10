@@ -11,6 +11,9 @@ Phonebox separates **training** (development) from **inference** (production):
 
 ## Creating Deployable Bundles
 
+Standalone bundles support decision-tree models. Use the full phonebox library
+or CLI for multigram inference.
+
 ### Step 1: Train a Model
 
 ```bash

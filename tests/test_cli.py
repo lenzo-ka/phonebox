@@ -306,7 +306,6 @@ class TestPronounceCommand:
 
 def test_bundle_rejects_multigram_sidecar_before_loading(tmp_path, capsys):
     model = tmp_path / "model.g2p.gz"
-    model.write_bytes(b"not needed")
     model.with_suffix(".gz.units.json").write_text("{}", encoding="utf-8")
     output = tmp_path / "g2p.py"
 

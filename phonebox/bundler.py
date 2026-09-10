@@ -79,7 +79,7 @@ def bundle_g2p(model_path: str, output_path: str) -> None:
         ValueError: The model is a multigram artifact, which is not supported.
     """
     model = Path(model_path)
-    if model.with_suffix(model.suffix + ".units.json").is_file():
+    if not model.exists() and model.with_suffix(model.suffix + ".units.json").is_file():
         raise ValueError(
             "standalone bundling supports decision-tree models only; "
             "the selected model has a MultigramG2P sidecar"
