@@ -24,7 +24,27 @@ _ES_MX_G2P_RULES = r"""
 :: Any-Lower ;
 """
 
-_KNOWN_G2P_RULES = {"es_MX": _ES_MX_G2P_RULES}
+_IT_IT_G2P_RULES = r"""
+:: NFC ;
+
+\u00E8 > \u025B ;
+\u00C8 > \u025B ;
+\u00E9 > e ;
+\u00C9 > e ;
+\u00F2 > \u0254 ;
+\u00D2 > \u0254 ;
+\u00F3 > o ;
+\u00D3 > o ;
+
+:: Any-Lower ;
+:: Null ;
+:: [^-.[:L:]] Remove ;
+"""
+
+_KNOWN_G2P_RULES = {
+    "es_MX": _ES_MX_G2P_RULES,
+    "it_IT": _IT_IT_G2P_RULES,
+}
 
 
 def known_legacy_g2p_rules(locale: str | None) -> str | None:

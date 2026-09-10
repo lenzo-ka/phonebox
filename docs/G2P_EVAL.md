@@ -149,6 +149,13 @@ the current policy. Models older than that known policy, or trained with
 unrecorded custom locale rules, cannot be reconstructed exactly from metadata
 they never saved.
 
+Italian folds acute and grave accents on `a`, `i`, and `u` to their base
+letters because the current phones are segmental and do not recover lexical
+stress. The vowel-quality spellings remain distinct: `è→ɛ`, `é→e`, `ò→ɔ`, and
+`ó→o`. Snapshot-absent Italian models use the frozen policy from immediately
+before the a/i/u folding change; current training saves the new rules. This is
+a targeted vocabulary-coverage result rather than a broad accuracy claim.
+
 1:1 inference: `phonebox pronounce -m tree-only.g2p.gz` (no sidecar).
 
 ## Related CLI

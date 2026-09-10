@@ -2,6 +2,13 @@
 
 from __future__ import annotations
 
+import gzip
+import json
+import unicodedata
+
+import pytest
+
+from phonebox import G2P
 from phonebox.core.vectorizer import Vectorizer
 
 JOIN = "\u208a"
@@ -34,6 +41,82 @@ def test_it_phonemic_accents_map_to_ipa_graphemes():
     vec = Vectorizer(locale="it_IT", phoneset_name="ipa")
     assert vec.cook_letters("caffè", g2p=True) == ["c", "a", "f", "f", "ɛ"]
     assert vec.cook_letters("abbandonò", g2p=True)[-1] == "ɔ"
+
+
+@pytest.mark.parametrize(
+    ("letter", "expected"),
+    [
+        ("à", "a"),
+        ("á", "a"),
+        ("ì", "i"),
+        ("í", "i"),
+        ("ù", "u"),
+        ("ú", "u"),
+        ("è", "ɛ"),
+        ("é", "e"),
+        ("ò", "ɔ"),
+        ("ó", "o"),
+    ],
+)
+def test_it_accent_policy_is_stable_across_case_and_normalization(letter, expected):
+    vec = Vectorizer(locale="it_IT", phoneset_name="ipa")
+    variants = (letter, letter.upper(), unicodedata.normalize("NFD", letter))
+    assert ["".join(vec.cook_letters(value, g2p=True)) for value in variants] == [
+        expected
+    ] * 3
+
+
+def test_public_g2p_folds_accented_aiu_to_trained_plain_spellings(tmp_path):
+    dictionary = tmp_path / "italian-accents.dict"
+    dictionary.write_text(
+        "citta k i t t a\ncosi k o z i\npiu p i u\nlagumina l a g u m i n a\n",
+        encoding="utf-8",
+    )
+    g2p = G2P.train(
+        dictionary,
+        locale="it_IT",
+        phoneset="ipa",
+        use_dict_fallback=False,
+        verbose=False,
+    )
+    expected = {
+        "città": ["k", "i", "t", "t", "a"],
+        "così": ["k", "o", "z", "i"],
+        "più": ["p", "i", "u"],
+        "lagúmina": ["l", "a", "g", "u", "m", "i", "n", "a"],
+    }
+    for word, phones in expected.items():
+        assert g2p.pronounce(word) == phones
+        assert g2p.pronounce(word.upper()) == phones
+        assert g2p.pronounce(unicodedata.normalize("NFD", word)) == phones
+
+
+def test_it_snapshot_and_known_legacy_policy_remain_distinct(tmp_path):
+    dictionary = tmp_path / "italian-snapshot.dict"
+    dictionary.write_text("citta k i t t a\n", encoding="utf-8")
+    model_path = tmp_path / "italian.g2p.gz"
+    G2P.train(
+        dictionary,
+        locale="it_IT",
+        phoneset="ipa",
+        use_dict_fallback=False,
+        output=model_path,
+        verbose=False,
+    )
+
+    current = G2P(model=model_path, use_dict_fallback=False)
+    assert "".join(current._dt.vectorizer.cook_letters("città", g2p=True)) == "citta"
+
+    with gzip.open(model_path, "rt", encoding="utf-8") as infile:
+        rows = [json.loads(line) for line in infile]
+    rows[-1]["metadata"].pop("letter_preprocessing")
+    with gzip.open(model_path, "wt", encoding="utf-8") as outfile:
+        for row in rows:
+            outfile.write(json.dumps(row, ensure_ascii=False) + "\n")
+
+    legacy = G2P(model=model_path, use_dict_fallback=False)
+    assert "".join(legacy._dt.vectorizer.cook_letters("città", g2p=True)) == "città"
+    assert "".join(legacy._dt.vectorizer.cook_letters("caffè", g2p=True)) == "caffɛ"
 
 
 def test_it_apostrophe_stripped():
