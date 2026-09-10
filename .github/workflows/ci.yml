@@ -34,6 +34,10 @@ jobs:
         run: |
           pytest tests/ -v --tb=short
 
+      - name: Verify generated exemplar inventory
+        if: matrix.python-version == '3.12' && matrix.os == 'ubuntu-latest'
+        run: python tools/generate_exemplars.py --check
+
       - name: Run tests with coverage
         if: matrix.python-version == '3.12' && matrix.os == 'ubuntu-latest'
         run: |
