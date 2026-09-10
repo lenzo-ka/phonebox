@@ -56,7 +56,7 @@ def decode_phones(target: str) -> list[str]:
 class MultigramG2P:
     """n:m G2P: EM unit model + unit n-gram LM + joint Viterbi decode."""
 
-    VERSION = "3"
+    VERSION = "4"
 
     def __init__(
         self,
@@ -72,6 +72,7 @@ class MultigramG2P:
         parallel_viterbi: bool = False,
         num_workers: int | None = None,
         min_unit_mass: float = DEFAULT_MULTIGRAM_MIN_UNIT_MASS,
+        preprocessor=None,
     ) -> None:
         self.aligner = MultigramAligner(
             max_letter_span=max_letter_span,
@@ -93,6 +94,11 @@ class MultigramG2P:
         self.exceptions: dict[str, list[str]] = {}
         self.locale: str | None = None
         self.phoneset_name: str | None = None
+        self.preprocessor = preprocessor
+
+    def set_preprocessor(self, vectorizer) -> None:
+        """Attach the Vectorizer whose raw-word cooking was used for training."""
+        self.preprocessor = vectorizer
 
     # ----------- training
 
@@ -108,7 +114,13 @@ class MultigramG2P:
                 word, phones = parsed
                 if not word or not phones:
                     continue
-                out.append((list(word.lower()), list(phones)))
+                if self.preprocessor is not None:
+                    letters = self.preprocessor.cook_letters(word, g2p=True)
+                    cooked_phones = self.preprocessor.cook_phones(list(phones))
+                else:
+                    letters = list(word.lower())
+                    cooked_phones = list(phones)
+                out.append((letters, cooked_phones))
         if self.verbose:
             logger.info("MultigramG2P: loaded %d entries from %s", len(out), path)
         return out
@@ -192,11 +204,18 @@ class MultigramG2P:
         return phones if phones is not None else []
 
     def pronounce(self, word: str) -> list[str]:
-        """Predict phones for a raw word string (per-character split).
+        """Predict phones for a raw word using saved training preprocessing.
 
-        Prefer ``pronounce_letters`` after ``Vectorizer.cook_letters``.
+        Legacy v3 models without a preprocessing snapshot retain their former
+        lowercase, per-character behavior.  Use :meth:`pronounce_letters` for
+        an explicitly pre-cooked token sequence.
         """
-        return self.pronounce_letters(list(word.lower()), word=word)
+        letters = (
+            self.preprocessor.cook_letters(word, g2p=True)
+            if self.preprocessor is not None
+            else list(word.lower())
+        )
+        return self.pronounce_letters(letters, word=word)
 
     # ----------- save/load
 
@@ -229,6 +248,10 @@ class MultigramG2P:
             meta["locale"] = self.locale
         if self.phoneset_name:
             meta["phoneset_name"] = self.phoneset_name
+        if self.preprocessor is not None:
+            meta["letter_preprocessing"] = (
+                self.preprocessor.export_letter_preprocessing()
+            )
         lm_path.write_text(
             json.dumps(self.lm.to_dict(), indent=2, ensure_ascii=False) + "\n",
             encoding=FILE_ENCODING,
@@ -273,6 +296,18 @@ class MultigramG2P:
             }
         inst.locale = meta.get("locale")
         inst.phoneset_name = meta.get("phoneset_name")
+        if "letter_preprocessing" in meta:
+            snapshot = meta["letter_preprocessing"]
+            if not isinstance(snapshot, dict):
+                raise ValueError("malformed letter_preprocessing metadata")
+            from .vectorizer import Vectorizer
+
+            vectorizer = Vectorizer(
+                locale=inst.locale,
+                phoneset_name=inst.phoneset_name or "ipa",
+                letter_preprocessing=snapshot,
+            )
+            inst.preprocessor = vectorizer
         return inst
 
 

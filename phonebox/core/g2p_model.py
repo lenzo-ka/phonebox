@@ -908,8 +908,11 @@ class G2PDecisionTree:
             # trained on (say) es_MX but loaded via G2P() (default locale
             # en_US) would silently keep the en_US xlit and mangle inputs.
             loaded_locale = pick("locale", v.locale)
-            if loaded_locale != v.locale:
+            has_preprocessing_snapshot = "letter_preprocessing" in metadata
+            if loaded_locale != v.locale and not has_preprocessing_snapshot:
                 v.setup_locale(loaded_locale)
+            elif has_preprocessing_snapshot:
+                v.locale = v.canonical_locale_for(loaded_locale)
             v.phoneset_name = pick("phoneset_name", v.phoneset_name)
             v.remove_stress = pick("remove_stress", v.remove_stress)
             v.remove_accents = pick("remove_accents", v.remove_accents)
@@ -936,6 +939,16 @@ class G2PDecisionTree:
             v.phon_join_re = make_join_re(phone_joins) if phone_joins else None
             # Keep vectorizer.config consistent so a re-export round-trips.
             v.config = {"join": {"letters": letter_joins, v.phoneset_name: phone_joins}}
+
+            # Snapshot-era models carry their exact transliterator rules and
+            # active joins.  Restore them last so package locale updates cannot
+            # reinterpret an already-trained model.  Absence means the legacy
+            # metadata contract above; a present malformed snapshot is an error.
+            if "letter_preprocessing" in metadata:
+                snapshot = metadata["letter_preprocessing"]
+                if not isinstance(snapshot, dict):
+                    raise ValueError("malformed letter_preprocessing metadata")
+                v.load_letter_preprocessing(snapshot)
 
             # Load embedded exceptions dictionary (saved under metadata).
             exceptions = pick("exceptions", None)

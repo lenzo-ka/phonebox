@@ -29,15 +29,14 @@ class RuleTransliterator:
         self, path: str | Path | None = None, rules: str | None = None
     ) -> None:
         self.path = path
+        if path and rules is None:
+            with open(path, encoding=FILE_ENCODING) as f:
+                rules = f.read()
         self.rules = rules
         self._transliterator = None
 
         if HAS_ICU and (rules or path):
             try:
-                if path:
-                    with open(path, encoding=FILE_ENCODING) as f:
-                        rules = f.read()
-
                 if rules:
                     self._transliterator = icu.Transliterator.createFromRules(
                         "Custom", rules, icu.UTransDirection.FORWARD

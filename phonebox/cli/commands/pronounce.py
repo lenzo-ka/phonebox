@@ -87,6 +87,12 @@ def handle_pronounce(args):
         except Exception as e:
             print(f"Error loading multigram model: {e}", file=sys.stderr)
             return 1
+        if mg.preprocessor is not None and (args.locale or args.phoneset):
+            print(
+                "Error: --locale/--phoneset cannot override preprocessing saved in this model",
+                file=sys.stderr,
+            )
+            return 2
         locale = args.locale or mg.locale
         phoneset = args.phoneset or mg.phoneset_name or "ipa"
         vec = None
@@ -100,6 +106,8 @@ def handle_pronounce(args):
             )
 
         def pronounce_word(w: str) -> list[str]:
+            if mg.preprocessor is not None:
+                return mg.pronounce(w)
             if vec is not None:
                 return mg.pronounce_letters(vec.cook_letters(w, g2p=True), word=w)
             return mg.pronounce(w)

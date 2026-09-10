@@ -139,8 +139,10 @@ g2p = G2P(model="model.g2p.gz")
 phones = g2p.pronounce("hello")
 print(phones)  # ['HH', 'AH', 'L', 'OW']
 
-# n:m multigram (train via CLI or library)
-mg = MultigramG2P(max_letter_span=2, max_phone_span=2)
+# n:m multigram: the vectorizer is saved with the model and reused by pronounce()
+from phonebox.core.vectorizer import Vectorizer
+vec = Vectorizer(locale="en_US", phoneset_name="cmu")
+mg = MultigramG2P(max_letter_span=2, max_phone_span=2, preprocessor=vec)
 mg.train_from_dict("lexicon.tsv")
 # phonebox train-multigram … ; phonebox pronounce -m model.g2p.gz (sidecar auto-detect)
 

@@ -46,6 +46,13 @@ def setup_train_multigram_command(subparsers) -> None:
         action="store_true",
         help="Disable locale config.json letter/phone joins before training.",
     )
+    parser.add_argument(
+        "--spelling-rewrite",
+        action="append",
+        default=[],
+        metavar="FROM=TO",
+        help="Rewrite a grapheme before training and inference (repeatable).",
+    )
     parser.add_argument("-v", "--verbose", action="store_true")
     parser.set_defaults(func=handle_train_multigram)
 
@@ -70,8 +77,24 @@ def handle_train_multigram(args) -> int:
     out = Path(args.output)
     out.parent.mkdir(parents=True, exist_ok=True)
 
+    spelling_rewrites: dict[str, str] = {}
+    for item in args.spelling_rewrite:
+        if "=" not in item:
+            print(
+                f"Error: invalid --spelling-rewrite {item!r}; expected FROM=TO",
+                file=sys.stderr,
+            )
+            return 2
+        source, target = item.split("=", 1)
+        if len(source) != 1:
+            print("Error: spelling rewrite FROM must be one character", file=sys.stderr)
+            return 2
+        spelling_rewrites[source] = target
     vec = Vectorizer(
-        locale=args.locale, phoneset_name=args.phoneset, remove_stress=False
+        locale=args.locale,
+        phoneset_name=args.phoneset,
+        remove_stress=False,
+        spelling_rewrites=spelling_rewrites,
     )
     if args.no_config_joins:
         vec.disable_config_joins()
@@ -117,6 +140,7 @@ def handle_train_multigram(args) -> int:
         parallel_viterbi=args.parallel_align,
     )
     mg.train_from_pairs(pairs)
+    mg.set_preprocessor(vec)
     mg.locale = args.locale
     mg.phoneset_name = args.phoneset
     mg.export(out)

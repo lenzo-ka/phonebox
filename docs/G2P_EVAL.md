@@ -117,18 +117,25 @@ from phonebox.core.multigram_g2p import MultigramG2P
 from phonebox.core.vectorizer import Vectorizer
 
 vec = Vectorizer(locale="it_IT", phoneset_name="ipa")
-mg = MultigramG2P(max_letter_span=2, max_phone_span=2)
+mg = MultigramG2P(max_letter_span=2, max_phone_span=2, preprocessor=vec)
 mg.train_from_dict("it_ipa.tsv")
-letters = vec.cook_letters("ciao", g2p=True)
-phones = mg.pronounce_letters(letters, word="ciao")
+phones = mg.pronounce("ciao")
+# For callers that already cooked tokens: mg.pronounce_letters(letters)
 ```
 
 CLI training and inference:
 
 ```bash
 phonebox train-multigram --locale it_IT --lexicon it_ipa.tsv -o model.g2p.gz
+# Optional repeatable grapheme rewrite: --spelling-rewrite FROM=TO
 phonebox pronounce ciao -m model.g2p.gz   # auto-detects .units.json sidecar
 ```
+
+Newly exported models embed the exact training-time transliterator rules,
+letter joins, and spelling rewrites. Loading them does not consult newer locale
+policy. Version 3 sidecars without this snapshot keep their historical
+lowercase, per-character library behavior; the CLI retains its locale-metadata
+cooking for those legacy models.
 
 1:1 inference: `phonebox pronounce -m tree-only.g2p.gz` (no sidecar).
 

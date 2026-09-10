@@ -8,12 +8,15 @@ join-discovery report and the eval script in scripts/.
 
 from __future__ import annotations
 
+import json
+
 from phonebox.core.multigram_g2p import (
     MultigramG2P,
     decode_phones,
     encode_phones,
     encode_unit_letters,
 )
+from phonebox.core.vectorizer import Vectorizer
 
 
 def test_encode_decode_phones_roundtrip():
@@ -142,3 +145,101 @@ def test_pronounce_unseen_letters_falls_back_to_single(tmp_path):
     # Output is best-effort but must be a list of strings
     assert isinstance(out, list)
     assert all(isinstance(p, str) for p in out)
+
+
+def test_raw_pronounce_uses_saved_training_preprocessing(tmp_path, monkeypatch):
+    vec = Vectorizer(
+        locale="default",
+        phoneset_name="ipa",
+        spelling_rewrites={"x": "q"},
+    )
+    model = MultigramG2P(
+        max_letter_span=1,
+        max_phone_span=1,
+        min_phone_span=1,
+        em_max_iterations=2,
+        preprocessor=vec,
+    )
+    model.train_from_pairs([(["q"], ["K"])])
+
+    # The raw API cooks x→q; the explicit cooked-token API remains literal.
+    assert model.pronounce("x") == ["K"]
+    assert model.pronounce_letters(["x"]) == []
+
+    saved = tmp_path / "rewrite.g2p"
+    model.export(saved)
+    monkeypatch.setattr(
+        Vectorizer,
+        "setup_locale",
+        lambda self, locale: (_ for _ in ()).throw(
+            AssertionError("snapshot load consulted current locale policy")
+        ),
+    )
+    loaded = MultigramG2P.load(saved)
+    assert loaded.pronounce("x") == ["K"]
+    assert loaded.preprocessor.export_letter_preprocessing() == (
+        vec.export_letter_preprocessing()
+    )
+
+
+def test_disabled_config_joins_persist_after_reload(tmp_path):
+    vec = Vectorizer(locale="it_IT", phoneset_name="ipa")
+    vec.disable_config_joins()
+    model = MultigramG2P(
+        max_letter_span=1,
+        max_phone_span=1,
+        min_phone_span=1,
+        em_max_iterations=2,
+        preprocessor=vec,
+    )
+    model.train_from_pairs([(["g"], ["g"]), (["l"], ["l"]), (["i"], ["i"])])
+    saved = tmp_path / "no-joins.g2p"
+    model.export(saved)
+
+    loaded = MultigramG2P.load(saved)
+    assert loaded.preprocessor.export_letter_preprocessing()["letter_joins"] == []
+    assert loaded.preprocessor.cook_letters("gli", g2p=True) == ["g", "l", "i"]
+
+
+def test_legacy_v3_model_keeps_per_character_lowercase_contract(tmp_path):
+    model = MultigramG2P(
+        max_letter_span=1,
+        max_phone_span=1,
+        min_phone_span=1,
+        em_max_iterations=2,
+    )
+    model.train_from_pairs([(["x"], ["K"])])
+    saved = tmp_path / "legacy.g2p"
+    model.export(saved)
+    metadata_path = saved.with_suffix(saved.suffix + ".units.json")
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    metadata["version"] = "3"
+    metadata.pop("letter_preprocessing", None)
+    metadata_path.write_text(json.dumps(metadata), encoding="utf-8")
+
+    loaded = MultigramG2P.load(saved)
+    assert loaded.preprocessor is None
+    assert loaded.pronounce("X") == ["K"]
+
+
+def test_present_malformed_preprocessing_metadata_is_not_legacy(tmp_path):
+    model = MultigramG2P(
+        max_letter_span=1,
+        max_phone_span=1,
+        min_phone_span=1,
+        em_max_iterations=2,
+    )
+    model.train_from_pairs([(["x"], ["K"])])
+    saved = tmp_path / "malformed.g2p"
+    model.export(saved)
+    metadata_path = saved.with_suffix(saved.suffix + ".units.json")
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    metadata["letter_preprocessing"] = {"version": 99}
+    metadata_path.write_text(json.dumps(metadata), encoding="utf-8")
+
+    try:
+        MultigramG2P.load(saved)
+    except ValueError as error:
+        assert "unsupported letter preprocessing version" in str(error)
+    else:
+        raise AssertionError("malformed snapshot silently used legacy behavior")
