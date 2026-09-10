@@ -913,6 +913,10 @@ class G2PDecisionTree:
                 v.setup_locale(loaded_locale)
             elif has_preprocessing_snapshot:
                 v.locale = v.canonical_locale_for(loaded_locale)
+            policy_locale = pick("policy_locale", None)
+            if policy_locale is not None and not isinstance(policy_locale, str):
+                raise ValueError("malformed policy_locale metadata")
+            v.policy_locale = policy_locale
             v.phoneset_name = pick("phoneset_name", v.phoneset_name)
             v.remove_stress = pick("remove_stress", v.remove_stress)
             v.remove_accents = pick("remove_accents", v.remove_accents)

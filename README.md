@@ -184,6 +184,11 @@ phonebox bundle model.g2p.gz -o g2p.py
 python g2p.py "test"
 ```
 
+Locale arguments accept bare language tags and case-insensitive hyphenated or
+underscored forms. See [Locale exemplar inventories](docs/EXEMPLARS.md) for the
+exact naming and resolution contract, generated ICU/CLDR data pipeline, and
+orthography-only scope.
+
 ## Algorithm
 
 1. **EM Alignment**: Expectation-Maximization aligns letters to phonemes
@@ -197,7 +202,10 @@ Based on research from CMU:
 
 ## License
 
-BSD 2-Clause License - see LICENSE file.
+Phonebox source code is available under the [BSD 2-Clause License](LICENSE).
+The generated ICU/CLDR locale artifact is available under the [Unicode License
+v3](LICENSE-UNICODE). See [Third-party notices](THIRD_PARTY_NOTICES.md) for its
+source, modifications, and versioned provenance.
 
 ## Author
 

@@ -3,6 +3,7 @@
 Tests for CLI commands and subcommands.
 """
 
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -598,6 +599,54 @@ def test_train_multigram_rejects_uncooked_rewrite_source(tmp_path):
 
     assert result.returncode == 2
     assert "use the cooked character 'x'" in result.stderr
+
+
+def test_locale_help_documents_bare_case_and_separator_forms():
+    result = subprocess.run(
+        [sys.executable, "-m", "phonebox.cli.main", "train-multigram", "--help"],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert "case-insensitive" in result.stdout
+    assert "bare, hyphenated" in result.stdout
+    assert "underscored" in result.stdout
+
+
+def test_train_multigram_cli_accepts_bare_locale_and_saves_canonical_policy(tmp_path):
+    lexicon = tmp_path / "italian.dict"
+    lexicon.write_text(
+        "caffe k a f f e\ncitta t i t t a\npiu p j u\n", encoding="utf-8"
+    )
+    model_path = tmp_path / "italian.g2p"
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "phonebox.cli.main",
+            "train-multigram",
+            "--locale",
+            "IT",
+            "--lexicon",
+            str(lexicon),
+            "--output",
+            str(model_path),
+            "--max-letter-span",
+            "1",
+            "--max-phone-span",
+            "1",
+            "--em-iterations",
+            "2",
+        ],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr
+    metadata = json.loads(
+        model_path.with_suffix(model_path.suffix + ".units.json").read_text()
+    )
+    assert metadata["locale"] == "it"
+    assert metadata["letter_preprocessing"]["source"]["g2p_rules"]
 
 
 class TestCLIIntegration:

@@ -45,6 +45,14 @@ def test_ranges_strings_and_boundaries_are_exact():
 
 def test_exact_inventories_and_profiles_are_deduplicated():
     data = json.loads((ROOT / "phonebox/config/exemplars.json").read_text())
+    assert data["generator"]["source"] == {
+        "icu": "https://icu.unicode.org/",
+        "cldr": "https://cldr.unicode.org/",
+    }
+    assert data["generator"]["license"] == {
+        "id": "Unicode-3.0",
+        "notice": "LICENSE-UNICODE",
+    }
     inventories = [
         json.dumps(v, ensure_ascii=False, sort_keys=True) for v in data["inventories"]
     ]
@@ -83,7 +91,7 @@ def test_generator_mechanics_preserve_native_ranges_and_strings():
     with pytest.raises(RuntimeError, match=r"expected .*ICU=78\.3.*found .*ICU=77\.1"):
         module.validate_versions(
             {
-                "icukit": "0.3.0",
+                "icukit": "0.4.0",
                 "icukit-pyicu": "78.3.0",
                 "ICU": "77.1",
                 "Unicode": "16.0",
@@ -106,4 +114,3 @@ def test_format_mismatch_has_regeneration_guidance(monkeypatch):
     with pytest.raises(RuntimeError, match="regenerate.*pinned dev tools"):
         exemplars.supported_locales()
     exemplars._data.cache_clear()
-    exemplars._locale_aliases.cache_clear()

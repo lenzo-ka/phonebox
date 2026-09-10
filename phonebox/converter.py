@@ -15,6 +15,7 @@ from .constants import (
     DICT_ENCODING,
 )
 from .core.decision_tree import DecisionTree
+from .locale_resolution import canonical_locale
 from .normalize import normalize_text, tokenize_raw
 
 
@@ -57,14 +58,14 @@ class G2P:
             remove_stress: Whether stress was removed in training
             use_dict_fallback: Use exceptions dictionary (hybrid lookup)
         """
-        self.locale = locale
+        self.locale = canonical_locale(locale)
         self.phoneset = phoneset
         self.remove_stress = remove_stress
         self.use_dict_fallback = use_dict_fallback
 
         # Create DecisionTree
         self._dt = DecisionTree(
-            locale=locale,
+            locale=self.locale,
             phoneset_name=phoneset,
             remove_stress=remove_stress,
             use_dict_fallback=use_dict_fallback,
@@ -207,6 +208,7 @@ class G2P:
                 prune=True, validation_split=0.05,
             )
         """
+        locale = canonical_locale(locale)
         dt = DecisionTree(
             locale=locale, phoneset_name=phoneset, remove_stress=remove_stress, **kwargs
         )
@@ -260,17 +262,17 @@ class G2P:
         """
         import os
 
+        from .locale_resolution import locale_candidates
         from .locales import canonical_locale
 
         canon = canonical_locale(language)  # e.g. "fr_FR"
 
-        # Build hyphenated forms to try. If the user gave just a language
-        # code ("it", "fr"), also probe the conventional "xx-xx" filename
-        # so that e.g. `from_lang("it")` finds it-it-ipa.g2p.gz.
-        primary = canon.replace("_", "-").lower()  # "fr-fr" or "it"
-        forms = [primary]
-        if "_" not in canon and "-" not in canon:
-            forms.append(f"{primary}-{primary}")  # "it-it"
+        # Model selection uses identity and bare-language likely expansion;
+        # orthographic compatibility never substitutes a trained model.
+        forms = [
+            candidate.replace("_", "-").lower()
+            for candidate in locale_candidates(canon)
+        ]
 
         def names(form: str) -> str:
             return f"{form}-{phoneset}.g2p.gz"

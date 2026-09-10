@@ -62,7 +62,10 @@ def setup_pronounce_command(subparsers):
     )
     pronounce_parser.add_argument(
         "--locale",
-        help="Locale for legacy MultigramG2P models without saved preprocessing",
+        help=(
+            "Locale for legacy MultigramG2P models without saved preprocessing "
+            "(case-insensitive; bare, hyphenated, or underscored, e.g. it, it-IT)"
+        ),
     )
     pronounce_parser.add_argument(
         "--phoneset",

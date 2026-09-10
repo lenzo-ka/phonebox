@@ -55,7 +55,11 @@ def setup_train_command(subparsers):
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description=__doc__,
     )
-    parser.add_argument("--locale", required=True, help="Locale tag, e.g. fr_FR")
+    parser.add_argument(
+        "--locale",
+        required=True,
+        help="Locale tag (case-insensitive; bare, hyphenated, or underscored, e.g. fr, fr-FR)",
+    )
     parser.add_argument(
         "--lexicon",
         required=True,
