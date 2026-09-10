@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import json
 
+import pytest
+
 from phonebox.core.multigram_g2p import (
     MultigramG2P,
     decode_phones,
@@ -243,3 +245,39 @@ def test_present_malformed_preprocessing_metadata_is_not_legacy(tmp_path):
         assert "unsupported letter preprocessing version" in str(error)
     else:
         raise AssertionError("malformed snapshot silently used legacy behavior")
+
+
+@pytest.mark.parametrize(
+    "mutate, message",
+    [
+        (
+            lambda snapshot: snapshot["spelling_rewrites"].update({"x": 3}),
+            "spelling_rewrites",
+        ),
+        (
+            lambda snapshot: snapshot["source"].update(
+                {"g2p_rules": ":: definitely-not-a-transliterator ;"}
+            ),
+            "invalid saved g2p transliterator rules",
+        ),
+    ],
+)
+def test_snapshot_validation_fails_at_model_load(tmp_path, mutate, message):
+    vec = Vectorizer(locale="default", phoneset_name="ipa")
+    model = MultigramG2P(
+        max_letter_span=1,
+        max_phone_span=1,
+        min_phone_span=1,
+        em_max_iterations=2,
+        preprocessor=vec,
+    )
+    model.train_from_pairs([(["x"], ["K"])])
+    saved = tmp_path / "invalid-snapshot.g2p"
+    model.export(saved)
+    metadata_path = saved.with_suffix(saved.suffix + ".units.json")
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    mutate(metadata["letter_preprocessing"])
+    metadata_path.write_text(json.dumps(metadata), encoding="utf-8")
+
+    with pytest.raises(ValueError, match=message):
+        MultigramG2P.load(saved)

@@ -354,6 +354,15 @@ class Vectorizer:
         for key in ("norm_rules", "g2p_rules"):
             if source.get(key) is not None and not isinstance(source.get(key), str):
                 raise ValueError(f"malformed letter preprocessing source: {key}")
+        joins = snapshot["letter_joins"]
+        if not all(isinstance(item, str) for item in joins):
+            raise ValueError("malformed letter preprocessing field: letter_joins")
+        rewrites = snapshot["spelling_rewrites"]
+        if not all(
+            isinstance(key, str) and len(key) == 1 and isinstance(value, str)
+            for key, value in rewrites.items()
+        ):
+            raise ValueError("malformed letter preprocessing field: spelling_rewrites")
         from ..utils.icu_utils import RuleTransliterator
 
         norm_rules = source.get("norm_rules")
@@ -364,12 +373,15 @@ class Vectorizer:
         self.g2p_transliterator = (
             RuleTransliterator(rules=g2p_rules) if g2p_rules else None
         )
+        if norm_rules and not self.norm_transliterator:
+            raise ValueError("invalid saved norm transliterator rules")
+        if g2p_rules and not self.g2p_transliterator:
+            raise ValueError("invalid saved g2p transliterator rules")
         self.cased = snapshot["cased"]
         self.remove_accents = snapshot["remove_accents"]
         self.filter_non_letters = snapshot["filter_non_letters"]
         self.spelling_rewrites = dict(snapshot["spelling_rewrites"])
         self.join_char = snapshot["join_char"]
-        joins = snapshot["letter_joins"]
         self.lett_join_re = make_join_re(joins)
         saved_join_config = deepcopy((self.config or {}).get("join", {}))
         saved_join_config["letters"] = list(joins)

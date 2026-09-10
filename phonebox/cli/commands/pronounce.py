@@ -58,11 +58,11 @@ def setup_pronounce_command(subparsers):
     )
     pronounce_parser.add_argument(
         "--locale",
-        help="Locale tag for MultigramG2P letter cooking (or override model metadata)",
+        help="Locale for legacy MultigramG2P models without saved preprocessing",
     )
     pronounce_parser.add_argument(
         "--phoneset",
-        help="Phoneset for MultigramG2P letter cooking (or override model metadata)",
+        help="Phoneset for legacy MultigramG2P models without saved preprocessing",
     )
     pronounce_parser.set_defaults(func=handle_pronounce)
 
