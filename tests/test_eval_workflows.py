@@ -73,6 +73,34 @@ def test_curated_directory_mode_rejects_unknown_locale_without_traceback(
     assert "unsupported curated locales" in capsys.readouterr().err
 
 
+def test_curated_paths_accept_case_separator_and_bare_likely_variants(tmp_path):
+    from phonebox.cli.commands.compare import _curated_paths
+
+    paths = _curated_paths(tmp_path, ["IT-it", "pt"])
+    assert paths == {
+        "it_IT": tmp_path / "it_ipa.tsv",
+        "pt": tmp_path / "pt_ipa.tsv",
+    }
+
+
+def test_sweep_canonicalizes_explicit_identity_and_preserves_path(
+    monkeypatch, tmp_path
+):
+    path = tmp_path / "chosen.lex"
+    seen = []
+
+    def prepare(locale, supplied_path, **kwargs):
+        seen.append((locale, supplied_path))
+        return object(), [], [], {}
+
+    monkeypatch.setattr(g2p_sweep, "prepare_sweep_data", prepare)
+    rows = g2p_sweep.run_g2p_sweep(
+        {"IT-it": path}, locales=["it_IT"], letter_spans=[], lm_orders=[]
+    )
+    assert seen == [("it_IT", path)]
+    assert rows == {"it_IT": {}}
+
+
 def test_sweep_runs_real_preparation_training_and_evaluation(tmp_path):
     lexicon = tmp_path / "tiny.tsv"
     lexicon.write_text(
@@ -227,6 +255,50 @@ def test_experiments_use_explicit_paths(monkeypatch, tmp_path):
         output_dir=tmp_path / "out",
         skip_error_analysis=True,
     )
+    assert seen[0]["lexicon"] == lexicon
+    assert seen[0]["baseline_model"] == model
+    assert manifest[0]["locale"] == "it_IT"
+
+
+def test_experiments_resolve_bare_locale_without_changing_paths(monkeypatch, tmp_path):
+    lexicon = tmp_path / "chosen.lex"
+    model = tmp_path / "chosen.g2p.gz"
+    seen = []
+
+    def compare(**kwargs):
+        seen.append(kwargs)
+        return {
+            "locale": kwargs["locale"],
+            "train_normalize_policy": kwargs.get("train_normalize_policy"),
+            "results": [
+                {
+                    "model": model_name,
+                    "wer_pct": 0.0,
+                    "per_pct": 0.0,
+                    "per_equiv_pct": 0.0,
+                }
+                for model_name in ("G2PDecisionTree", "MultigramG2P")
+            ],
+        }
+
+    monkeypatch.setattr(experiments, "run_compare", compare)
+    monkeypatch.setattr(experiments, "load_lexicon", lambda path: [])
+    monkeypatch.setattr(experiments, "split_lexicon", lambda pairs, **kwargs: ([], []))
+    monkeypatch.setattr(
+        experiments,
+        "audit_normalize_delta",
+        lambda *args: {
+            "entries_changed": 0,
+            "train_entries": 0,
+            "phone_token_changes": 0,
+        },
+    )
+    manifest = experiments.run_experiments(
+        [experiments.ExperimentSpec("it", lexicon, model)],
+        output_dir=tmp_path / "out",
+        skip_error_analysis=True,
+    )
+    assert seen[0]["locale"] == "it_IT"
     assert seen[0]["lexicon"] == lexicon
     assert seen[0]["baseline_model"] == model
     assert manifest[0]["locale"] == "it_IT"

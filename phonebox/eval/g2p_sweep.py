@@ -15,6 +15,7 @@ from phonebox.eval.g2p_compare import (
     load_lexicon,
     train_multigram,
 )
+from phonebox.eval.locale_registry import canonical_locale_paths, canonical_locales
 from phonebox.experiments.equiv import equiv_for_locale
 from phonebox.experiments.split import split_lexicon
 
@@ -47,6 +48,9 @@ def run_g2p_sweep(
     relaxed_locales: frozenset[str] = frozenset(),
 ) -> dict[str, dict[tuple[int, int], dict[str, float]]]:
     """Train and evaluate every requested locale/span/order combination."""
+    lexicons = canonical_locale_paths(lexicons)
+    locales = canonical_locales(locales)
+    relaxed_locales = frozenset(canonical_locales(list(relaxed_locales)))
     rows: dict[str, dict[tuple[int, int], dict[str, float]]] = {}
     for locale in locales:
         vec, train, test, gold = prepare_sweep_data(

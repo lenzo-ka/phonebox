@@ -30,6 +30,7 @@ from phonebox.experiments.analysis import (
 from phonebox.experiments.equiv import equiv_for_locale
 from phonebox.experiments.normalize import NORMALIZE_POLICIES
 from phonebox.experiments.split import split_lexicon
+from phonebox.locale_resolution import resolve_locale
 
 
 @dataclass(frozen=True)
@@ -202,18 +203,41 @@ def run_experiments(
     policies: list[str] | None = None,
 ) -> list[dict[str, object]]:
     """Run explicit Italian/Portuguese experiments and return their manifest."""
-    unsupported = {spec.locale for spec in experiments} - set(NORMALIZE_POLICIES)
+    normalized_experiments = []
+    unsupported = set()
+    for spec in experiments:
+        resolution = resolve_locale(spec.locale, NORMALIZE_POLICIES)
+        if resolution.resolved is None:
+            unsupported.add(resolution.requested)
+            continue
+        normalized_experiments.append(
+            ExperimentSpec(
+                resolution.resolved,
+                spec.lexicon,
+                spec.baseline_model,
+                spec.policy,
+            )
+        )
     if unsupported:
         raise ValueError(
             f"unsupported normalization experiment locales: {sorted(unsupported)}"
         )
+    experiments = normalized_experiments
     out_root = Path(output_dir)
     results_dir = out_root / "results"
     results_dir.mkdir(parents=True, exist_ok=True)
 
-    selected_locales = (
-        set(locales) if locales else {spec.locale for spec in experiments}
-    )
+    selected_locales = {spec.locale for spec in experiments}
+    if locales:
+        selected_locales = set()
+        for locale in locales:
+            resolution = resolve_locale(locale, NORMALIZE_POLICIES)
+            if resolution.resolved is None:
+                raise ValueError(
+                    f"unsupported normalization experiment locale: "
+                    f"{resolution.requested}"
+                )
+            selected_locales.add(resolution.resolved)
     manifest: list[dict[str, object]] = []
     t_all = time.time()
 

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from phonebox.locale_resolution import resolve_locale
+
 # Italian open/closed (same as compare_g2p historical --vowel-equiv).
 _IT_VOWEL_QUALITY = frozenset({("e", "ɛ"), ("ɛ", "e"), ("o", "ɔ"), ("ɔ", "o")})
 
@@ -30,8 +32,9 @@ _LOCALE_EQUIV: dict[str, frozenset[tuple[str, str]]] = {
 
 
 def equiv_for_locale(locale: str) -> frozenset[tuple[str, str]] | None:
-    return _LOCALE_EQUIV.get(locale)
+    resolved = resolve_locale(locale, _LOCALE_EQUIV).resolved
+    return _LOCALE_EQUIV.get(resolved) if resolved else None
 
 
 def locale_uses_relaxed_scoring(locale: str) -> bool:
-    return locale in _LOCALE_EQUIV
+    return resolve_locale(locale, _LOCALE_EQUIV).resolved is not None

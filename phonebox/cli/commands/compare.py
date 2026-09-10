@@ -21,8 +21,14 @@ from phonebox.eval.g2p_compare_all import (
     run_compare_all,
     write_compare_all,
 )
-from phonebox.eval.locale_registry import EVALUATION_LOCALES
+from phonebox.eval.locale_registry import (
+    EVALUATION_LOCALES,
+    canonical_locale_paths,
+    canonical_locales,
+    evaluation_locale,
+)
 from phonebox.experiments.equiv import equiv_for_locale
+from phonebox.locale_resolution import canonical_locale
 
 
 def setup_compare_commands(subparsers) -> None:
@@ -184,7 +190,7 @@ def setup_compare_commands(subparsers) -> None:
     experiments.add_argument("--em-iterations", type=int, default=15)
     experiments.add_argument("--parallel-align", action="store_true")
     experiments.add_argument("--skip-error-analysis", action="store_true")
-    experiments.add_argument("--locales", nargs="*", choices=["it_IT", "pt_BR"])
+    experiments.add_argument("--locales", nargs="*")
     experiments.add_argument("--policies", nargs="*")
     experiments.add_argument(
         "--experiment",
@@ -215,7 +221,11 @@ def handle_compare_all(args) -> int:
             if args.no_config_joins
             else Path("docs/G2P_COMPARE.md")
         )
-    locales = args.locales or list(EVALUATION_LOCALES)
+    try:
+        locales = canonical_locales(args.locales or list(EVALUATION_LOCALES))
+    except ValueError as exc:
+        print(exc, file=sys.stderr)
+        return 2
     try:
         lexicons = _curated_paths(Path(lex_dir), locales)
     except ValueError as exc:
@@ -225,7 +235,7 @@ def handle_compare_all(args) -> int:
         None
         if args.no_config_joins
         else {
-            locale: Path(g2p_dir) / EVALUATION_LOCALES[locale].baseline_model
+            locale: Path(g2p_dir) / evaluation_locale(locale).baseline_model
             for locale in locales
         }
     )
@@ -321,19 +331,12 @@ def _locale_paths(values: list[str]) -> dict[str, Path]:
         if not separator or not locale or not path:
             raise ValueError(f"invalid locale path {value!r}; expected LOCALE=PATH")
         paths[locale] = Path(path)
-    return paths
+    return canonical_locale_paths(paths)
 
 
 def _curated_paths(root: Path, locales: list[str]) -> dict[str, Path]:
-    unsupported = set(locales) - set(EVALUATION_LOCALES)
-    if unsupported:
-        supported = ", ".join(EVALUATION_LOCALES)
-        raise ValueError(
-            f"unsupported curated locales {sorted(unsupported)}; choose from {supported}"
-        )
-    return {
-        locale: root / EVALUATION_LOCALES[locale].lexicon_name for locale in locales
-    }
+    locales = canonical_locales(locales)
+    return {locale: root / evaluation_locale(locale).lexicon_name for locale in locales}
 
 
 def handle_compare_sweep(args) -> int:
@@ -366,10 +369,7 @@ def handle_compare_sweep(args) -> int:
         em_iterations=args.em_iterations,
         parallel_align=args.parallel_align,
         relaxed_locales=frozenset(
-            locale
-            for locale in locales
-            if EVALUATION_LOCALES.get(locale)
-            and EVALUATION_LOCALES[locale].sweep_relaxed_per
+            locale for locale in locales if evaluation_locale(locale).sweep_relaxed_per
         ),
     )
     args.output.parent.mkdir(parents=True, exist_ok=True)
@@ -399,7 +399,13 @@ def handle_compare_units(args) -> int:
     except ValueError as exc:
         print(exc, file=sys.stderr)
         return 2
-    locales = args.locales or list(paths) or list(EVALUATION_LOCALES)
+    try:
+        locales = canonical_locales(
+            args.locales or list(paths) or list(EVALUATION_LOCALES)
+        )
+    except ValueError as exc:
+        print(exc, file=sys.stderr)
+        return 2
     if not paths:
         lexicons = _required_dir(
             args.lexicon_dir, "PHONEDECODING_LEXICON_DIR", "--lexicon-dir"
@@ -459,7 +465,7 @@ def handle_compare_experiments(args) -> int:
 
     if args.experiment:
         specs = [
-            ExperimentSpec(locale, Path(lexicon), Path(model), policy)
+            ExperimentSpec(canonical_locale(locale), Path(lexicon), Path(model), policy)
             for locale, policy, lexicon, model in args.experiment
         ]
     else:
@@ -482,8 +488,8 @@ def handle_compare_experiments(args) -> int:
         specs = [
             ExperimentSpec(
                 locale,
-                lexicons / EVALUATION_LOCALES[locale].lexicon_name,
-                models / EVALUATION_LOCALES[locale].baseline_model,
+                lexicons / evaluation_locale(locale).lexicon_name,
+                models / evaluation_locale(locale).baseline_model,
                 policy,
             )
             for locale, policies in definitions

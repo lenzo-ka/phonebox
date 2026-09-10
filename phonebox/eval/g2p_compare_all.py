@@ -20,6 +20,7 @@ from phonebox.constants import (
     FILE_ENCODING,
 )
 from phonebox.eval.g2p_compare import run_compare
+from phonebox.eval.locale_registry import canonical_locale_paths, canonical_locales
 from phonebox.experiments.equiv import equiv_for_locale
 from phonebox.experiments.metrics import G2P_METRICS_FOOTER
 
@@ -205,7 +206,11 @@ def run_compare_all(
     """Compare explicit locale lexicons/models and return structured summaries."""
     if not no_config_joins and baseline_models is None:
         raise ValueError("baseline_models is required when config joins are enabled")
-    selected = locales or list(lexicons)
+    lexicons = canonical_locale_paths(lexicons)
+    baseline_models = (
+        None if baseline_models is None else canonical_locale_paths(baseline_models)
+    )
+    selected = canonical_locales(locales) if locales else list(lexicons)
     summaries: list[dict[str, object]] = []
 
     for locale in selected:
