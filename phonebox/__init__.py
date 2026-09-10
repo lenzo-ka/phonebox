@@ -26,6 +26,7 @@ from .locales import (
     resolve_locale,
     supplement_defaults,
 )
+from .training import TrainingResult, train_g2p, train_g2p_from_config
 
 __all__ = [
     # High-level API
@@ -36,6 +37,9 @@ __all__ = [
     "EMAlign",
     "MultigramG2P",
     "Vectorizer",
+    "TrainingResult",
+    "train_g2p",
+    "train_g2p_from_config",
     # Locale-aware defaults
     "LocaleResolution",
     "canonical_locale",

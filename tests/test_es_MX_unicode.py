@@ -46,6 +46,7 @@ def test_public_g2p_treats_spanish_nfc_and_nfd_letters_identically(tmp_path):
         dictionary,
         locale="es_MX",
         phoneset="ipa",
+        prune=False,
         use_dict_fallback=False,
         verbose=False,
     )
@@ -74,6 +75,7 @@ def test_public_g2p_keeps_spanish_vowels_distinct_from_glides(tmp_path):
         dictionary,
         locale="es_MX",
         phoneset="ipa",
+        prune=False,
         use_dict_fallback=False,
         verbose=False,
     )
@@ -103,6 +105,7 @@ def test_spanish_hiatus_words_match_runner_and_bundle(tmp_path):
         dictionary,
         locale="es_MX",
         phoneset="ipa",
+        prune=False,
         use_dict_fallback=False,
         verbose=False,
     )
@@ -141,6 +144,7 @@ def test_spanish_snapshot_reload_keeps_new_policy(tmp_path):
         dictionary,
         locale="es_MX",
         phoneset="ipa",
+        prune=False,
         use_dict_fallback=False,
         output=model_path,
         verbose=False,
@@ -158,6 +162,7 @@ def test_snapshot_absent_spanish_cart_uses_known_previous_policy(tmp_path):
         dictionary,
         locale="es_MX",
         phoneset="ipa",
+        prune=False,
         use_dict_fallback=False,
         output=model_path,
         verbose=False,

@@ -9,10 +9,18 @@ from pathlib import Path
 
 from .constants import (
     DEFAULT_LOCALE,
+    DEFAULT_MAX_COMBINATIONS,
     DEFAULT_MULTIGRAM_PHONESET,
     DEFAULT_NBEST_COUNT,
     DEFAULT_PHONESET,
-    DICT_ENCODING,
+    DEFAULT_STORE_DISTRIBUTIONS,
+    DEFAULT_TRAIN_PARALLEL_ALIGN,
+    DEFAULT_TRAIN_PHONESET,
+    DEFAULT_TRAIN_PRUNE,
+    DEFAULT_TRAIN_REMOVE_STRESS,
+    DEFAULT_TRAIN_TEST_SPLIT,
+    DEFAULT_TRAIN_VALIDATION_SPLIT,
+    DEFAULT_TRAINER,
 )
 from .core.decision_tree import DecisionTree
 from .locale_resolution import canonical_locale
@@ -172,16 +180,34 @@ class G2P:
         return self._dt.pronounce_nbest(word, n)
 
     @classmethod
+    def _from_trained_model(cls, model: DecisionTree) -> G2P:
+        """Create the facade around an already initialized decision tree."""
+        instance = cls.__new__(cls)
+        instance._dt = model
+        instance.locale = model.vectorizer.locale
+        instance.phoneset = model.vectorizer.phoneset_name
+        instance.remove_stress = model.vectorizer.remove_stress
+        instance.use_dict_fallback = model.use_dict_fallback
+        return instance
+
+    @classmethod
     def train(
         cls,
         dictionary: str | Path,
         locale: str = DEFAULT_LOCALE,
-        phoneset: str = DEFAULT_PHONESET,
-        remove_stress: bool = False,
+        phoneset: str = DEFAULT_TRAIN_PHONESET,
+        remove_stress: bool = DEFAULT_TRAIN_REMOVE_STRESS,
         output: str | Path | None = None,
-        prune: bool = False,
-        validation_split: float = 0.0,
-        test_split: float = 0.0,
+        prune: bool = DEFAULT_TRAIN_PRUNE,
+        validation_split: float = DEFAULT_TRAIN_VALIDATION_SPLIT,
+        test_split: float = DEFAULT_TRAIN_TEST_SPLIT,
+        alignments_out: str | Path | None = None,
+        trainer: str = DEFAULT_TRAINER,
+        parallel_align: bool = DEFAULT_TRAIN_PARALLEL_ALIGN,
+        max_combinations: int | None = DEFAULT_MAX_COMBINATIONS,
+        width: int | None = None,
+        store_distributions: bool = DEFAULT_STORE_DISTRIBUTIONS,
+        verbose: bool = False,
         **kwargs,
     ) -> G2P:
         """
@@ -196,6 +222,13 @@ class G2P:
             prune: Post-prune the trained tree on the validation split
             validation_split: Fraction held out for pruning (e.g. 0.05)
             test_split: Fraction held out for held-out test evaluation
+            alignments_out: Optional reusable-alignment checkpoint path
+            trainer: Tree training backend (``"native"`` or ``"sklearn"``)
+            parallel_align: Use multiprocessing for EM alignment
+            max_combinations: Maximum alignment combinations per entry
+            width: Optional odd feature-context width
+            store_distributions: Store leaf distributions for scoring and n-best
+            verbose: Enable detailed library logging
             **kwargs: Additional DecisionTree parameters
 
         Returns:
@@ -209,23 +242,27 @@ class G2P:
             )
         """
         locale = canonical_locale(locale)
-        dt = DecisionTree(
-            locale=locale, phoneset_name=phoneset, remove_stress=remove_stress, **kwargs
-        )
-        dt.train_from_dict(
-            str(dictionary),
-            encoding=DICT_ENCODING,
+        from .training import train_g2p
+
+        result = train_g2p(
+            dictionary,
+            locale=locale,
+            phoneset=phoneset,
+            remove_stress=remove_stress,
+            output=output,
+            alignments_out=alignments_out,
             validation_split=validation_split,
             test_split=test_split,
             prune=prune,
+            trainer=trainer,
+            parallel_align=parallel_align,
+            max_combinations=max_combinations,
+            width=width,
+            store_distributions=store_distributions,
+            verbose=verbose,
+            **kwargs,
         )
-
-        if output:
-            dt.export(str(output))
-
-        instance = cls(locale=locale, phoneset=phoneset, remove_stress=remove_stress)
-        instance._dt = dt
-        return instance
+        return cls._from_trained_model(result.model)
 
     @classmethod
     def from_lang(

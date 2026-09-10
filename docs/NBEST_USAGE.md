@@ -15,7 +15,7 @@ Phonebox supports **confidence scores** and **n-best pronunciation lists** for g
 Distributions are stored by default. To train a model:
 
 ```bash
-phonebox model build en_US my_dict.txt -o model.g2p.gz
+phonebox train --locale en_US --lexicon my_dict.txt -o model.g2p.gz
 ```
 
 This stores probability distributions at ambiguous decision tree leaves, enabling confidence scores and n-best generation.
@@ -284,12 +284,12 @@ class G2P:
 ### Training
 
 ```bash
-phonebox model build en_US dict.txt -o model.g2p.gz [options]
-phonebox model train en_US --dict dict.txt -o model.g2p.gz [options]
+phonebox train --locale en_US --lexicon dict.txt -o model.g2p.gz [options]
 ```
 
-Distributions are stored by default. The entropy threshold (`min_dist_entropy`)
-can be set via a YAML config file with `--config`.
+Distributions are stored by default; pass `--no-store-distributions` to omit
+them. Advanced tree options such as `min_dist_entropy` are available through
+the Python `train_g2p` API.
 
 ### Inference
 
@@ -372,7 +372,7 @@ with open('words.txt') as infile, open('output.csv', 'w') as outfile:
 
 **Solution:** Retrain (distributions are enabled by default):
 ```bash
-phonebox model build en_US dict.txt -o new_model.g2p.gz
+phonebox train --locale en_US --lexicon dict.txt -o new_model.g2p.gz
 ```
 
 ### "All confidences are 1.0"

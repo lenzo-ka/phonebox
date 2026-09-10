@@ -4,7 +4,7 @@
 
 ```bash
 # Training (distributions stored by default, enabling n-best)
-phonebox model build en_US dict.txt -o model.g2p.gz
+phonebox train --locale en_US --lexicon dict.txt -o model.g2p.gz
 ```
 
 ## CLI Usage
@@ -266,6 +266,6 @@ A: Model uncertain due to limited training data for that pattern
 ---
 
 **Quick Links:**
-- Train: `phonebox model build en_US dict.txt -o model.g2p.gz`
+- Train: `phonebox train --locale en_US --lexicon dict.txt -o model.g2p.gz`
 - Confidence: `g2p.pronounce_with_confidence(word)`
 - N-best: `g2p.pronounce_nbest(word, n=5)`

@@ -30,11 +30,18 @@ from cartlet import PROB_HIGH_CONFIDENCE
 from .constants import (
     DEFAULT_CASED,
     DEFAULT_LOCALE,
+    DEFAULT_MAX_COMBINATIONS,
     DEFAULT_MAX_ITERATIONS,
     DEFAULT_MIN_SAMPLES_LEAF,
     DEFAULT_MIN_SAMPLES_SPLIT,
-    DEFAULT_PHONESET,
     DEFAULT_STORE_DISTRIBUTIONS,
+    DEFAULT_TRAIN_PARALLEL_ALIGN,
+    DEFAULT_TRAIN_PHONESET,
+    DEFAULT_TRAIN_PRUNE,
+    DEFAULT_TRAIN_REMOVE_STRESS,
+    DEFAULT_TRAIN_TEST_SPLIT,
+    DEFAULT_TRAIN_VALIDATION_SPLIT,
+    DEFAULT_TRAINER,
     FILE_ENCODING,
 )
 
@@ -176,8 +183,8 @@ def merge_configs(*configs: dict[str, Any]) -> dict[str, Any]:
 # Default config template
 DEFAULT_CONFIG = {
     "locale": DEFAULT_LOCALE,
-    "phoneset": DEFAULT_PHONESET,
-    "remove_stress": True,
+    "phoneset": DEFAULT_TRAIN_PHONESET,
+    "remove_stress": DEFAULT_TRAIN_REMOVE_STRESS,
     "remove_accents": None,  # Auto-detect based on phoneset
     "filter_non_letters": False,  # Remove non-letter chars (except -'.)
     "cased": DEFAULT_CASED,
@@ -187,20 +194,17 @@ DEFAULT_CONFIG = {
     # in memory with the alignment table and finishes the same job in a
     # fraction of the wall-clock. Override via --trainer sklearn on the
     # CLI if you really want it.
-    "trainer": "native",
+    "trainer": DEFAULT_TRAINER,
     "max_iterations": DEFAULT_MAX_ITERATIONS,
-    # None here means "unset" — the trainer falls back to
-    # constants.DEFAULT_MAX_COMBINATIONS (10000) downstream. max_combinations=0
-    # (unbounded) used to be the default but blew up to 200+ GB RSS on French;
-    # the 10000 cap keeps >99% of entries while staying memory-bounded.
-    "max_combinations": None,
+    # Zero explicitly disables the bound; the shared default is finite.
+    "max_combinations": DEFAULT_MAX_COMBINATIONS,
     "min_samples_split": DEFAULT_MIN_SAMPLES_SPLIT,
     "min_samples_leaf": DEFAULT_MIN_SAMPLES_LEAF,
     "store_distributions": DEFAULT_STORE_DISTRIBUTIONS,
     "min_confidence": PROB_HIGH_CONFIDENCE,
     "criterion": "entropy",
-    "parallel_align": False,
-    "validation_split": 0.05,  # 5% for pruning
-    "test_split": 0.05,  # 5% for evaluation (train gets 90%)
-    "prune": False,  # Enable pruning with validation data
+    "parallel_align": DEFAULT_TRAIN_PARALLEL_ALIGN,
+    "validation_split": DEFAULT_TRAIN_VALIDATION_SPLIT,
+    "test_split": DEFAULT_TRAIN_TEST_SPLIT,
+    "prune": DEFAULT_TRAIN_PRUNE,
 }

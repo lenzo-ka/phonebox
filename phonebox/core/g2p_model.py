@@ -265,6 +265,7 @@ class G2PDecisionTree:
         validation_split: float = 0.0,
         test_split: float = 0.0,
         prune: bool = False,
+        alignments_path: str | None = None,
     ) -> dict:
         """Load dictionary, align, and train in one call.
 
@@ -275,6 +276,7 @@ class G2PDecisionTree:
             test_split: Fraction held out for held-out test evaluation
             prune: Post-prune the trained tree using the validation split.
                 Pruning helps avoid overfitting to idiosyncratic spellings.
+            alignments_path: Optional path for the reusable EM alignment checkpoint.
 
         Returns:
             Training metrics dict
@@ -282,6 +284,8 @@ class G2PDecisionTree:
         with open(dict_path, encoding=encoding) as f:
             self.load_prondict(f)
         self.align()
+        if alignments_path is not None:
+            self.save_alignments(alignments_path)
         return self.train(
             validation_split=validation_split,
             test_split=test_split,

@@ -141,7 +141,12 @@ phonebox dict fetch cmudict
 ## Python API
 
 ```python
-from phonebox import G2P, MultigramG2P
+from phonebox import G2P, MultigramG2P, train_g2p
+
+# Train/export a 1:1 model. Defaults: IPA, native serial training, pruning with
+# a 5% validation split, stored leaf distributions, and preserved stress.
+training = train_g2p("dictionary.tsv", locale="en", output="model.g2p.gz")
+# Use phoneset="cmu", remove_stress=True when CMU stress digits should be removed.
 
 # 1:1 decision tree (CLI: phonebox pronounce)
 g2p = G2P(model="model.g2p.gz")
@@ -164,7 +169,13 @@ for pron, score in g2p.pronounce_nbest("read", n=3):
 
 ## Step-by-Step Training
 
-For debugging or custom workflows:
+The primary CLI applies the same defaults as `train_g2p` and `G2P.train`:
+
+```bash
+phonebox train --locale en --lexicon dictionary.tsv -o model.g2p.gz
+```
+
+For prepared-input or debugging workflows:
 
 ```bash
 # 1. Fetch dictionary

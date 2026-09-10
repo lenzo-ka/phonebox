@@ -19,7 +19,8 @@ or CLI for multigram inference.
 ```bash
 # Fetch dictionary and train
 phonebox dict fetch cmudict
-phonebox model build en_US data/cmudict/cmudict.dict \
+phonebox train --locale en_US --phoneset cmu \
+  --lexicon data/cmudict/cmudict.dict \
   -o model.g2p.gz \
   --remove-stress
 ```

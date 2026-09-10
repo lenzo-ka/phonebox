@@ -13,7 +13,15 @@ from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import Any, TextIO
 
-from .constants import DICT_ENCODING, DOWNLOAD_TIMEOUT_SECONDS
+from .constants import (
+    DEFAULT_TRAIN_PHONESET,
+    DEFAULT_TRAIN_PRUNE,
+    DEFAULT_TRAIN_REMOVE_STRESS,
+    DEFAULT_TRAIN_TEST_SPLIT,
+    DEFAULT_TRAIN_VALIDATION_SPLIT,
+    DICT_ENCODING,
+    DOWNLOAD_TIMEOUT_SECONDS,
+)
 from .core.decision_tree import DecisionTree
 from .lexicon import parse_dict_line, strip_phone_stress
 from .utils.logging_config import get_logger
@@ -258,12 +266,13 @@ class Dictionary:
         self,
         locale: str | None = None,
         output: str | Path | None = None,
-        phoneset: str = "cmu",
-        remove_stress: bool = False,
+        phoneset: str = DEFAULT_TRAIN_PHONESET,
+        remove_stress: bool = DEFAULT_TRAIN_REMOVE_STRESS,
         config: str | None = None,
-        prune: bool = False,
-        validation_split: float = 0.0,
-        test_split: float = 0.0,
+        prune: bool = DEFAULT_TRAIN_PRUNE,
+        validation_split: float = DEFAULT_TRAIN_VALIDATION_SPLIT,
+        test_split: float = DEFAULT_TRAIN_TEST_SPLIT,
+        alignments_out: str | Path | None = None,
         **kwargs,
     ) -> DecisionTree:
         """
@@ -316,21 +325,21 @@ class Dictionary:
 
         locale = locale or self.locale
 
-        dt = DecisionTree(
-            locale=locale, phoneset_name=phoneset, remove_stress=remove_stress, **kwargs
-        )
-        dt.train_from_dict(
-            str(self.path),
-            encoding=DICT_ENCODING,
+        from .training import train_g2p
+
+        result = train_g2p(
+            self.path,
+            locale=locale,
+            phoneset=phoneset,
+            remove_stress=remove_stress,
+            output=output,
+            alignments_out=alignments_out,
             validation_split=validation_split,
             test_split=test_split,
             prune=prune,
+            **kwargs,
         )
-
-        if output:
-            dt.export(str(output))
-
-        return dt
+        return result.model
 
     @staticmethod
     def _download_file(url: str, output_path: Path) -> bool:
