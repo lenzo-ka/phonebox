@@ -263,7 +263,8 @@ class TestBundledStandalone:
         assert training["trainer"] == "metadata-sentinel"
         assert metadata["dict_hash"] == expected_hash
 
-    def test_non_cart_bundle_preserves_flat_legacy_metadata(self, tmp_path):
+    @pytest.mark.parametrize("wrapper", ["absent", "empty", "partial"])
+    def test_non_cart_bundle_preserves_flat_legacy_metadata(self, tmp_path, wrapper):
         g2p, _ = _train_with_letter_join(tmp_path, ["c h"])
         nested_path = tmp_path / "nested.g2p.gz"
         g2p.save(str(nested_path))
@@ -282,6 +283,13 @@ class TestBundledStandalone:
             }
         )
         header.update(metadata)
+        if wrapper == "empty":
+            header["metadata"] = {}
+        elif wrapper == "partial":
+            header["metadata"] = {
+                "cased": False,
+                "unknown_nested_field": {"preserved": True},
+            }
         legacy_path = tmp_path / "legacy.g2p.gz"
         with gzip.open(legacy_path, "wt", encoding="utf-8") as target:
             target.write(json.dumps(header) + "\n")
@@ -294,7 +302,8 @@ class TestBundledStandalone:
             f"ns=runpy.run_path({str(bundle_path)!r}); "
             "g=ns['G2PPredictor'].from_embedded(); "
             "print(json.dumps([g.width,g.cased,g.join_char,"
-            "g.metadata['join']['letters'],g.exceptions]))"
+            "g.metadata['join']['letters'],g.exceptions,"
+            "g.metadata.get('unknown_nested_field')]))"
         )
         result = subprocess.run(
             [sys.executable, "-S", "-c", probe],
@@ -304,10 +313,11 @@ class TestBundledStandalone:
         )
         assert json.loads(result.stdout) == [
             5,
-            True,
+            wrapper != "partial",
             "+",
             ["c h"],
             {"chat": ["LEGACY"]},
+            {"preserved": True} if wrapper == "partial" else None,
         ]
 
     def test_failed_non_cart_export_removes_temporary_cart(self, tmp_path, monkeypatch):

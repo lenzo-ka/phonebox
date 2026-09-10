@@ -37,12 +37,23 @@ def _ensure_cart_format(model_path: str) -> tuple[str, bool]:
     # Preserve the source metadata verbatim. Reconstructing it through
     # G2PDecisionTree.export would replace training-time settings with the
     # loader's defaults and could lose fields unknown to this version.
-    if "metadata" in dt._model_header:
-        source_metadata = deepcopy(dt._model_header["metadata"])
-    else:
-        # Older cartlet headers stored phonebox configuration at top level.
-        # Preserve that exact legacy representation through conversion.
-        source_metadata = deepcopy(dt._model_header)
+    structural_keys = {
+        "class_labels",
+        "feature_names",
+        "feature_specs",
+        "metadata",
+        "model",
+        "task",
+    }
+    source_metadata = {
+        key: deepcopy(value)
+        for key, value in dt._model_header.items()
+        if key not in structural_keys
+    }
+    # Match G2PDecisionTree.load_model's field-by-field precedence: legacy flat
+    # values remain fallbacks, while every nested value (including fields this
+    # version does not know about) wins and survives conversion verbatim.
+    source_metadata.update(deepcopy(dt._model_header.get("metadata", {})))
     try:
         dt._cart.export(
             cart_path,
