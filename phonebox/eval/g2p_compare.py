@@ -159,7 +159,10 @@ def evaluate(
     word_ok = word_ok_relaxed = 0
     phone_ok = 0
     phone_den = 0
+    reference_phone_den = 0
     edit_sum = edit_sum_equiv = 0
+    variant_edit_sum = 0
+    variant_phone_den = 0
     for word, expected in test_set:
         try:
             pred = predict(word)
@@ -177,12 +180,19 @@ def evaluate(
             word_ok_relaxed += 1
         n = max(len(expected), len(pred))
         phone_den += n
+        reference_phone_den += len(expected)
         for i in range(min(len(expected), len(pred))):
             a, b = expected[i], pred[i]
             if _phone_eq(a, b, phone_equiv):
                 phone_ok += 1
         word_edits = edit_distance(expected, pred, phone_equiv=None)
         edit_sum += word_edits
+        variants = gold or {tuple(expected)}
+        best_edits, best_reference = min(
+            (edit_distance(list(candidate), pred), candidate) for candidate in variants
+        )
+        variant_edit_sum += best_edits
+        variant_phone_den += len(best_reference)
         if phone_equiv is not None:
             edit_sum_equiv += edit_distance(expected, pred, phone_equiv=phone_equiv)
         else:
@@ -192,6 +202,16 @@ def evaluate(
         "wer_pct": 100.0 * (1.0 - word_ok / n_test),
         "wer_relaxed_pct": 100.0 * (1.0 - word_ok_relaxed / n_test),
         "per_pct": 100.0 * edit_sum / phone_den if phone_den else 0.0,
+        "per_reference_pct": (
+            100.0 * edit_sum / reference_phone_den if reference_phone_den else 0.0
+        ),
+        "per_reference_edits": edit_sum,
+        "reference_phones": reference_phone_den,
+        "per_variant_pct": (
+            100.0 * variant_edit_sum / variant_phone_den if variant_phone_den else 0.0
+        ),
+        "per_variant_edits": variant_edit_sum,
+        "per_variant_reference_phones": variant_phone_den,
         "per_equiv_pct": 100.0 * edit_sum_equiv / phone_den if phone_den else 0.0,
         "pos_acc_pct": 100.0 * phone_ok / phone_den if phone_den else 0.0,
         "n_test": n_test,
@@ -205,13 +225,14 @@ def train_baseline(
     *,
     use_dict_fallback: bool = False,
     exceptions: dict[str, list[str]] | None = None,
+    remove_stress: bool = False,
 ):
     from phonebox.core.g2p_model import G2PDecisionTree
 
     dt = G2PDecisionTree(
         locale=locale,
         phoneset_name=phoneset,
-        remove_stress=False,
+        remove_stress=remove_stress,
         verbose=False,
         trainer="native",
         parallel_align=False,

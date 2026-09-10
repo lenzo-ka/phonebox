@@ -30,6 +30,8 @@ from phonebox.eval.locale_registry import (
 from phonebox.experiments.equiv import equiv_for_locale
 from phonebox.locale_resolution import canonical_locale
 
+from .cmudict_compare import setup_cmudict_compare_command
+
 
 def setup_compare_commands(subparsers) -> None:
     parser = subparsers.add_parser(
@@ -43,6 +45,7 @@ def setup_compare_commands(subparsers) -> None:
         ),
     )
     sp = parser.add_subparsers(dest="compare_mode", required=True)
+    setup_cmudict_compare_command(sp)
 
     all_p = sp.add_parser(
         "all",
