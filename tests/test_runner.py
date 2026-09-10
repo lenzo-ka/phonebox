@@ -126,6 +126,17 @@ class TestRunnerLetterJoining:
 class TestBundledStandalone:
     """The bundled standalone .py must reproduce the same predictions."""
 
+    def test_bundle_rejects_present_null_preprocessing(self, tmp_path, monkeypatch):
+        cart_path = tmp_path / "model.cart"
+        cart_path.write_bytes(b"")
+        monkeypatch.setattr(
+            "phonebox.bundler.read_cart_metadata",
+            lambda _path: {"letter_preprocessing": None},
+        )
+
+        with pytest.raises(ValueError, match="letter_preprocessing must be an object"):
+            bundle_g2p(str(cart_path), str(tmp_path / "bundle.py"))
+
     @pytest.mark.parametrize("word", ["cat", "chat", "rich", "cool", "much"])
     def test_bundle_matches_heavy(self, tmp_path, word):
         g2p, cart_path = _train_with_letter_join(tmp_path, ["c h"])

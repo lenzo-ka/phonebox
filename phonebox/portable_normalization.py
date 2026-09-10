@@ -92,6 +92,11 @@ def compile_letter_preprocessing(snapshot):
         raise PortableNormalizationError(
             "letter_preprocessing.source must be an object"
         )
+    for key in ("norm_rules", "g2p_rules"):
+        if key not in source:
+            raise PortableNormalizationError(
+                f"letter_preprocessing.source.{key} is required"
+            )
 
     operations: list[dict[str, object]] = []
     join_char = snapshot.get("join_char")
@@ -112,7 +117,7 @@ def compile_letter_preprocessing(snapshot):
             "letter_preprocessing case/accent/filter flags must be booleans"
         )
     if not cased:
-        operations.append({"op": "lower"})
+        operations.append({"op": "scalar_lower"})
     if remove_accents:
         operations.append({"op": "remove_accents"})
     if filter_non_letters:
@@ -174,8 +179,12 @@ def _apply_operations(text, operations):
             text = unicodedata.normalize(form, text)
         elif op == "replace":
             text = text.replace(operation["source"], operation["replacement"])
+        elif op == "scalar_lower":
+            text = "".join(character.lower()[0] for character in text)
         elif op == "lower":
-            text = text.lower()
+            # ICU's root-locale lowercase maps capital dotted I to one scalar,
+            # unlike Python's default two-code-point expansion.
+            text = text.replace("İ", "I").lower()
         elif op == "remove_accents":
             text = unicodedata.normalize("NFD", text)
             text = "".join(ch for ch in text if unicodedata.category(ch) != "Mn")

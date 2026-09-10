@@ -52,7 +52,7 @@ def bundle_g2p(model_path: str, output_path: str) -> None:
     try:
         metadata = read_cart_metadata(cart_path)
         preprocessing = metadata.get("letter_preprocessing")
-        if preprocessing is not None:
+        if "letter_preprocessing" in metadata:
             # Fail before writing an output when exact training behavior is
             # outside the deliberately small standard-library contract.
             compile_letter_preprocessing(preprocessing)

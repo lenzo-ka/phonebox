@@ -100,6 +100,26 @@ def test_rewrites_are_simultaneous_and_joins_follow_them():
     assert apply_portable_preprocessing("xh", program) == ["c₊h"]
 
 
+def test_uncased_flag_lowercases_each_scalar_independently():
+    program = compile_letter_preprocessing(_snapshot(None, cased=False))
+    assert apply_portable_preprocessing("ΑΣ", program) == ["α", "σ"]
+    assert apply_portable_preprocessing("İΣ", program) == ["i", "σ"]
+
+
+def test_icu_any_lower_remains_contextual():
+    program = compile_letter_preprocessing(_snapshot(":: Any-Lower ;", cased=True))
+    assert apply_portable_preprocessing("ΑΣ", program) == ["α", "ς"]
+    assert apply_portable_preprocessing("İΣ", program) == ["i", "ς"]
+
+
+@pytest.mark.parametrize("missing", ["norm_rules", "g2p_rules"])
+def test_source_requires_both_rule_keys(missing):
+    snapshot = _snapshot(None)
+    del snapshot["source"][missing]
+    with pytest.raises(PortableNormalizationError, match=missing):
+        compile_letter_preprocessing(snapshot)
+
+
 def test_consecutive_icu_replacements_are_one_simultaneous_pass():
     program = compile_letter_preprocessing(_snapshot("x > y; y > z;", cased=True))
     assert apply_portable_preprocessing("xy", program) == ["y", "z"]

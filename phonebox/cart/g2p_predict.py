@@ -74,10 +74,11 @@ class G2PPredictor(Predictor):  # type: ignore[name-defined]  # noqa: F821
         self.join_char = meta.get("join_char", self.DEFAULT_JOIN_CHAR)
         self.cased = meta.get("cased", self.DEFAULT_CASED)
         self.exceptions = meta.get("exceptions", {})
+        has_letter_preprocessing = "letter_preprocessing" in meta
         self.letter_preprocessing = meta.get("letter_preprocessing")
         self.portable_preprocessing = (
             compile_letter_preprocessing(self.letter_preprocessing)
-            if self.letter_preprocessing is not None
+            if has_letter_preprocessing
             else None
         )
 
