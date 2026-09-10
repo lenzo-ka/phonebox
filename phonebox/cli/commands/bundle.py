@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 import os
 import sys
 
@@ -11,6 +12,7 @@ def setup_bundle_command(subparsers):
     parser = subparsers.add_parser(
         "bundle",
         help="Bundle a decision-tree model as a standalone Python predictor",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
         description="""Bundle a decision-tree G2P model into a standalone executable.
 
 Creates a self-contained .py file with the model embedded. Multigram models
