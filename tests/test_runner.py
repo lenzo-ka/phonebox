@@ -7,6 +7,7 @@ through the runner or executed as a bundled standalone script.
 
 from __future__ import annotations
 
+import json
 import subprocess
 import sys
 
@@ -166,6 +167,39 @@ class TestBundledStandalone:
 
         with pytest.raises(ValueError, match="letter_preprocessing must be an object"):
             bundle_g2p(str(cart_path), str(tmp_path / "bundle.py"))
+
+    def test_non_cart_bundle_preserves_training_metadata(self, tmp_path):
+        g2p, _ = _train_with_letter_join(tmp_path, ["c h"])
+        g2p._dt.max_iterations = 17
+        g2p._dt.max_combinations = 1234
+        g2p._dt.min_change_ratio = 0.125
+        g2p._dt.trainer = "metadata-sentinel"
+        model_path = tmp_path / "metadata.g2p.gz"
+        g2p.save(str(model_path))
+        expected_hash = g2p._dt.dict_hash
+
+        bundle_path = tmp_path / "metadata.py"
+        bundle_g2p(str(model_path), str(bundle_path))
+        probe = (
+            "import json,runpy; "
+            f"ns=runpy.run_path({str(bundle_path)!r}); "
+            "m=ns['G2PPredictor'].from_embedded().metadata; "
+            "print(json.dumps({'training_config':m['training_config'],"
+            "'dict_hash':m['dict_hash']}))"
+        )
+        result = subprocess.run(
+            [sys.executable, "-S", "-c", probe],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        metadata = json.loads(result.stdout)
+        training = metadata["training_config"]
+        assert training["max_iterations"] == 17
+        assert training["max_combinations"] == 1234
+        assert training["min_change_ratio"] == 0.125
+        assert training["trainer"] == "metadata-sentinel"
+        assert metadata["dict_hash"] == expected_hash
 
     @pytest.mark.parametrize("word", ["cat", "chat", "rich", "cool", "much"])
     def test_bundle_matches_heavy(self, tmp_path, word):

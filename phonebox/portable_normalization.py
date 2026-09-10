@@ -21,6 +21,25 @@ _SHIPPED_FILTERS = {
     "[^-.'[:l:]] remove": "-.'",
     "[^-.[:l:]] remove": "-.",
 }
+_SUPPORTED_RULE_SHAPES = {
+    (),
+    ("NFC",),
+    ("Any-Lower",),
+    ("NFD", "Mark-Remove", "NFC", "Filter", "Any-Lower"),
+    ("NFC", "Any-Lower", "Null", "Filter"),
+    ("NFC", "Replacements", "Any-Lower", "Null", "Filter"),
+    (
+        "NFC",
+        "Replacements",
+        "NFD",
+        "Mark-Remove",
+        "NFC",
+        "Replacements",
+        "Null",
+        "Filter",
+        "Any-Lower",
+    ),
+}
 
 
 def _exact_scalar(value):
@@ -45,11 +64,13 @@ def _compile_rules(rules, label):
     operations: list[dict[str, object]] = []
     unsupported = []
     replacements: dict[str, str] = {}
+    shape = []
 
     def flush_replacements():
         if replacements:
             operations.append({"op": "map_chars", "map": dict(replacements)})
             replacements.clear()
+            shape.append("Replacements")
 
     for statement in _rule_statements(rules or ""):
         if statement.startswith("::"):
@@ -57,18 +78,22 @@ def _compile_rules(rules, label):
             directive = statement[2:].strip()
             if directive in _NORMAL_FORMS:
                 operations.append({"op": "normalize", "form": directive})
+                shape.append(directive)
             elif directive == "Any-Lower":
                 operations.append({"op": "lower"})
+                shape.append(directive)
             elif directive == "Null":
-                continue
+                shape.append(directive)
             elif directive.lower() == "[:m:] remove":
                 operations.append({"op": "remove_mark_characters"})
+                shape.append("Mark-Remove")
             else:
                 keep = _SHIPPED_FILTERS.get(directive.lower())
                 if keep is not None:
                     operations.append(
                         {"op": "filter", "categories": ["L"], "keep": keep}
                     )
+                    shape.append("Filter")
                 else:
                     unsupported.append(f"{label}: {statement}")
             continue
@@ -82,6 +107,8 @@ def _compile_rules(rules, label):
                 continue
         unsupported.append(f"{label}: {statement}")
     flush_replacements()
+    if not unsupported and tuple(shape) not in _SUPPORTED_RULE_SHAPES:
+        unsupported.append(f"{label}: unsupported directive order")
     return operations, unsupported
 
 
@@ -107,9 +134,9 @@ def compile_letter_preprocessing(snapshot):
 
     operations: list[dict[str, object]] = []
     join_char = snapshot.get("join_char")
-    if not isinstance(join_char, str):
+    if not isinstance(join_char, str) or len(join_char) > 1:
         raise PortableNormalizationError(
-            "letter_preprocessing.join_char must be a string"
+            "letter_preprocessing.join_char must contain at most one character"
         )
     if join_char:
         operations.append({"op": "replace", "source": join_char, "replacement": ""})
@@ -144,6 +171,17 @@ def compile_letter_preprocessing(snapshot):
         compiled, rejected = _compile_rules(rules, key)
         operations.extend(compiled)
         unsupported.extend(rejected)
+    if unsupported:
+        details = "; ".join(unsupported)
+        raise PortableNormalizationError(
+            f"letter preprocessing uses unsupported ICU rules: {details}"
+        )
+
+    joins = snapshot.get("letter_joins")
+    if not isinstance(joins, list) or not all(isinstance(item, str) for item in joins):
+        raise PortableNormalizationError(
+            "letter_preprocessing.letter_joins must be a list of strings"
+        )
 
     rewrites = snapshot.get("spelling_rewrites")
     if not isinstance(rewrites, dict) or not all(
@@ -154,18 +192,16 @@ def compile_letter_preprocessing(snapshot):
             "letter_preprocessing.spelling_rewrites must map characters to strings"
         )
     if rewrites:
+        for rewrite_source in rewrites:
+            cooked_source = _join_letters(
+                list(_apply_operations(rewrite_source, operations)), joins, join_char
+            )
+            if cooked_source != [rewrite_source]:
+                raise PortableNormalizationError(
+                    "letter_preprocessing spelling rewrite source changes during "
+                    f"cooking: {rewrite_source!r}"
+                )
         operations.append({"op": "map_chars", "map": dict(rewrites)})
-
-    joins = snapshot.get("letter_joins")
-    if not isinstance(joins, list) or not all(isinstance(item, str) for item in joins):
-        raise PortableNormalizationError(
-            "letter_preprocessing.letter_joins must be a list of strings"
-        )
-    if unsupported:
-        details = "; ".join(unsupported)
-        raise PortableNormalizationError(
-            f"letter preprocessing uses unsupported ICU rules: {details}"
-        )
     return {
         "version": 1,
         "operations": operations,

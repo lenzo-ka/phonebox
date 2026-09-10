@@ -5,6 +5,7 @@ G2P model bundler - creates standalone Python executables with embedded models.
 from __future__ import annotations
 
 import tempfile
+from copy import deepcopy
 from pathlib import Path
 
 from cartlet import bundle as cartlet_bundle
@@ -33,9 +34,16 @@ def _ensure_cart_format(model_path: str) -> tuple[str, bool]:
     with tempfile.NamedTemporaryFile(suffix=".cart", delete=False) as tmp:
         cart_path = tmp.name
 
-    # Re-export through phonebox so the temporary CART retains the loaded
-    # vectorizer metadata, including its exact preprocessing snapshot.
-    dt.export(cart_path)
+    # Preserve the source metadata verbatim. Reconstructing it through
+    # G2PDecisionTree.export would replace training-time settings with the
+    # loader's defaults and could lose fields unknown to this version.
+    source_metadata = deepcopy(dt._model_header.get("metadata", {}))
+    dt._cart.export(
+        cart_path,
+        metadata=source_metadata,
+        store_distributions=dt._cart.store_distributions,
+        format=".cart",
+    )
     return cart_path, True
 
 

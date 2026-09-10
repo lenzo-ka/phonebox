@@ -27,6 +27,14 @@ transliteration, `phonebox bundle` exits with an error naming the unsupported
 rule. The full phonebox library can still load that model with ICU; bundling
 never substitutes an approximate transformation.
 
+Portable category filtering and casing use the Unicode Character Database in
+the Python runtime. ICU and Python may ship different Unicode versions, so
+characters added or reclassified between those versions can behave differently
+from training. Use the same Unicode data version for strict parity, or validate
+the input repertoire before deployment. The bundle cannot enforce this from
+older model snapshots because they do not record the training ICU/Unicode
+version.
+
 ## Python Bundle
 
 ```bash

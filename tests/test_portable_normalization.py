@@ -121,13 +121,16 @@ def test_source_requires_both_rule_keys(missing):
 
 
 def test_consecutive_icu_replacements_are_one_simultaneous_pass():
-    program = compile_letter_preprocessing(_snapshot("x > y; y > z;", cased=True))
+    rules = """
+    :: NFC ;
+    x > y;
+    y > z;
+    :: Any-Lower ;
+    :: Null ;
+    :: [^-.[:L:]] Remove ;
+    """
+    program = compile_letter_preprocessing(_snapshot(rules, cased=True))
     assert apply_portable_preprocessing("xy", program) == ["y", "z"]
-
-
-def test_icu_mark_removal_removes_all_mark_categories_without_decomposition():
-    program = compile_letter_preprocessing(_snapshot(":: [:M:] Remove;", cased=True))
-    assert apply_portable_preprocessing("a\u0903", program) == ["a"]
 
 
 def test_filter_flag_recomposes_preserved_marks_like_vectorizer():
@@ -149,6 +152,8 @@ def test_filter_flag_recomposes_preserved_marks_like_vectorizer():
         "a > 'b' ;",
         "\\u0061b > c ;",
         ":: [^'-\\.[:L:]] Remove ;",
+        ":: [:M:] Remove ;",
+        ":: [:M:] Remove ; :: Any-Lower ;",
     ],
 )
 def test_unsupported_icu_invalidates_the_whole_program(rules):
@@ -159,6 +164,18 @@ def test_unsupported_icu_invalidates_the_whole_program(rules):
 def test_unknown_snapshot_version_is_rejected():
     with pytest.raises(PortableNormalizationError, match="version"):
         compile_letter_preprocessing(_snapshot(":: NFC ;", version=2))
+
+
+def test_rewrite_source_must_survive_all_preceding_cooking():
+    with pytest.raises(PortableNormalizationError, match="changes during cooking"):
+        compile_letter_preprocessing(
+            _snapshot(None, cased=False, spelling_rewrites={"X": "q"})
+        )
+
+
+def test_multicharacter_join_marker_is_rejected():
+    with pytest.raises(PortableNormalizationError, match="at most one character"):
+        compile_letter_preprocessing(_snapshot(None, join_char="ab"))
 
 
 def test_all_shipped_locale_g2p_rules_are_portable():
