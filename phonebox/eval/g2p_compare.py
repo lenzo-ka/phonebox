@@ -21,10 +21,10 @@ from phonebox.constants import (
     DICT_ENCODING,
 )
 from phonebox.core.vectorizer import Vectorizer
-from phonebox.dictionary import parse_dict_line
 from phonebox.experiments.equiv import equiv_for_locale
 from phonebox.experiments.normalize import apply_train_normalize
 from phonebox.experiments.split import split_lexicon
+from phonebox.lexicon import parse_dict_line
 
 PolicyFn = Callable[[str, list[str]], list[str]]
 

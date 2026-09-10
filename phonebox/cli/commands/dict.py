@@ -4,9 +4,11 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
+from ...constants import FILE_ENCODING
 from ._common import add_vectorizer_args, require_file
 
 
@@ -14,13 +16,16 @@ def setup_dict_commands(subparsers):
     """Setup dictionary subcommands."""
     dict_parser = subparsers.add_parser(
         "dict",
-        help="Dictionary operations (fetch, export-vectors)",
+        help="Dictionary operations (fetch, process, export-vectors)",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description="Fetch and process pronunciation dictionaries.",
         epilog="""
 Examples:
   # Download CMUdict
   phonebox dict fetch cmudict
+
+  # Normalize and map phones, then deduplicate pronunciation variants
+  phonebox dict process cmudict.dict -o processed.dict --phone-map phones.json
 
   # Export feature vectors for external training
   phonebox dict export-vectors cmudict.txt -o vectors.tsv
@@ -38,6 +43,24 @@ Examples:
     fetch_parser.add_argument("name", help="Dictionary name (e.g., cmudict)")
     fetch_parser.add_argument("--data-dir", help="Data directory")
     fetch_parser.set_defaults(func=handle_dict_fetch)
+
+    process_parser = dict_subparsers.add_parser(
+        "process",
+        help="Normalize, map, and deduplicate a pronunciation dictionary",
+    )
+    process_parser.add_argument("dictionary", type=Path)
+    process_parser.add_argument("-o", "--output", required=True, type=Path)
+    process_parser.add_argument("--remove-stress", action="store_true")
+    process_parser.add_argument(
+        "--phoneset", default="cmu", help="Phoneset stress syntax (default: cmu)"
+    )
+    process_parser.add_argument("--lowercase", action="store_true")
+    process_parser.add_argument(
+        "--phone-map",
+        type=Path,
+        help="JSON object mapping a phone to one phone or a nonempty phone list",
+    )
+    process_parser.set_defaults(func=handle_dict_process)
 
     # phonebox dict export-vectors
     export_vectors_parser = dict_subparsers.add_parser(
@@ -72,6 +95,38 @@ def handle_dict_fetch(args):
     except Exception as e:
         print(f"Error fetching dictionary: {e}", file=sys.stderr)
         return 1
+
+
+def handle_dict_process(args):
+    """Handle ``phonebox dict process`` through the public Dictionary API."""
+    from ...dictionary import Dictionary
+
+    if (rc := require_file(args.dictionary, "dictionary")) is not None:
+        return rc
+    mapping = None
+    if args.phone_map is not None:
+        if (rc := require_file(args.phone_map, "phone map")) is not None:
+            return rc
+        try:
+            mapping = json.loads(args.phone_map.read_text(encoding=FILE_ENCODING))
+        except (OSError, json.JSONDecodeError) as exc:
+            print(f"Invalid phone map: {exc}", file=sys.stderr)
+            return 2
+        if not isinstance(mapping, dict):
+            print("Invalid phone map: expected a JSON object", file=sys.stderr)
+            return 2
+    try:
+        Dictionary(args.dictionary).process(
+            remove_stress=args.remove_stress,
+            phoneset=args.phoneset,
+            lowercase=args.lowercase,
+            phone_mapping=mapping,
+            output=args.output,
+        )
+    except (OSError, TypeError, ValueError) as exc:
+        print(f"Dictionary processing failed: {exc}", file=sys.stderr)
+        return 2
+    return 0
 
 
 def handle_dict_export_vectors(args):

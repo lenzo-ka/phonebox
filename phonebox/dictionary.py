@@ -6,15 +6,16 @@ Dictionary class for managing pronunciation dictionaries.
 from __future__ import annotations
 
 import json
-import re
 import urllib.error
 import urllib.request
 from collections import defaultdict
+from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import Any, TextIO
 
 from .constants import DICT_ENCODING, DOWNLOAD_TIMEOUT_SECONDS
 from .core.decision_tree import DecisionTree
+from .lexicon import parse_dict_line, strip_phone_stress
 from .utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -26,37 +27,32 @@ CMUDICT_REPO = "https://raw.githubusercontent.com/cmusphinx/cmudict/master"
 
 def strip_stress(phoneme: str) -> str:
     """Remove stress markers from a phoneme."""
-    return re.sub(r"[012]$", "", phoneme)
+    return strip_phone_stress(phoneme, "cmu")
 
 
-def parse_dict_line(line: str) -> tuple[str, list[str]] | None:
-    """
-    Parse a single line from a pronunciation dictionary.
+def phone_mapping_transform(
+    mapping: Mapping[str, str | list[str]],
+) -> Callable[[list[str]], list[str]]:
+    """Build a validated literal phone-to-phone-sequence transform."""
+    cooked: dict[str, list[str]] = {}
+    for source, target in mapping.items():
+        if not isinstance(source, str) or not source:
+            raise TypeError("phone mapping keys must be nonempty strings")
+        values = [target] if isinstance(target, str) else target
+        if (
+            not isinstance(values, list)
+            or not values
+            or not all(isinstance(phone, str) and phone for phone in values)
+        ):
+            raise TypeError(
+                "phone mapping values must be nonempty strings or lists of them"
+            )
+        cooked[source] = values
 
-    Returns:
-        Tuple of (base_word, phonemes) or None if line should be skipped
-    """
-    line = line.strip()
+    def transform(phones: list[str]) -> list[str]:
+        return [mapped for phone in phones for mapped in cooked.get(phone, [phone])]
 
-    if not line or line.startswith(";;;") or line.startswith("#"):
-        return None
-
-    if "#" in line:
-        line = line.split("#")[0].strip()
-
-    if "\t" in line:
-        parts = line.split("\t")
-        word_with_variant = parts[0].strip()
-        phonemes = parts[1].strip().split() if len(parts) > 1 else []
-    else:
-        parts = line.split()
-        if len(parts) < 2:
-            return None
-        word_with_variant = parts[0]
-        phonemes = parts[1:]
-
-    base_word = re.sub(r"\(\d+\)$", "", word_with_variant)
-    return base_word, phonemes
+    return transform
 
 
 class Dictionary:
@@ -140,6 +136,8 @@ class Dictionary:
         remove_stress: bool,
         deduplicate: bool,
         sort_output: bool,
+        phone_transform: Callable[[list[str]], list[str]] | None,
+        phoneset: str,
     ) -> int:
         """Internal method to normalize dictionary."""
         word_pronunciations: dict[str, list[str]] = defaultdict(list)
@@ -154,8 +152,18 @@ class Dictionary:
             if lowercase:
                 base_word = base_word.lower()
 
+            if phone_transform is not None:
+                phonemes = phone_transform(phonemes)
+                if (
+                    not isinstance(phonemes, list)
+                    or not phonemes
+                    or not all(isinstance(phone, str) and phone for phone in phonemes)
+                ):
+                    raise TypeError(
+                        "phone_transform must return a list of nonempty strings"
+                    )
             if remove_stress:
-                phonemes = [strip_stress(p) for p in phonemes]
+                phonemes = [strip_phone_stress(p, phoneset) for p in phonemes]
 
             pronunciation = " ".join(phonemes)
 
@@ -182,6 +190,9 @@ class Dictionary:
         deduplicate: bool = True,
         sort_output: bool = True,
         output: str | Path | None = None,
+        phone_transform: Callable[[list[str]], list[str]] | None = None,
+        phone_mapping: Mapping[str, str | list[str]] | None = None,
+        phoneset: str = "cmu",
     ) -> Dictionary:
         """
         Process dictionary with various transformations.
@@ -192,18 +203,39 @@ class Dictionary:
             deduplicate: Remove duplicate pronunciations
             sort_output: Sort output alphabetically
             output: Output file path (default: create temp file)
+            phone_transform: Optional pronunciation mapping applied before
+                deduplication and dense variant numbering.
+            phone_mapping: Literal phone replacements. Each value is one phone
+                or a nonempty list of phones. Mutually exclusive with
+                ``phone_transform``.
+            phoneset: Phoneset tag selecting stress syntax. Unknown tags preserve
+                phone tokens when ``remove_stress`` is enabled.
 
         Returns:
             New Dictionary instance pointing to processed file
         """
         if not self.path:
             raise ValueError("Cannot process dictionary without input file")
+        if phone_transform is not None and phone_mapping is not None:
+            raise ValueError("choose phone_transform or phone_mapping, not both")
+        if phone_mapping is not None:
+            phone_transform = phone_mapping_transform(phone_mapping)
 
         if output is None:
             suffix = "_nostress" if remove_stress else "_processed"
             output = self.path.parent / f"{self.path.stem}{suffix}{self.path.suffix}"
 
         output = Path(output)
+        try:
+            if self.path.resolve().samefile(output.resolve()):
+                raise ValueError(
+                    "input and output dictionary must be different files"
+                ) from None
+        except FileNotFoundError:
+            if self.path.resolve() == output.resolve():
+                raise ValueError(
+                    "input and output dictionary must be different files"
+                ) from None
 
         with (
             open(self.path, encoding=DICT_ENCODING) as infile,
@@ -216,6 +248,8 @@ class Dictionary:
                 remove_stress=remove_stress,
                 deduplicate=deduplicate,
                 sort_output=sort_output,
+                phone_transform=phone_transform,
+                phoneset=phoneset,
             )
 
         return Dictionary(path=output, dict_format=self.dict_format, locale=self.locale)
