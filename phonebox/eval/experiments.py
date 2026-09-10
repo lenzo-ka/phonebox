@@ -201,6 +201,7 @@ def run_experiments(
     skip_error_analysis: bool = False,
     locales: list[str] | None = None,
     policies: list[str] | None = None,
+    quiet: bool = True,
 ) -> list[dict[str, object]]:
     """Run explicit Italian/Portuguese experiments and return their manifest."""
     normalized_experiments = []
@@ -253,7 +254,8 @@ def run_experiments(
         model_path = Path(spec.baseline_model)
         selected_specs.setdefault(locale, spec)
         label = f"{locale}_{policy}"
-        print(f"\n=== {label} ===", flush=True)
+        if not quiet:
+            print(f"\n=== {label} ===", flush=True)
 
         train_norm = None if policy == "baseline" else policy
         summary = run_compare(
@@ -267,7 +269,7 @@ def run_experiments(
             train_normalize_policy=train_norm,
             experiment_label=label,
             baseline_model=model_path,
-            quiet=False,
+            quiet=quiet,
         )
         result_path = results_dir / f"{label}.json"
         result_path.write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
@@ -289,7 +291,8 @@ def run_experiments(
         }
         error_sections: list[str] = []
         if not skip_error_analysis:
-            print(f"\n--- error analysis {locale} ---", flush=True)
+            if not quiet:
+                print(f"\n--- error analysis {locale} ---", flush=True)
             b_tab, m_tab = _run_error_analysis(
                 locale,
                 lexicon,
@@ -356,7 +359,8 @@ def run_experiments(
         encoding="utf-8",
     )
 
-    print(f"\nWrote {out_root} in {time.time() - t_all:.0f}s", flush=True)
+    if not quiet:
+        print(f"\nWrote {out_root} in {time.time() - t_all:.0f}s", flush=True)
     return manifest
 
 

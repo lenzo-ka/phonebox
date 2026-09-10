@@ -99,9 +99,7 @@ def setup_compare_commands(subparsers) -> None:
         metavar="LOCALE=PATH",
         help="Explicit locale lexicon; repeat for multiple locales",
     )
-    sweep.add_argument(
-        "--locales", nargs="*", default=["fr_FR", "de_DE", "pt_BR", "en_US"]
-    )
+    sweep.add_argument("--locales", nargs="*", default=None)
     sweep.add_argument(
         "--letter-spans",
         type=int,
@@ -239,18 +237,22 @@ def handle_compare_all(args) -> int:
             for locale in locales
         }
     )
-    summaries = run_compare_all(
-        lexicons=lexicons,
-        baseline_models=models,
-        no_config_joins=args.no_config_joins,
-        seed=args.seed,
-        max_test=args.max_test,
-        em_iterations=args.em_iterations,
-        parallel_align=args.parallel_align,
-        use_exceptions=args.use_exceptions,
-        locales=locales,
-        quiet=False,
-    )
+    try:
+        summaries = run_compare_all(
+            lexicons=lexicons,
+            baseline_models=models,
+            no_config_joins=args.no_config_joins,
+            seed=args.seed,
+            max_test=args.max_test,
+            em_iterations=args.em_iterations,
+            parallel_align=args.parallel_align,
+            use_exceptions=args.use_exceptions,
+            locales=locales,
+            quiet=False,
+        )
+    except (FileNotFoundError, ValueError) as exc:
+        print(exc, file=sys.stderr)
+        return 2
     write_compare_all(
         output,
         summaries,
@@ -294,7 +296,7 @@ def handle_compare_locale(args) -> int:
             baseline_model=args.baseline_model,
             use_exceptions=args.use_exceptions,
         )
-    except FileNotFoundError as exc:
+    except (FileNotFoundError, ValueError) as exc:
         print(exc, file=sys.stderr)
         return 2
 
@@ -347,7 +349,7 @@ def handle_compare_sweep(args) -> int:
     except ValueError as exc:
         print(exc, file=sys.stderr)
         return 2
-    locales = list(paths) if paths else args.locales
+    locales = args.locales or list(paths) or ["fr_FR", "de_DE", "pt_BR", "en_US"]
     if not paths:
         lexicons = _required_dir(
             args.lexicon_dir, "PHONEDECODING_LEXICON_DIR", "--lexicon-dir"
@@ -359,19 +361,25 @@ def handle_compare_sweep(args) -> int:
         except ValueError as exc:
             print(exc, file=sys.stderr)
             return 2
-    rows = run_g2p_sweep(
-        paths,
-        locales=locales,
-        letter_spans=args.letter_spans,
-        lm_orders=args.lm_orders,
-        seed=args.seed,
-        max_test=args.max_test,
-        em_iterations=args.em_iterations,
-        parallel_align=args.parallel_align,
-        relaxed_locales=frozenset(
-            locale for locale in locales if evaluation_locale(locale).sweep_relaxed_per
-        ),
-    )
+    try:
+        rows = run_g2p_sweep(
+            paths,
+            locales=locales,
+            letter_spans=args.letter_spans,
+            lm_orders=args.lm_orders,
+            seed=args.seed,
+            max_test=args.max_test,
+            em_iterations=args.em_iterations,
+            parallel_align=args.parallel_align,
+            relaxed_locales=frozenset(
+                locale
+                for locale in locales
+                if evaluation_locale(locale).sweep_relaxed_per
+            ),
+        )
+    except (FileNotFoundError, ValueError) as exc:
+        print(exc, file=sys.stderr)
+        return 2
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(
         format_g2p_sweep(
@@ -417,19 +425,26 @@ def handle_compare_units(args) -> int:
         except ValueError as exc:
             print(exc, file=sys.stderr)
             return 2
-    text = "\n".join(
-        format_multigram_units(
-            analyze_multigram_units(
-                locale,
-                paths[locale],
-                top=args.top,
-                em_iterations=args.em_iterations,
-                seed=args.seed,
-                max_test=args.max_test,
+    try:
+        from phonebox.eval.locale_registry import select_locale_paths
+
+        selected_paths = select_locale_paths(paths, locales)
+        text = "\n".join(
+            format_multigram_units(
+                analyze_multigram_units(
+                    locale,
+                    selected_paths[locale],
+                    top=args.top,
+                    em_iterations=args.em_iterations,
+                    seed=args.seed,
+                    max_test=args.max_test,
+                )
             )
+            for locale in selected_paths
         )
-        for locale in locales
-    )
+    except (FileNotFoundError, ValueError) as exc:
+        print(exc, file=sys.stderr)
+        return 2
     print(text, end="")
     if args.output:
         args.output.parent.mkdir(parents=True, exist_ok=True)
@@ -443,17 +458,21 @@ def handle_compare_units(args) -> int:
 def handle_compare_accuracy(args) -> int:
     from phonebox.eval.accuracy import evaluate_accuracy, load_pronunciation_entries
 
-    entries = load_pronunciation_entries(args.dictionary)
-    print(f"Loaded {len(entries):,} entries (excluding alternates)")
-    result = evaluate_accuracy(
-        entries,
-        locale=args.locale,
-        phoneset=args.phoneset,
-        train_fraction=args.train_fraction,
-        seed=args.seed,
-        width=args.width,
-        parallel_align=args.parallel_align,
-    )
+    try:
+        entries = load_pronunciation_entries(args.dictionary)
+        print(f"Loaded {len(entries):,} entries (excluding alternates)")
+        result = evaluate_accuracy(
+            entries,
+            locale=args.locale,
+            phoneset=args.phoneset,
+            train_fraction=args.train_fraction,
+            seed=args.seed,
+            width=args.width,
+            parallel_align=args.parallel_align,
+        )
+    except (FileNotFoundError, ValueError) as exc:
+        print(exc, file=sys.stderr)
+        return 2
     print(f"Train: {result.training_entries:,}, Test: {result.test_entries:,}")
     print(f"Word accuracy: {result.word_accuracy:.1f}%")
     print(f"Phone accuracy: {result.phone_accuracy:.1f}%")
@@ -463,47 +482,54 @@ def handle_compare_accuracy(args) -> int:
 def handle_compare_experiments(args) -> int:
     from phonebox.eval.experiments import ExperimentSpec, run_experiments
 
-    if args.experiment:
-        specs = [
-            ExperimentSpec(canonical_locale(locale), Path(lexicon), Path(model), policy)
-            for locale, policy, lexicon, model in args.experiment
-        ]
-    else:
-        lexicons = _required_dir(
-            args.lexicon_dir, "PHONEDECODING_LEXICON_DIR", "--lexicon-dir"
-        )
-        models = _required_dir(args.g2p_dir, "PHONEDECODING_G2P_DIR", "--g2p-dir")
-        if lexicons is None or models is None:
-            return 2
-        definitions = [
-            (
-                "it_IT",
-                ("baseline", "spelling_gated", "collapse_open"),
-            ),
-            (
-                "pt_BR",
-                ("baseline", "surface_final", "do_du", "citation_expand"),
-            ),
-        ]
-        specs = [
-            ExperimentSpec(
-                locale,
-                lexicons / evaluation_locale(locale).lexicon_name,
-                models / evaluation_locale(locale).baseline_model,
-                policy,
+    try:
+        if args.experiment:
+            specs = [
+                ExperimentSpec(
+                    canonical_locale(locale), Path(lexicon), Path(model), policy
+                )
+                for locale, policy, lexicon, model in args.experiment
+            ]
+        else:
+            lexicons = _required_dir(
+                args.lexicon_dir, "PHONEDECODING_LEXICON_DIR", "--lexicon-dir"
             )
-            for locale, policies in definitions
-            for policy in policies
-        ]
-    run_experiments(
-        specs,
-        output_dir=args.output_dir,
-        seed=args.seed,
-        max_test=args.max_test,
-        em_iterations=args.em_iterations,
-        parallel_align=args.parallel_align,
-        skip_error_analysis=args.skip_error_analysis,
-        locales=args.locales,
-        policies=args.policies,
-    )
+            models = _required_dir(args.g2p_dir, "PHONEDECODING_G2P_DIR", "--g2p-dir")
+            if lexicons is None or models is None:
+                return 2
+            definitions = [
+                (
+                    "it_IT",
+                    ("baseline", "spelling_gated", "collapse_open"),
+                ),
+                (
+                    "pt_BR",
+                    ("baseline", "surface_final", "do_du", "citation_expand"),
+                ),
+            ]
+            specs = [
+                ExperimentSpec(
+                    locale,
+                    lexicons / evaluation_locale(locale).lexicon_name,
+                    models / evaluation_locale(locale).baseline_model,
+                    policy,
+                )
+                for locale, policies in definitions
+                for policy in policies
+            ]
+        run_experiments(
+            specs,
+            output_dir=args.output_dir,
+            seed=args.seed,
+            max_test=args.max_test,
+            em_iterations=args.em_iterations,
+            parallel_align=args.parallel_align,
+            skip_error_analysis=args.skip_error_analysis,
+            locales=args.locales,
+            policies=args.policies,
+            quiet=False,
+        )
+    except (FileNotFoundError, ValueError) as exc:
+        print(exc, file=sys.stderr)
+        return 2
     return 0

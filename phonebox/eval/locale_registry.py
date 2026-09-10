@@ -51,6 +51,26 @@ def canonical_locales(locales: Sequence[str]) -> list[str]:
     return result
 
 
+def select_locale_paths(
+    paths: Mapping[str, Path], locales: Sequence[str] | None = None
+) -> dict[str, Path]:
+    """Select explicit paths by exact or bare-language-likely locale identity."""
+    canonical_paths = canonical_locale_paths(paths)
+    requested = (
+        canonical_locales(locales) if locales is not None else list(canonical_paths)
+    )
+    selected: dict[str, Path] = {}
+    for locale in requested:
+        resolution = resolve_locale(locale, canonical_paths)
+        if resolution.resolved is None:
+            raise ValueError(
+                f"no path supplied for locale {resolution.requested!r}; "
+                f"available: {', '.join(canonical_paths)}"
+            )
+        selected[resolution.requested] = canonical_paths[resolution.resolved]
+    return selected
+
+
 def evaluation_locale(locale: str) -> EvaluationLocale:
     """Select an exact or bare-language-likely curated evaluation entry."""
     resolution = resolve_locale(locale, EVALUATION_LOCALES)
@@ -69,4 +89,5 @@ __all__ = [
     "canonical_locale_paths",
     "canonical_locales",
     "evaluation_locale",
+    "select_locale_paths",
 ]

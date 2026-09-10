@@ -154,6 +154,7 @@ def evaluate(
     test_set: list[tuple[str, list[str]]],
     gold_variants: dict[str, set[tuple[str, ...]]] | None = None,
     phone_equiv: frozenset[tuple[str, str]] | None = None,
+    quiet: bool = True,
 ) -> dict[str, float]:
     word_ok = word_ok_relaxed = 0
     phone_ok = 0
@@ -163,7 +164,8 @@ def evaluate(
         try:
             pred = predict(word)
         except Exception as exc:
-            print(f"  [{name}] {word!r}: {exc}", file=sys.stderr)
+            if not quiet:
+                print(f"  [{name}] {word!r}: {exc}", file=sys.stderr)
             pred = []
         gold = gold_variants.get(word) if gold_variants else None
         if pred == expected:
@@ -313,7 +315,7 @@ def run_compare(
     skip_multigram: bool = False,
     baseline_model: Path | None = None,
     use_exceptions: bool = False,
-    quiet: bool = False,
+    quiet: bool = True,
 ) -> dict[str, object]:
     """Run comparison; return metadata plus per-model metric dicts."""
     if not lexicon.is_file():
@@ -436,6 +438,7 @@ def run_compare(
             test_eval,
             gold_variants=gold_variants,
             phone_equiv=equiv,
+            quiet=quiet,
         )
         results.append(("G2PDecisionTree", time.time() - t0, m))
 
@@ -471,6 +474,7 @@ def run_compare(
             test_eval,
             gold_variants=gold_variants,
             phone_equiv=equiv,
+            quiet=quiet,
         )
         results.append(("MultigramG2P", time.time() - t0, m))
 
