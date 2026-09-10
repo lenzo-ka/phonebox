@@ -103,13 +103,13 @@ def test_rewrites_are_simultaneous_and_joins_follow_them():
 def test_uncased_flag_lowercases_each_scalar_independently():
     program = compile_letter_preprocessing(_snapshot(None, cased=False))
     assert apply_portable_preprocessing("ΑΣ", program) == ["α", "σ"]
-    assert apply_portable_preprocessing("İΣ", program) == ["i", "σ"]
+    assert apply_portable_preprocessing("İΣ", program) == ["i", "\u0307", "σ"]
 
 
 def test_icu_any_lower_remains_contextual():
     program = compile_letter_preprocessing(_snapshot(":: Any-Lower ;", cased=True))
     assert apply_portable_preprocessing("ΑΣ", program) == ["α", "ς"]
-    assert apply_portable_preprocessing("İΣ", program) == ["i", "ς"]
+    assert apply_portable_preprocessing("İΣ", program) == ["i", "\u0307", "ς"]
 
 
 @pytest.mark.parametrize("missing", ["norm_rules", "g2p_rules"])

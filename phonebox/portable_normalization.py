@@ -180,11 +180,9 @@ def _apply_operations(text, operations):
         elif op == "replace":
             text = text.replace(operation["source"], operation["replacement"])
         elif op == "scalar_lower":
-            text = "".join(character.lower()[0] for character in text)
+            text = "".join(character.lower() for character in text)
         elif op == "lower":
-            # ICU's root-locale lowercase maps capital dotted I to one scalar,
-            # unlike Python's default two-code-point expansion.
-            text = text.replace("İ", "I").lower()
+            text = text.lower()
         elif op == "remove_accents":
             text = unicodedata.normalize("NFD", text)
             text = "".join(ch for ch in text if unicodedata.category(ch) != "Mn")
