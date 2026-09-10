@@ -149,8 +149,6 @@ def handle_train_multigram(args) -> int:
     )
     mg.train_from_pairs(pairs)
     mg.set_preprocessor(vec)
-    mg.locale = vec.locale
-    mg.phoneset_name = args.phoneset
     mg.export(out)
     log.info("exported %s (+ .units.json, .lm.json) in %.1fs", out, time.time() - t0)
     return 0

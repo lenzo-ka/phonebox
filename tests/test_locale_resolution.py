@@ -111,20 +111,31 @@ def test_public_training_accepts_case_separator_alias(tmp_path):
     assert loaded._dt.vectorizer.policy_locale == "it_IT"
 
 
-def test_multigram_roundtrips_compatible_policy_provenance(tmp_path):
-    vectorizer = Vectorizer(locale="es_ES", phoneset_name="ipa")
+@pytest.mark.parametrize("attach", ["constructor", "setter"])
+def test_multigram_roundtrips_compatible_policy_provenance(tmp_path, attach):
+    vectorizer = Vectorizer(locale="ES-es", phoneset_name="ipa")
     assert vectorizer.policy_locale == "es_MX"
-    model = MultigramG2P(
-        max_letter_span=1,
-        max_phone_span=1,
-        min_phone_span=1,
-        em_max_iterations=2,
-        preprocessor=vectorizer,
-    )
-    model.locale = vectorizer.locale
-    model.phoneset_name = "ipa"
+    if attach == "constructor":
+        model = MultigramG2P(
+            max_letter_span=1,
+            max_phone_span=1,
+            min_phone_span=1,
+            em_max_iterations=2,
+            preprocessor=vectorizer,
+        )
+    else:
+        model = MultigramG2P(
+            max_letter_span=1,
+            max_phone_span=1,
+            min_phone_span=1,
+            em_max_iterations=2,
+        )
+    if attach == "setter":
+        model.set_preprocessor(vectorizer)
+    assert model.locale == "es_ES"
+    assert model.phoneset_name == "ipa"
     model.train_from_pairs([(["a"], ["a"])])
-    path = tmp_path / "spanish.g2p"
+    path = tmp_path / f"spanish-{attach}.g2p"
     model.export(path)
     loaded = MultigramG2P.load(path)
     assert loaded.preprocessor is not None

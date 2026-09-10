@@ -179,6 +179,7 @@ def test_raw_pronounce_uses_saved_training_preprocessing(tmp_path, monkeypatch):
     )
     loaded = MultigramG2P.load(saved)
     assert loaded.pronounce("x") == ["K"]
+    assert loaded.preprocessor is not None
     assert loaded.preprocessor.export_letter_preprocessing() == (
         vec.export_letter_preprocessing()
     )
@@ -199,6 +200,7 @@ def test_disabled_config_joins_persist_after_reload(tmp_path):
     model.export(saved)
 
     loaded = MultigramG2P.load(saved)
+    assert loaded.preprocessor is not None
     assert loaded.preprocessor.export_letter_preprocessing()["letter_joins"] == []
     assert loaded.preprocessor.cook_letters("gli", g2p=True) == ["g", "l", "i"]
 

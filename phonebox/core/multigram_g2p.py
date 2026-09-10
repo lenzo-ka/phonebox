@@ -20,7 +20,7 @@ import json
 from collections import defaultdict
 from pathlib import Path
 from time import time
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from ..constants import (
     DEFAULT_MULTIGRAM_MIN_UNIT_MASS,
@@ -42,6 +42,9 @@ from .multigram_lm import (
 )
 
 logger = get_logger(__name__)
+
+if TYPE_CHECKING:
+    from .vectorizer import Vectorizer
 
 SILENT_TARGET = EPSILON
 
@@ -72,7 +75,7 @@ class MultigramG2P:
         parallel_viterbi: bool = False,
         num_workers: int | None = None,
         min_unit_mass: float = DEFAULT_MULTIGRAM_MIN_UNIT_MASS,
-        preprocessor=None,
+        preprocessor: Vectorizer | None = None,
     ) -> None:
         self.aligner = MultigramAligner(
             max_letter_span=max_letter_span,
@@ -94,11 +97,15 @@ class MultigramG2P:
         self.exceptions: dict[str, list[str]] = {}
         self.locale: str | None = None
         self.phoneset_name: str | None = None
-        self.preprocessor = preprocessor
+        self.preprocessor: Vectorizer | None = None
+        if preprocessor is not None:
+            self.set_preprocessor(preprocessor)
 
-    def set_preprocessor(self, vectorizer) -> None:
+    def set_preprocessor(self, vectorizer: Vectorizer) -> None:
         """Attach the Vectorizer whose raw-word cooking was used for training."""
         self.preprocessor = vectorizer
+        self.locale = vectorizer.locale
+        self.phoneset_name = vectorizer.phoneset_name
 
     # ----------- training
 
@@ -312,7 +319,7 @@ class MultigramG2P:
             if policy_locale is not None and not isinstance(policy_locale, str):
                 raise ValueError("malformed policy_locale metadata")
             vectorizer.policy_locale = policy_locale
-            inst.preprocessor = vectorizer
+            inst.set_preprocessor(vectorizer)
         return inst
 
 
