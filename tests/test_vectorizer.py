@@ -36,6 +36,19 @@ class TestVectorizer:
         letters = v.cook_letters(["H", "E", "L", "L", "O"], g2p=True)
         assert letters == ["h", "e", "l", "l", "o"]
 
+    def test_spelling_rewrite_rejects_source_changed_by_locale_cooking(self):
+        with pytest.raises(ValueError, match="use the cooked character 'x'"):
+            Vectorizer(
+                locale="en_US",
+                phoneset_name="ipa",
+                spelling_rewrites={"X": "q"},
+            )
+
+        vectorizer = Vectorizer(
+            locale="en_US", phoneset_name="ipa", spelling_rewrites={"x": "q"}
+        )
+        assert vectorizer.cook_letters("X", g2p=True) == ["q"]
+
     def test_filter_non_letters(self):
         """Test that non-letters are filtered when filter_non_letters is enabled."""
         v = Vectorizer(locale="en_US", phoneset_name="cmu", filter_non_letters=True)

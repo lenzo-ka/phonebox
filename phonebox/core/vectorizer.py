@@ -152,6 +152,7 @@ class Vectorizer:
         self.phon_join_re: re.Pattern[str] | None = None
         if letter_preprocessing is None:
             self.setup_locale(locale)
+            self._normalize_spelling_rewrites()
         else:
             self.locale = self.canonical_locale_for(locale or DEFAULT_LOCALE)
             self.load_letter_preprocessing(letter_preprocessing)
@@ -332,6 +333,25 @@ class Vectorizer:
             "filter_non_letters": self.filter_non_letters,
             "spelling_rewrites": dict(self.spelling_rewrites),
         }
+
+    def _normalize_spelling_rewrites(self) -> None:
+        """Validate rewrite keys against their post-cooking execution stage."""
+        requested = self.spelling_rewrites
+        self.spelling_rewrites = {}
+        for source, replacement in requested.items():
+            if not isinstance(source, str) or not isinstance(replacement, str):
+                raise ValueError("spelling rewrites must map strings to strings")
+            cooked = self.cook_letters(source, g2p=True)
+            if len(cooked) != 1 or len(cooked[0]) != 1:
+                raise ValueError(
+                    f"spelling rewrite source {source!r} does not cook to one character"
+                )
+            if cooked[0] != source:
+                raise ValueError(
+                    f"spelling rewrite source {source!r} changes during locale cooking; "
+                    f"use the cooked character {cooked[0]!r}"
+                )
+            self.spelling_rewrites[source] = replacement
 
     def load_letter_preprocessing(self, snapshot: dict) -> None:
         """Restore preprocessing from model metadata without locale lookup."""

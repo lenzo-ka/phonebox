@@ -127,7 +127,7 @@ CLI training and inference:
 
 ```bash
 phonebox train-multigram --locale it_IT --lexicon it_ipa.tsv -o model.g2p.gz
-# Optional repeatable grapheme rewrite: --spelling-rewrite FROM=TO
+# Optional post-cooking grapheme rewrite: --spelling-rewrite FROM=TO
 phonebox pronounce ciao -m model.g2p.gz   # auto-detects .units.json sidecar
 ```
 

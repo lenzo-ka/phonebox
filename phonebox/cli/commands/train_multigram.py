@@ -51,7 +51,7 @@ def setup_train_multigram_command(subparsers) -> None:
         action="append",
         default=[],
         metavar="FROM=TO",
-        help="Rewrite a grapheme before training and inference (repeatable).",
+        help="Rewrite one post-cooking grapheme (FROM=TO, repeatable).",
     )
     parser.add_argument("-v", "--verbose", action="store_true")
     parser.set_defaults(func=handle_train_multigram)
@@ -90,12 +90,16 @@ def handle_train_multigram(args) -> int:
             print("Error: spelling rewrite FROM must be one character", file=sys.stderr)
             return 2
         spelling_rewrites[source] = target
-    vec = Vectorizer(
-        locale=args.locale,
-        phoneset_name=args.phoneset,
-        remove_stress=False,
-        spelling_rewrites=spelling_rewrites,
-    )
+    try:
+        vec = Vectorizer(
+            locale=args.locale,
+            phoneset_name=args.phoneset,
+            remove_stress=False,
+            spelling_rewrites=spelling_rewrites,
+        )
+    except ValueError as error:
+        print(f"Error: {error}", file=sys.stderr)
+        return 2
     if args.no_config_joins:
         vec.disable_config_joins()
     mg_cfg = vec.multigram_config()
