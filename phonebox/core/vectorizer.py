@@ -152,7 +152,9 @@ class Vectorizer:
         self.phon_join_re: re.Pattern[str] | None = None
         if letter_preprocessing is None:
             self.setup_locale(locale)
-            self._normalize_spelling_rewrites()
+            self.spelling_rewrites = self._validate_spelling_rewrites(
+                self.spelling_rewrites
+            )
         else:
             self.locale = self.canonical_locale_for(locale or DEFAULT_LOCALE)
             self.load_letter_preprocessing(letter_preprocessing)
@@ -334,24 +336,27 @@ class Vectorizer:
             "spelling_rewrites": dict(self.spelling_rewrites),
         }
 
-    def _normalize_spelling_rewrites(self) -> None:
-        """Validate rewrite keys against their post-cooking execution stage."""
-        requested = self.spelling_rewrites
+    def _validate_spelling_rewrites(self, requested: dict[str, str]) -> dict[str, str]:
+        """Validate every key with all post-cooking rewrites disabled."""
+        previous = self.spelling_rewrites
         self.spelling_rewrites = {}
-        for source, replacement in requested.items():
-            if not isinstance(source, str) or not isinstance(replacement, str):
-                raise ValueError("spelling rewrites must map strings to strings")
-            cooked = self.cook_letters(source, g2p=True)
-            if len(cooked) != 1 or len(cooked[0]) != 1:
-                raise ValueError(
-                    f"spelling rewrite source {source!r} does not cook to one character"
-                )
-            if cooked[0] != source:
-                raise ValueError(
-                    f"spelling rewrite source {source!r} changes during locale cooking; "
-                    f"use the cooked character {cooked[0]!r}"
-                )
-            self.spelling_rewrites[source] = replacement
+        try:
+            for source, replacement in requested.items():
+                if not isinstance(source, str) or not isinstance(replacement, str):
+                    raise ValueError("spelling rewrites must map strings to strings")
+                cooked = self.cook_letters(source, g2p=True)
+                if len(cooked) != 1 or len(cooked[0]) != 1:
+                    raise ValueError(
+                        f"spelling rewrite source {source!r} does not cook to one character"
+                    )
+                if cooked[0] != source:
+                    raise ValueError(
+                        f"spelling rewrite source {source!r} changes during locale cooking; "
+                        f"use the cooked character {cooked[0]!r}"
+                    )
+        finally:
+            self.spelling_rewrites = previous
+        return dict(requested)
 
     def load_letter_preprocessing(self, snapshot: dict) -> None:
         """Restore preprocessing from model metadata without locale lookup."""
@@ -387,29 +392,55 @@ class Vectorizer:
 
         norm_rules = source.get("norm_rules")
         g2p_rules = source.get("g2p_rules")
-        self.norm_transliterator = (
+        norm_transliterator = (
             RuleTransliterator(rules=norm_rules) if norm_rules else None
         )
-        self.g2p_transliterator = (
-            RuleTransliterator(rules=g2p_rules) if g2p_rules else None
-        )
-        if norm_rules and not self.norm_transliterator:
+        g2p_transliterator = RuleTransliterator(rules=g2p_rules) if g2p_rules else None
+        if norm_rules and not norm_transliterator:
             raise ValueError("invalid saved norm transliterator rules")
-        if g2p_rules and not self.g2p_transliterator:
+        if g2p_rules and not g2p_transliterator:
             raise ValueError("invalid saved g2p transliterator rules")
-        self.cased = snapshot["cased"]
-        self.remove_accents = snapshot["remove_accents"]
-        self.filter_non_letters = snapshot["filter_non_letters"]
-        saved_rewrites = dict(snapshot["spelling_rewrites"])
-        self.spelling_rewrites = {}
-        self.join_char = snapshot["join_char"]
-        self.lett_join_re = make_join_re(joins)
-        saved_join_config = deepcopy((self.config or {}).get("join", {}))
-        saved_join_config["letters"] = list(joins)
-        self.config = {"join": saved_join_config}
-        self.spelling_rewrites = saved_rewrites
-        self._normalize_spelling_rewrites()
-        self.letter_preprocessing = deepcopy(snapshot)
+        previous_state = (
+            self.norm_transliterator,
+            self.g2p_transliterator,
+            self.cased,
+            self.remove_accents,
+            self.filter_non_letters,
+            self.spelling_rewrites,
+            self.join_char,
+            self.lett_join_re,
+            self.config,
+            self.letter_preprocessing,
+        )
+        try:
+            self.norm_transliterator = norm_transliterator
+            self.g2p_transliterator = g2p_transliterator
+            self.cased = snapshot["cased"]
+            self.remove_accents = snapshot["remove_accents"]
+            self.filter_non_letters = snapshot["filter_non_letters"]
+            self.join_char = snapshot["join_char"]
+            self.lett_join_re = make_join_re(joins)
+            saved_join_config = deepcopy((self.config or {}).get("join", {}))
+            saved_join_config["letters"] = list(joins)
+            self.config = {"join": saved_join_config}
+            self.spelling_rewrites = self._validate_spelling_rewrites(
+                dict(snapshot["spelling_rewrites"])
+            )
+            self.letter_preprocessing = deepcopy(snapshot)
+        except Exception:
+            (
+                self.norm_transliterator,
+                self.g2p_transliterator,
+                self.cased,
+                self.remove_accents,
+                self.filter_non_letters,
+                self.spelling_rewrites,
+                self.join_char,
+                self.lett_join_re,
+                self.config,
+                self.letter_preprocessing,
+            ) = previous_state
+            raise
 
     @staticmethod
     def canonical_locale_for(locale):

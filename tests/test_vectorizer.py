@@ -49,6 +49,22 @@ class TestVectorizer:
         )
         assert vectorizer.cook_letters("X", g2p=True) == ["q"]
 
+    def test_invalid_saved_rewrite_leaves_existing_vectorizer_unchanged(self):
+        vectorizer = Vectorizer(
+            locale="en_US", phoneset_name="ipa", spelling_rewrites={"x": "q"}
+        )
+        before = vectorizer.export_letter_preprocessing()
+        invalid = Vectorizer(
+            locale="en_US", phoneset_name="ipa"
+        ).export_letter_preprocessing()
+        invalid["spelling_rewrites"] = {"X": "z"}
+
+        with pytest.raises(ValueError, match="use the cooked character 'x'"):
+            vectorizer.load_letter_preprocessing(invalid)
+
+        assert vectorizer.export_letter_preprocessing() == before
+        assert vectorizer.cook_letters("x", g2p=True) == ["q"]
+
     def test_filter_non_letters(self):
         """Test that non-letters are filtered when filter_non_letters is enabled."""
         v = Vectorizer(locale="en_US", phoneset_name="cmu", filter_non_letters=True)
