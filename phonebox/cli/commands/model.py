@@ -5,8 +5,16 @@ from __future__ import annotations
 
 import argparse
 import sys
+from pathlib import Path
 
 from ...constants import DEFAULT_PHONESET, FILE_ENCODING
+from ...utils.io import paths_refer_to_same_file
+
+
+def _nonempty_path(value: str) -> str:
+    if not value:
+        raise argparse.ArgumentTypeError("path must not be empty")
+    return value
 
 
 def setup_model_commands(subparsers):
@@ -42,9 +50,15 @@ Examples:
         ),
     )
     prepared_input = train_parser.add_mutually_exclusive_group(required=True)
-    prepared_input.add_argument("-a", "--alignments", help="Alignment file")
-    prepared_input.add_argument("--vectors", help="Vectorized data file")
-    train_parser.add_argument("-o", "--output", required=True, help="Output model file")
+    prepared_input.add_argument(
+        "-a", "--alignments", type=_nonempty_path, help="Alignment file"
+    )
+    prepared_input.add_argument(
+        "--vectors", type=_nonempty_path, help="Vectorized data file"
+    )
+    train_parser.add_argument(
+        "-o", "--output", required=True, type=_nonempty_path, help="Output model file"
+    )
     train_parser.add_argument("--remove-stress", action="store_true")
     train_parser.add_argument("--cased", action="store_true")
     train_parser.add_argument("--max-iterations", type=int)
@@ -109,6 +123,16 @@ Examples:
 def handle_model_train(args):
     """Handle 'phonebox model train' command."""
     from ...core.g2p_model import G2PDecisionTree
+
+    prepared_path = Path(args.alignments or args.vectors)
+    if not prepared_path.is_file():
+        print(f"Error: prepared input not found: {prepared_path}", file=sys.stderr)
+        return 2
+    if paths_refer_to_same_file(prepared_path, args.output):
+        print(
+            "Error: prepared input and output must be different files", file=sys.stderr
+        )
+        return 2
 
     print(f"Training model for {args.locale}", file=sys.stderr)
 

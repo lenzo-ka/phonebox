@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import contextlib
 import sys
+from pathlib import Path
 
 from ..constants import FILE_ENCODING
 
@@ -22,3 +23,15 @@ def is_dict_comment(line: str) -> bool:
     """Return True if *line* is empty or a dictionary comment (# or ;;;)."""
     stripped = line.strip()
     return not stripped or stripped.startswith("#") or stripped.startswith(";;;")
+
+
+def paths_refer_to_same_file(first: str | Path, second: str | Path) -> bool:
+    """Return whether two paths resolve to one location or existing file."""
+    first_path = Path(first).resolve()
+    second_path = Path(second).resolve()
+    if first_path == second_path:
+        return True
+    try:
+        return first_path.samefile(second_path)
+    except FileNotFoundError:
+        return False

@@ -364,13 +364,12 @@ class G2P:
         processed = cmudict.process(remove_stress=True)
 
         # Train model
-        dt = processed.train_g2p_model(locale=DEFAULT_LOCALE, remove_stress=True)
-
-        instance = cls(
-            locale=DEFAULT_LOCALE, phoneset=DEFAULT_PHONESET, remove_stress=True
+        dt = processed.train_g2p_model(
+            locale=DEFAULT_LOCALE,
+            phoneset=DEFAULT_PHONESET,
+            remove_stress=True,
         )
-        instance._dt = dt
-        return instance
+        return cls._from_trained_model(dt)
 
     def save(self, path: str | Path) -> None:
         """Save the trained model to a file."""

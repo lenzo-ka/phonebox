@@ -24,6 +24,7 @@ from .constants import (
 )
 from .core.decision_tree import DecisionTree
 from .lexicon import parse_dict_line, strip_phone_stress
+from .utils.io import paths_refer_to_same_file
 from .utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -234,16 +235,8 @@ class Dictionary:
             output = self.path.parent / f"{self.path.stem}{suffix}{self.path.suffix}"
 
         output = Path(output)
-        try:
-            if self.path.resolve().samefile(output.resolve()):
-                raise ValueError(
-                    "input and output dictionary must be different files"
-                ) from None
-        except FileNotFoundError:
-            if self.path.resolve() == output.resolve():
-                raise ValueError(
-                    "input and output dictionary must be different files"
-                ) from None
+        if paths_refer_to_same_file(self.path, output):
+            raise ValueError("input and output dictionary must be different files")
 
         with (
             open(self.path, encoding=DICT_ENCODING) as infile,
@@ -305,6 +298,7 @@ class Dictionary:
             phoneset = config_dict.get("phoneset", phoneset)
             remove_stress = config_dict.get("remove_stress", remove_stress)
             output = config_dict.get("output", output)
+            alignments_out = config_dict.get("alignments_out", alignments_out)
             prune = config_dict.get("prune", prune)
             validation_split = config_dict.get("validation_split", validation_split)
             test_split = config_dict.get("test_split", test_split)
@@ -315,6 +309,7 @@ class Dictionary:
                 "phoneset",
                 "remove_stress",
                 "output",
+                "alignments_out",
                 "dictionary",
             } | _train_call_keys
             for key, value in config_dict.items():

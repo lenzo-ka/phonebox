@@ -21,6 +21,7 @@ from .constants import (
 )
 from .core.g2p_model import G2PDecisionTree
 from .locale_resolution import canonical_locale
+from .utils.io import paths_refer_to_same_file
 
 
 @dataclass(frozen=True)
@@ -33,9 +34,27 @@ class TrainingResult:
     alignments_path: Path | None
 
 
-def _default_alignments_path(output: Path) -> Path:
+def default_alignments_path(output: Path) -> Path:
+    """Derive the adjacent alignment checkpoint name for a model output."""
     stem = output.stem.removesuffix(".g2p")
     return output.with_name(f"{stem}_alignments.txt")
+
+
+def validate_training_paths(
+    dictionary: Path, output: Path | None, alignments: Path | None
+) -> None:
+    """Reject artifact aliases before training can read or write any path."""
+    named = [("dictionary", dictionary)]
+    if output is not None:
+        named.append(("output", output))
+    if alignments is not None:
+        named.append(("alignments", alignments))
+    for index, (left_name, left) in enumerate(named):
+        for right_name, right in named[index + 1 :]:
+            if paths_refer_to_same_file(left, right):
+                raise ValueError(
+                    f"{left_name} and {right_name} must be different files"
+                )
 
 
 def train_g2p(
@@ -77,8 +96,9 @@ def train_g2p(
     alignments_path = (
         Path(alignments_out)
         if alignments_out is not None
-        else (_default_alignments_path(output_path) if output_path else None)
+        else (default_alignments_path(output_path) if output_path else None)
     )
+    validate_training_paths(dictionary_path, output_path, alignments_path)
     if output_path:
         output_path.parent.mkdir(parents=True, exist_ok=True)
     if alignments_path:
@@ -121,4 +141,10 @@ def train_g2p_from_config(
     return train_g2p(dictionary, **options)
 
 
-__all__ = ["TrainingResult", "train_g2p", "train_g2p_from_config"]
+__all__ = [
+    "TrainingResult",
+    "default_alignments_path",
+    "train_g2p",
+    "train_g2p_from_config",
+    "validate_training_paths",
+]

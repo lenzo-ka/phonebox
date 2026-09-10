@@ -96,8 +96,8 @@ Using Models:
 Building Models:
   train        Train a 1:1 decision-tree model with safe defaults
   train-multigram  Train/export an n:m MultigramG2P model
-  model        Model operations (build, train, convert, benchmark)
-  dict         Dictionary operations (fetch, export-vectors)
+  model        Prepared-input training and model benchmarking
+  dict         Dictionary operations (fetch, process, export-vectors)
 
 Low-Level:
   align        Align letters to phonemes (EM algorithm)
@@ -174,6 +174,9 @@ The primary CLI applies the same defaults as `train_g2p` and `G2P.train`:
 ```bash
 phonebox train --locale en --lexicon dictionary.tsv -o model.g2p.gz
 ```
+
+JSON and TOML training configs use the standard installation. Install
+`phonebox[config]` to use YAML with `phonebox train --config training.yaml`.
 
 For prepared-input or debugging workflows:
 

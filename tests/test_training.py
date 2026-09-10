@@ -2,15 +2,21 @@
 
 from __future__ import annotations
 
+import argparse
 import inspect
 import json
+import os
 import subprocess
 import sys
+from pathlib import Path
+from types import SimpleNamespace
+from typing import Any
 
 import pytest
 
 from phonebox import G2P, train_g2p, train_g2p_from_config
-from phonebox.config_loader import DEFAULT_CONFIG
+from phonebox.cli.main import main
+from phonebox.config_loader import DEFAULT_CONFIG, load_config
 from phonebox.constants import (
     DEFAULT_MAX_COMBINATIONS,
     DEFAULT_STORE_DISTRIBUTIONS,
@@ -181,3 +187,166 @@ def test_config_defaults_match_primary_training_defaults(lexicon):
         {"dictionary": str(lexicon), "locale": "en", "prune": False}
     )
     assert result.model.vectorizer.phoneset_name == "ipa"
+
+
+@pytest.mark.parametrize("collision", ["input-output", "input-alignments", "both"])
+def test_training_rejects_artifact_path_collisions_before_writing(
+    lexicon, tmp_path, collision
+):
+    original = lexicon.read_bytes()
+    output = lexicon if collision == "input-output" else tmp_path / "model.g2p.gz"
+    alignments = (
+        lexicon
+        if collision == "input-alignments"
+        else (output if collision == "both" else None)
+    )
+    with pytest.raises(ValueError, match="different files"):
+        train_g2p(
+            lexicon,
+            locale="en",
+            output=output,
+            alignments_out=alignments,
+        )
+    assert lexicon.read_bytes() == original
+
+
+def test_training_rejects_derived_checkpoint_and_hardlink_aliases(lexicon, tmp_path):
+    derived_input = tmp_path / "model_alignments.txt"
+    derived_input.write_bytes(lexicon.read_bytes())
+    with pytest.raises(ValueError, match="dictionary and alignments"):
+        train_g2p(derived_input, locale="en", output=tmp_path / "model.g2p.gz")
+
+    hardlink = tmp_path / "dictionary-link"
+    os.link(lexicon, hardlink)
+    with pytest.raises(ValueError, match="dictionary and output"):
+        train_g2p(lexicon, locale="en", output=hardlink)
+
+
+def test_dictionary_config_handles_alignment_checkpoint_once(lexicon, tmp_path):
+    checkpoint = tmp_path / "configured-alignments.txt"
+    config = tmp_path / "training.json"
+    config.write_text(
+        json.dumps(
+            {
+                "locale": "en",
+                "alignments_out": str(checkpoint),
+                "prune": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+    model = Dictionary(lexicon).train_g2p_model(config=str(config))
+    assert checkpoint.is_file()
+    assert model.vectorizer.locale == "en"
+
+
+@pytest.mark.parametrize("contents", ["null", "[]", '"text"'])
+def test_config_file_requires_mapping(tmp_path, contents):
+    config = tmp_path / "training.json"
+    config.write_text(contents, encoding="utf-8")
+    with pytest.raises(ValueError, match="mapping/object"):
+        load_config(str(config))
+
+
+def test_pocketsphinx_facade_uses_trained_cmu_identity(lexicon, tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        Dictionary,
+        "fetch",
+        classmethod(lambda cls, *args, **kwargs: Dictionary(lexicon)),
+    )
+    g2p = G2P.from_pocketsphinx(tmp_path)
+    assert g2p.phoneset == "cmu"
+    assert g2p._dt.vectorizer.phoneset_name == "cmu"
+    assert g2p.remove_stress is True
+
+
+def test_recipe_delegates_transformed_dictionary_to_training(tmp_path, monkeypatch):
+    import phonebox.training
+    from phonebox.cli.commands.recipe import _build_g2p
+
+    source = tmp_path / "source.dict"
+    source.write_text("cat K AE2 T # note\ncat(2) K AE0 T\n", encoding="utf-8")
+    seen: dict[str, Any] = {}
+
+    def capture(dictionary, **options):
+        seen["dictionary"] = Path(dictionary).read_text(encoding="utf-8")
+        seen["options"] = options
+        return SimpleNamespace(model=object())
+
+    monkeypatch.setattr(phonebox.training, "train_g2p", capture)
+    args = SimpleNamespace(
+        source=str(source),
+        preset="tts",
+        output=str(tmp_path / "model.g2p.gz"),
+        keep_secondary=False,
+        mark_unstressed=False,
+        data_dir=str(tmp_path),
+        verbose=False,
+        prune=False,
+        validation_split=0.05,
+    )
+    assert _build_g2p(args) == 0
+    assert seen["dictionary"] == "cat K AE T\n"
+    assert seen["options"]["phoneset"] == "cmu"
+    assert seen["options"]["parallel_align"] is False
+
+
+@pytest.mark.parametrize(
+    ("source_name", "output_name"),
+    [("source.dict", "source.dict"), ("runner.alignments.txt", "runner.py")],
+)
+def test_recipe_rejects_original_input_artifact_aliases(
+    tmp_path, source_name, output_name
+):
+    from phonebox.cli.commands.recipe import _build_g2p
+
+    source = tmp_path / source_name
+    source.write_text("cat K AE1 T\n", encoding="utf-8")
+    original = source.read_bytes()
+    args = SimpleNamespace(
+        source=str(source),
+        preset="tts",
+        output=str(tmp_path / output_name),
+        keep_secondary=False,
+        mark_unstressed=False,
+        data_dir=str(tmp_path),
+        verbose=False,
+        prune=True,
+        validation_split=0.05,
+    )
+    assert _build_g2p(args) == 2
+    assert source.read_bytes() == original
+
+
+def test_recipe_uses_shared_pruning_default_with_explicit_opt_out():
+    from phonebox.cli.commands.recipe import setup_recipe_commands
+
+    parser = argparse.ArgumentParser()
+    subparsers = parser.add_subparsers()
+    setup_recipe_commands(subparsers)
+    enabled = parser.parse_args(["recipe", "input.dict", "tts", "-o", "model"])
+    disabled = parser.parse_args(
+        ["recipe", "input.dict", "tts", "-o", "model", "--no-prune"]
+    )
+    assert enabled.prune is DEFAULT_TRAIN_PRUNE is True
+    assert disabled.prune is False
+
+
+@pytest.mark.parametrize("flag", ["--alignments", "--vectors"])
+def test_prepared_training_preserves_aliased_input(tmp_path, flag, capsys):
+    source = tmp_path / "prepared.txt"
+    source.write_text("prepared input must remain intact\n", encoding="utf-8")
+    original = source.read_bytes()
+    assert main(["model", "train", "en_US", flag, str(source), "-o", str(source)]) == 2
+    assert source.read_bytes() == original
+    assert "must be different files" in capsys.readouterr().err
+
+
+def test_malformed_yaml_is_a_clean_cli_error(tmp_path, capsys):
+    pytest.importorskip("yaml")
+    config = tmp_path / "broken.yaml"
+    config.write_text("dictionary: [unterminated\n", encoding="utf-8")
+    assert main(["train", "--config", str(config)]) == 2
+    error = capsys.readouterr().err
+    assert "Invalid YAML config" in error
+    assert "Traceback" not in error

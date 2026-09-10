@@ -14,7 +14,7 @@ Commands:
     normalize       Normalize text for G2P (preview tokenization)
     bundle          Create standalone G2P predictor
     model           Prepared-input training and model benchmarking
-    dict            Dictionary operations (fetch, export-vectors)
+    dict            Dictionary operations (fetch, process, export-vectors)
     align           Align letters to phonemes
     vectorize       Convert alignments to feature vectors
     check           Validate lexicon against phoneset
@@ -80,7 +80,7 @@ Building Models:
   train        Train 1:1 G2P from a lexicon (safe defaults)
   train-multigram  Train n:m MultigramG2P (+ .units.json sidecar)
   model        Prepared-input training and model benchmarking
-  dict         Dictionary operations (fetch, export-vectors)
+  dict         Dictionary operations (fetch, process, export-vectors)
 
 Quality / locale tuning:
   check        Validate lexicon against canonical phoneset

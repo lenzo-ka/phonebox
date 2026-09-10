@@ -64,7 +64,9 @@ def setup_train_command(subparsers):
     )
     parser.add_argument("-o", "--output", default=None, help="Model output (.g2p.gz)")
     parser.add_argument(
-        "-c", "--config", help="YAML, TOML, or JSON training configuration"
+        "-c",
+        "--config",
+        help="TOML/JSON config, or YAML with phonebox[config] installed",
     )
     parser.add_argument(
         "--phoneset",
@@ -149,7 +151,7 @@ def handle_train(args) -> int:
 
     try:
         config = load_config(args.config) if args.config else {}
-    except (OSError, ValueError) as error:
+    except (ImportError, OSError, ValueError) as error:
         print(f"Error: {error}", file=sys.stderr)
         return 2
     overrides = {
@@ -192,7 +194,7 @@ def handle_train(args) -> int:
 
     try:
         result = train_g2p_from_config(config)
-    except (OSError, ValueError) as error:
+    except (ImportError, OSError, ValueError) as error:
         print(f"Error: {error}", file=sys.stderr)
         return 2
     log.info("Training metrics: %s", result.metrics)

@@ -67,7 +67,7 @@ def load_config(path: str) -> dict[str, Any]:
         preset_name = path.split(":", 1)[1]
         from .configs import get_builtin_config
 
-        return get_builtin_config(preset_name)
+        return _validate_config(get_builtin_config(preset_name), path)
 
     path_obj = Path(path)
 
@@ -77,12 +77,18 @@ def load_config(path: str) -> dict[str, Any]:
     suffix = path_obj.suffix.lower()
 
     if suffix in {".yaml", ".yml"}:
-        return _load_yaml(path_obj)
+        return _validate_config(_load_yaml(path_obj), path)
     if suffix == ".toml":
-        return _load_toml(path_obj)
+        return _validate_config(_load_toml(path_obj), path)
     if suffix == ".json":
-        return _load_json(path_obj)
+        return _validate_config(_load_json(path_obj), path)
     raise ValueError(f"Unsupported config format: {suffix}")
+
+
+def _validate_config(value: Any, source: str) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        raise ValueError(f"Config {source!r} must contain a mapping/object")
+    return value
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -90,10 +96,15 @@ def _load_yaml(path: Path) -> dict[str, Any]:
     try:
         import yaml
     except ImportError as e:
-        raise ImportError("PyYAML required for YAML configs: pip install pyyaml") from e
+        raise ImportError(
+            "YAML config requires the 'config' extra: pip install phonebox[config]"
+        ) from e
 
     with open(path, encoding=FILE_ENCODING) as f:
-        return yaml.safe_load(f)
+        try:
+            return yaml.safe_load(f)
+        except yaml.YAMLError as error:
+            raise ValueError(f"Invalid YAML config {path}: {error}") from error
 
 
 def _load_toml(path: Path) -> dict[str, Any]:

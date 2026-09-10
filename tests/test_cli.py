@@ -79,6 +79,8 @@ class TestCLIHelp:
             ["--alignments", "a.txt", "--vectors", "v.txt", "-o", "m.g2p.gz"],
             ["-o", "m.g2p.gz"],
             ["--alignments", "a.txt"],
+            ["--alignments", "", "-o", "m.g2p.gz"],
+            ["--alignments", "a.txt", "-o", ""],
         ],
     )
     def test_model_train_requires_one_prepared_input_and_output(self, arguments):
@@ -97,6 +99,28 @@ class TestCLIHelp:
         )
         assert result.returncode == 2
         assert "error:" in result.stderr.lower()
+
+    def test_model_train_rejects_missing_prepared_file_before_training(self, tmp_path):
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "phonebox.cli.main",
+                "model",
+                "train",
+                "en_US",
+                "--alignments",
+                str(tmp_path / "missing.alignments"),
+                "-o",
+                str(tmp_path / "model.g2p.gz"),
+            ],
+            capture_output=True,
+            text=True,
+        )
+        assert result.returncode == 2
+        assert "prepared input not found" in result.stderr
+        assert "Traceback" not in result.stderr
+        assert not (tmp_path / "model.g2p.gz").exists()
 
     def test_model_no_subcommand(self):
         """Test g2p model (no subcommand shows help)."""
