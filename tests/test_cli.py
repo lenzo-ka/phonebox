@@ -315,6 +315,25 @@ def test_bundle_rejects_multigram_sidecar_before_loading(tmp_path, capsys):
     assert not output.exists()
 
 
+def test_bundle_library_rejects_exported_multigram(tmp_path):
+    from phonebox.bundler import bundle_g2p
+    from phonebox.core.multigram_g2p import MultigramG2P
+
+    model_path = tmp_path / "model.g2p"
+    model = MultigramG2P(
+        max_letter_span=1,
+        max_phone_span=1,
+        min_phone_span=1,
+        em_max_iterations=2,
+    )
+    model.train_from_pairs([(["a"], ["A"])])
+    model.export(model_path)
+    output = tmp_path / "predict.py"
+    with pytest.raises(ValueError, match="decision-tree models only.*MultigramG2P"):
+        bundle_g2p(str(model_path), str(output))
+    assert not output.exists()
+
+
 class TestBenchmarkCommand:
     """Test phonebox benchmark command."""
 

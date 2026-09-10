@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import os
 import sys
-from pathlib import Path
 
 
 def setup_bundle_command(subparsers):
@@ -36,16 +35,6 @@ Library usage:
 def handle_bundle(args):
     """Handle 'phonebox bundle' command."""
     from ...bundler import bundle_g2p
-
-    model_path = Path(args.model)
-    sidecar = model_path.with_suffix(model_path.suffix + ".units.json")
-    if sidecar.is_file():
-        print(
-            "Error: standalone bundling supports decision-tree models only; "
-            "the selected model has a MultigramG2P sidecar",
-            file=sys.stderr,
-        )
-        return 1
 
     try:
         print(f"Bundling -> {args.output}", file=sys.stderr)

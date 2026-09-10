@@ -72,9 +72,18 @@ def bundle_g2p(model_path: str, output_path: str) -> None:
     Bundle G2P model into a standalone Python executable.
 
     Args:
-        model_path: Path to model file (.g2p.gz, .cart, etc.)
+        model_path: Path to a decision-tree model (.g2p.gz, .cart, etc.)
         output_path: Output `.py` file path
+
+    Raises:
+        ValueError: The model is a multigram artifact, which is not supported.
     """
+    model = Path(model_path)
+    if model.with_suffix(model.suffix + ".units.json").is_file():
+        raise ValueError(
+            "standalone bundling supports decision-tree models only; "
+            "the selected model has a MultigramG2P sidecar"
+        )
     cart_path, cleanup = _ensure_cart_format(model_path)
 
     try:
