@@ -1,4 +1,4 @@
-"""Normalize command: preview text normalization for G2P."""
+"""Normalize command: preview model-independent text tokenization."""
 
 from __future__ import annotations
 
@@ -11,10 +11,10 @@ def setup_normalize_command(subparsers):
     """Setup normalize command."""
     parser = subparsers.add_parser(
         "normalize",
-        help="Normalize text for G2P (preview tokenization)",
-        description="""Normalize text for G2P processing.
+        help="Preview model-independent text tokenization",
+        description="""Preview text tokenization used by pronounce_text.
 
-Shows how text is normalized before pronunciation:
+This does not apply a model's locale-specific grapheme transformations. It:
 - NFC Unicode normalization
 - Strips punctuation/symbols from token edges
 - Preserves internal apostrophes and hyphens
@@ -27,7 +27,7 @@ Examples:
   phonebox normalize --raw "Hello, world!"
   echo "Hello, world!" | phonebox normalize""",
     )
-    parser.add_argument("text", nargs="*", help="Text to normalize")
+    parser.add_argument("text", nargs="*", help="Text to tokenize")
     parser.add_argument(
         "-f", "--file", metavar="FILE", help="Read text from file (- for stdin)"
     )

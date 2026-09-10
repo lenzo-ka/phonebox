@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 import os
 import sys
 
@@ -10,10 +11,12 @@ def setup_bundle_command(subparsers):
     """Setup bundle command."""
     parser = subparsers.add_parser(
         "bundle",
-        help="Create standalone Python G2P predictor with embedded model",
-        description="""Bundle G2P model into a standalone Python executable.
+        help="Bundle a decision-tree model as a standalone Python predictor",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        description="""Bundle a decision-tree G2P model into a standalone executable.
 
-Creates a self-contained .py file with the model embedded.
+Creates a self-contained .py file with the model embedded. Multigram models
+are not supported by the standalone decision-tree predictor.
 
 Examples:
   phonebox bundle model.g2p.gz -o g2p.py
@@ -26,7 +29,7 @@ Library usage:
   g2p = G2PPredictor.from_embedded()
   phones = g2p.pronounce_text('Hello, world!')""",
     )
-    parser.add_argument("model", help="Model file (.g2p.gz, .cart, etc.)")
+    parser.add_argument("model", help="Decision-tree model (.g2p.gz, .cart, etc.)")
     parser.add_argument("-o", "--output", required=True, help="Output .py file")
     parser.set_defaults(func=handle_bundle)
 

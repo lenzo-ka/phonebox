@@ -42,8 +42,20 @@ from .commands.train_multigram import setup_train_multigram_command
 from .commands.vectorize import setup_vectorize_command
 
 
-def main():
-    """Main CLI entry point with subcommands."""
+def _normalize_help_aliases(argv: list[str]) -> list[str]:
+    """Translate friendly help aliases without changing process-global arguments."""
+    if not argv:
+        return argv
+    if argv[0] == "help":
+        return [*argv[1:], "--help"] if len(argv) > 1 else ["--help"]
+    command_groups = {"compare", "dict", "model"}
+    if argv[0] in command_groups and len(argv) > 1 and argv[1] == "help":
+        return [argv[0], *argv[2:], "--help"]
+    return argv
+
+
+def main(argv: list[str] | None = None) -> int:
+    """Run the CLI for ``argv`` and return the command status."""
     parser = argparse.ArgumentParser(
         prog="phonebox",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -54,8 +66,8 @@ Quick Start:
 
 Using Models:
   pronounce    Get pronunciations for words
-  normalize    Preview text normalization/tokenization
-  bundle       Create standalone executable with embedded model
+  normalize    Preview model-independent text tokenization
+  bundle       Bundle a decision-tree model as a standalone executable
 
 Building Models:
   train        Train 1:1 G2P from a lexicon (safe defaults)
@@ -99,24 +111,6 @@ For more help:
         version=f"phonebox {__version__}",
     )
 
-    # Handle "phonebox help <command>" pattern
-    if len(sys.argv) > 1 and sys.argv[1] == "help":
-        if len(sys.argv) > 2:
-            # phonebox help <command> -> phonebox <command> --help
-            sys.argv = [sys.argv[0], sys.argv[2], "--help"]
-        else:
-            # phonebox help -> phonebox --help
-            sys.argv = [sys.argv[0], "--help"]
-
-    # Handle "phonebox <command> help [<subcommand>]" pattern
-    if len(sys.argv) > 2 and sys.argv[2] == "help":
-        if len(sys.argv) > 3:
-            # phonebox <command> help <subcommand> -> phonebox <command> <subcommand> --help
-            sys.argv = [sys.argv[0], sys.argv[1], sys.argv[3], "--help"]
-        else:
-            # phonebox <command> help -> phonebox <command> --help
-            sys.argv = [sys.argv[0], sys.argv[1], "--help"]
-
     # Create subparsers for command groups
     subparsers = parser.add_subparsers(
         dest="command",
@@ -140,20 +134,21 @@ For more help:
     setup_suggest_joins_command(subparsers)
 
     # Parse arguments
-    args = parser.parse_args()
+    arguments = sys.argv[1:] if argv is None else argv
+    args = parser.parse_args(_normalize_help_aliases(list(arguments)))
 
     # Execute the command
     if hasattr(args, "func"):
         result = args.func(args)
-        sys.exit(result if result is not None else 0)
+        return result if result is not None else 0
     elif hasattr(args, "parser"):
         # Subcommand group called with no subcommand - show its help
         args.parser.print_help()
-        sys.exit(1)
+        return 1
     else:
         parser.print_help()
-        sys.exit(1)
+        return 1
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

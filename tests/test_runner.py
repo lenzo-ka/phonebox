@@ -219,6 +219,32 @@ class TestRunnerLetterJoining:
 class TestBundledStandalone:
     """The bundled standalone .py must reproduce the same predictions."""
 
+    @pytest.mark.parametrize("suffix", [".cart", ".g2p.gz"])
+    def test_existing_tree_bundles_with_multigram_sidecars(self, tmp_path, suffix):
+        from phonebox.core.multigram_g2p import MultigramG2P
+
+        model_path = tmp_path / ("shared" + suffix)
+        multigram = MultigramG2P(
+            max_letter_span=1,
+            max_phone_span=1,
+            min_phone_span=1,
+            em_max_iterations=2,
+        )
+        multigram.train_from_pairs([(["a"], ["A"])])
+        multigram.export(model_path)
+        g2p, _ = _train_with_letter_join(tmp_path, ["c h"])
+        g2p._dt.export(str(model_path), include_exceptions=False)
+
+        bundle_path = tmp_path / "predict.py"
+        bundle_g2p(str(model_path), str(bundle_path))
+        result = subprocess.run(
+            [sys.executable, "-S", str(bundle_path), "cat"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        assert result.stdout.strip().partition("\t")[2].split() == ["K", "AE", "T"]
+
     def test_bundle_rejects_present_null_preprocessing(self, tmp_path, monkeypatch):
         cart_path = tmp_path / "model.cart"
         cart_path.write_bytes(b"")

@@ -1,7 +1,7 @@
 # Bundling G2P for Deployment
 
-Create a self-contained Python G2P executable with the model embedded using
-`phonebox bundle`.
+Create a self-contained Python G2P executable with a decision-tree model embedded
+using `phonebox bundle`. Multigram models are not supported by this bundler.
 
 ## Quick Start
 

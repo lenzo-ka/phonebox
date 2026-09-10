@@ -378,10 +378,15 @@ class Vectorizer:
             for key, value in rewrites.items()
         ):
             raise ValueError("malformed letter preprocessing field: spelling_rewrites")
-        from ..utils.icu_utils import RuleTransliterator
+        from ..utils.icu_utils import HAS_ICU, RuleTransliterator
 
         norm_rules = source.get("norm_rules")
         g2p_rules = source.get("g2p_rules")
+        if (norm_rules or g2p_rules) and not HAS_ICU:
+            raise RuntimeError(
+                "loading saved letter preprocessing requires the ICU runtime; "
+                "install phonebox with its declared runtime dependencies"
+            )
         norm_transliterator = (
             RuleTransliterator(rules=norm_rules) if norm_rules else None
         )

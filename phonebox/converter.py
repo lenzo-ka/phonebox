@@ -15,13 +15,15 @@ from .constants import (
     DICT_ENCODING,
 )
 from .core.decision_tree import DecisionTree
+from .normalize import normalize_text, tokenize_raw
 
 
 class G2P:
     """
     Simple, high-level interface for grapheme-to-phoneme conversion.
 
-    Zero external dependencies - uses DecisionTree for all operations.
+    Uses the full phonebox runtime and its declared dependencies. Generated
+    bundles provide the separate standard-library-only deployment path.
 
     Examples:
         # Use pre-trained model
@@ -51,7 +53,7 @@ class G2P:
         Args:
             model: Path to trained model file (or None to train new)
             locale: Language locale
-            phoneset: Phoneset name ('cmu' or 'xsampa')
+            phoneset: Phoneset name, such as 'cmu', 'xsampa', or 'ipa'.
             remove_stress: Whether stress was removed in training
             use_dict_fallback: Use exceptions dictionary (hybrid lookup)
         """
@@ -71,7 +73,10 @@ class G2P:
         if model:
             # Load existing model (overwrites initial vectorizer)
             self._dt.load_model(str(model))
-            self.locale = self._dt.vectorizer.locale
+            vectorizer = self._dt.vectorizer
+            self.locale = vectorizer.locale
+            self.phoneset = vectorizer.phoneset_name
+            self.remove_stress = vectorizer.remove_stress
 
     def pronounce(self, word: str) -> list[str]:
         """
@@ -110,17 +115,22 @@ class G2P:
         """
         return [(word, self.pronounce(word)) for word in words]
 
-    def pronounce_text(self, text: str) -> list[tuple[str, list[str]]]:
+    def pronounce_text(
+        self, text: str, *, raw: bool = False
+    ) -> list[tuple[str, list[str]]]:
         """
         Pronounce all words in a text string.
 
         Args:
-            text: Text containing multiple words
+            text: Text containing multiple words.
+            raw: Split only on whitespace. By default, NFC-normalize and
+                remove punctuation, symbols, controls, marks, and separators
+                from token edges while preserving internal punctuation.
 
         Returns:
             List of (word, pronunciation) tuples
         """
-        words = text.split()
+        words = tokenize_raw(text) if raw else normalize_text(text)
         return self.pronounce_batch(words)
 
     def pronounce_with_confidence(self, word: str) -> tuple[list[str], list[float]]:

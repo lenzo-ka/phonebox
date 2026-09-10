@@ -84,10 +84,12 @@ Quick Start:
 
 Using Models:
   pronounce    Get pronunciations for words
-  normalize    Preview text normalization/tokenization
-  bundle       Create standalone executable with embedded model
+  normalize    Preview model-independent text tokenization
+  bundle       Bundle a decision-tree model as a standalone executable
 
 Building Models:
+  train        Train a 1:1 decision-tree model with safe defaults
+  train-multigram  Train/export an n:m MultigramG2P model
   model        Model operations (build, train, convert, benchmark)
   dict         Dictionary operations (fetch, export-vectors)
 
@@ -99,7 +101,6 @@ Quality:
   check          Validate lexicon against phoneset
   suggest-joins  Discover join candidates (multigram EM)
   compare        1:1 vs n:m eval (locale or all IPA locales)
-  train-multigram  Train/export MultigramG2P
 ```
 
 ### G2P evaluation (IPA locales)
@@ -116,7 +117,7 @@ See [`docs/G2P_EVAL.md`](docs/G2P_EVAL.md).
 ### Examples
 
 ```bash
-# Preview text normalization
+# Preview model-independent text tokenization
 phonebox normalize "Hello, world!"
 
 # Pronounce with existing model
@@ -138,6 +139,8 @@ from phonebox import G2P, MultigramG2P
 g2p = G2P(model="model.g2p.gz")
 phones = g2p.pronounce("hello")
 print(phones)  # ['HH', 'AH', 'L', 'OW']
+items = g2p.pronounce_text("Hello, world!")
+raw_items = g2p.pronounce_text("Hello, world!", raw=True)
 
 # n:m multigram: the vectorizer is saved with the model and reused by pronounce()
 from phonebox.core.vectorizer import Vectorizer

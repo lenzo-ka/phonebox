@@ -5,7 +5,7 @@ include requirements.txt
 include requirements-dev.txt
 
 # Include all configuration files
-recursive-include g2p/config *.json *.xlit
+recursive-include phonebox/config *.json *.xlit
 
 # Include examples
 recursive-include examples *.py

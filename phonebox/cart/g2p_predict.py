@@ -18,6 +18,7 @@ Zero dependencies beyond Python stdlib.
 
 from __future__ import annotations
 
+from ..normalize import normalize_text, tokenize_raw
 from ..portable_normalization import (
     apply_portable_preprocessing,
     compile_metadata_preprocessing,
@@ -152,35 +153,8 @@ class G2PPredictor(Predictor):  # type: ignore[name-defined]  # noqa: F821
         return [(word, self.pronounce(word)) for word in words]
 
     def tokenize(self, text):
-        """
-        Tokenize text into words for pronunciation.
-
-        Normalizes and extracts pronounceable tokens:
-        - NFC unicode normalization
-        - Strips punctuation/symbols from token edges (Unicode categories P, S, C, M, Z)
-        - Keeps internal punctuation (apostrophes, hyphens)
-        """
-        import unicodedata
-
-        # Unicode categories to strip from token edges
-        exclude_cats = {"P", "S", "C", "M", "Z"}
-
-        # Normalize unicode
-        text = unicodedata.normalize("NFC", text)
-
-        # Split and normalize each token
-        result = []
-        for token in text.split():
-            # Strip leading excluded characters
-            while token and unicodedata.category(token[0])[0] in exclude_cats:
-                token = token[1:]
-            # Strip trailing excluded characters
-            while token and unicodedata.category(token[-1])[0] in exclude_cats:
-                token = token[:-1]
-            if token:
-                result.append(token)
-
-        return result
+        """NFC-normalize and remove punctuation from token edges."""
+        return normalize_text(text)
 
     def pronounce_text(self, text, raw=False):
         """
@@ -190,7 +164,7 @@ class G2PPredictor(Predictor):  # type: ignore[name-defined]  # noqa: F821
             text: Input text
             raw: If True, skip normalization (just split on whitespace)
         """
-        words = text.split() if raw else self.tokenize(text)
+        words = tokenize_raw(text) if raw else self.tokenize(text)
         return [(word, self.pronounce(word)) for word in words]
 
     def __call__(self, word):

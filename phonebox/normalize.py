@@ -4,8 +4,6 @@ Text normalization for G2P processing.
 Provides consistent normalization across CLI, runners, and library.
 """
 
-from __future__ import annotations
-
 import unicodedata
 
 # Unicode categories to strip from token edges
@@ -37,14 +35,19 @@ def normalize_text(text: str) -> list[str]:
     result = []
 
     for token in text.split():
-        # Strip leading excluded characters
-        while token and unicodedata.category(token[0])[0] in EXCLUDE_CATEGORIES:
-            token = token[1:]
-        # Strip trailing excluded characters
-        while token and unicodedata.category(token[-1])[0] in EXCLUDE_CATEGORIES:
-            token = token[:-1]
-        if token:
-            result.append(token)
+        start = 0
+        end = len(token)
+        while (
+            start < end and unicodedata.category(token[start])[0] in EXCLUDE_CATEGORIES
+        ):
+            start += 1
+        while (
+            end > start
+            and unicodedata.category(token[end - 1])[0] in EXCLUDE_CATEGORIES
+        ):
+            end -= 1
+        if start < end:
+            result.append(token[start:end])
 
     return result
 

@@ -119,6 +119,15 @@ class TestVectorizer:
         v = Vectorizer(locale="es_MX", phoneset_name="ipa")
         assert v.multigram_config() == {}
 
+    def test_saved_rules_report_missing_icu_runtime(self, monkeypatch):
+        v = Vectorizer(locale="default", phoneset_name="ipa")
+        snapshot = v.export_letter_preprocessing()
+        snapshot["source"]["g2p_rules"] = ":: NFC ;"
+        monkeypatch.setattr("phonebox.utils.icu_utils.HAS_ICU", False)
+
+        with pytest.raises(RuntimeError, match="requires the ICU runtime"):
+            v.load_letter_preprocessing(snapshot)
+
     def test_join_seq_noop_single_token_pattern(self):
         """Single-token join patterns must not loop forever."""
         regex = make_join_re(["dʒ"])
