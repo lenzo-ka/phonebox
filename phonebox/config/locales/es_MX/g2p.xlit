@@ -1,11 +1,10 @@
-# es_MX: strip non-phonemic diacritics but preserve ñ and ü.
+# es_MX: fold strong-vowel accents but preserve ñ, ü, í, and ú.
 #
-# Spanish accents (á é í ó ú) only mark stress and are not phonemic, so we
-# drop them. ñ and ü, on the other hand, ARE phonemic (/ɲ/ and the /w/
-# trigger in gue/gui). We NFC-normalize first so canonically equivalent
-# decomposed spellings are protected with the same PUA placeholders. We then
-# use NFD + combining-mark removal, restore ñ and ü, remove unwanted
-# characters, and lowercase.
+# Acute weak vowels distinguish vowel hiatus from glides (hacia/hacía and
+# continuo/continúo), so í and ú remain distinct graphemes. Strong-vowel acute
+# marks are folded because this segmental model does not encode lexical stress.
+# ñ and ü remain phonemic. NFC first makes decomposed inputs follow the same
+# protection path before NFD mark removal and restoration.
 #
 # The bare `:: Null ;` between the restoration rules and the next filter
 # directive is intentional: ICU compound rule chains need a no-op
@@ -18,6 +17,10 @@
 \u00D1 > \uE002 ;
 \u00FC > \uE003 ;
 \u00DC > \uE004 ;
+\u00ED > \uE005 ;
+\u00CD > \uE006 ;
+\u00FA > \uE007 ;
+\u00DA > \uE008 ;
 
 :: NFD ;
 :: [:M:] Remove ;
@@ -27,6 +30,10 @@
 \uE002 > \u00D1 ;
 \uE003 > \u00FC ;
 \uE004 > \u00DC ;
+\uE005 > \u00ED ;
+\uE006 > \u00CD ;
+\uE007 > \u00FA ;
+\uE008 > \u00DA ;
 
 :: Null ;
 :: [^-.'[:L:]] Remove ;

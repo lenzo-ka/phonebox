@@ -98,6 +98,8 @@ def handle_pronounce(args):
         vec = None
         if locale:
             vec = Vectorizer(locale=locale, phoneset_name=phoneset, remove_stress=False)
+            if mg.preprocessor is None:
+                vec._use_legacy_locale_preprocessing()
         if locale is None:
             print(
                 "Warning: no locale in model metadata; using per-character letters "
