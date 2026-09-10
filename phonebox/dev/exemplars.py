@@ -1,18 +1,15 @@
-#!/usr/bin/env python3
 """Generate Phonebox's packaged ICU locale exemplar inventory."""
 
 from __future__ import annotations
 
-import argparse
 import itertools
 import json
-import sys
 from importlib.metadata import version
+from importlib.resources import files
 from pathlib import Path
 from typing import Any
 
 FORMAT_VERSION = 2
-DEFAULT_OUTPUT = Path("phonebox/config/exemplars.json")
 KINDS = ("standard", "auxiliary")
 EXPECTED_VERSIONS = {
     "icukit": "0.4.0",
@@ -37,7 +34,7 @@ def validate_versions(actual: dict[str, str]) -> None:
         )
 
 
-def inventory(unicode_set: Any) -> dict[str, Any]:
+def _inventory(unicode_set: Any) -> dict[str, Any]:
     characters: list[str] = []
     ranges: list[list[int]] = []
     for i in range(unicode_set.getRangeCount()):
@@ -54,7 +51,8 @@ def inventory(unicode_set: Any) -> dict[str, Any]:
     }
 
 
-def generate() -> dict[str, Any]:
+def generate_exemplars() -> dict[str, Any]:
+    """Build compact orthographic data from the pinned development dependencies."""
     try:
         import icu
         import icukit
@@ -76,7 +74,7 @@ def generate() -> dict[str, Any]:
         values = []
         for kind in KINDS:
             try:
-                value = inventory(
+                value = _inventory(
                     icu.UnicodeSet(icukit.get_exemplar_characters(locale, kind))
                 )
             except Exception as error:
@@ -115,7 +113,7 @@ def generate() -> dict[str, Any]:
     likely = {language: icukit.add_likely_subtags(language) for language in languages}
     configured = sorted(
         path.name
-        for path in (Path(__file__).parents[1] / "phonebox/config/locales").iterdir()
+        for path in files("phonebox.config").joinpath("locales").iterdir()
         if path.is_dir() and path.name != "default"
     )
     configured_profiles = {
@@ -169,43 +167,33 @@ def generate() -> dict[str, Any]:
     }
 
 
-def render(data: dict[str, Any]) -> str:
+def render_exemplars(data: dict[str, Any]) -> str:
+    """Serialize an inventory deterministically, preserving Unicode characters."""
     return (
         json.dumps(data, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
         + "\n"
     )
 
 
-def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(
-        description="Generate the packaged ICU standard and auxiliary exemplars."
-    )
-    parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
-    parser.add_argument(
-        "--check",
-        action="store_true",
-        help="fail unless OUTPUT is byte-for-byte current",
-    )
-    args = parser.parse_args(argv)
-    try:
-        content = render(generate())
-        if args.check:
-            if (
-                not args.output.exists()
-                or args.output.read_text(encoding="utf-8") != content
-            ):
-                print(
-                    f"{args.output} is stale; regenerate with this command",
-                    file=sys.stderr,
-                )
-                return 1
-        else:
-            args.output.parent.mkdir(parents=True, exist_ok=True)
-            args.output.write_text(content, encoding="utf-8")
-    except (OSError, RuntimeError) as error:
-        parser.error(str(error))
-    return 0
+def write_exemplars(output: str | Path) -> Path:
+    """Generate the pinned inventory and write its canonical UTF-8 JSON."""
+    content = render_exemplars(generate_exemplars())
+    path = Path(output)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(content, encoding="utf-8")
+    return path
 
 
-if __name__ == "__main__":
-    raise SystemExit(main())
+def check_exemplars(output: str | Path) -> bool:
+    """Return whether a file matches a freshly generated pinned inventory."""
+    content = render_exemplars(generate_exemplars())
+    path = Path(output)
+    return path.is_file() and path.read_text(encoding="utf-8") == content
+
+
+__all__ = [
+    "check_exemplars",
+    "generate_exemplars",
+    "render_exemplars",
+    "write_exemplars",
+]
