@@ -16,6 +16,11 @@ mypy>=1.0
 # Pre-commit hooks
 pre-commit>=3.0
 
+# Reproducible no-isolation wheel/sdist packaging tests
+build>=1.0
+setuptools>=77.0
+wheel
+
 # Documentation
 sphinx>=5.0
 sphinx-rtd-theme>=1.0
@@ -26,7 +31,7 @@ graphviz>=0.20
 matplotlib>=3.5.0
 
 # Pinned exemplar generation
-icukit==0.3.0
+icukit==0.4.0
 icukit-pyicu==78.3.0
 
 # Development tools

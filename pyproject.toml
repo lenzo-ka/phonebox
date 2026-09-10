@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
+requires = ["setuptools>=77.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -10,7 +10,8 @@ readme = "README.md"
 authors = [
     {name = "Kevin Lenzo (lenzo-ka)"},
 ]
-license = {text = "BSD-2-Clause"}
+license = "BSD-2-Clause AND Unicode-3.0"
+license-files = ["LICENSE", "LICENSE-UNICODE", "THIRD_PARTY_NOTICES.md"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -29,9 +30,9 @@ dependencies = [
     "cartlet>=0.5.0",
     # icukit ships prebuilt PyICU wheels for macOS arm64 / Linux / Windows
     # so installing phonebox does NOT require a system-level ICU build.
-    # Without this, our locale `g2p.xlit` files silently no-op and the
-    # trainer ingests un-normalised letters — surprised us once already
-    # with French (cf. the (N) variant leak into exception keys).
+    # The full runtime uses ICU to execute locale transliteration rules during
+    # training and to replay saved raw-rule snapshots. Standalone bundles use
+    # the separate portable preprocessing path.
     "icukit>=0.1.2",
 ]
 
@@ -48,7 +49,10 @@ dev = [
     "ruff>=0.4.0",
     "mypy>=1.0",
     "pre-commit>=3.0",
-    "icukit==0.3.0",
+    "build>=1.0",
+    "setuptools>=77.0",
+    "wheel",
+    "icukit==0.4.0",
     "icukit-pyicu==78.3.0",
 ]
 docs = [

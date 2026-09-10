@@ -22,7 +22,11 @@ def setup_train_multigram_command(subparsers) -> None:
             "is present."
         ),
     )
-    parser.add_argument("--locale", required=True, help="Locale tag, e.g. it_IT")
+    parser.add_argument(
+        "--locale",
+        required=True,
+        help="Locale tag (case-insensitive; bare, hyphenated, or underscored, e.g. it, it-IT)",
+    )
     parser.add_argument(
         "--lexicon",
         required=True,
@@ -145,7 +149,7 @@ def handle_train_multigram(args) -> int:
     )
     mg.train_from_pairs(pairs)
     mg.set_preprocessor(vec)
-    mg.locale = args.locale
+    mg.locale = vec.locale
     mg.phoneset_name = args.phoneset
     mg.export(out)
     log.info("exported %s (+ .units.json, .lm.json) in %.1fs", out, time.time() - t0)

@@ -21,6 +21,11 @@ from ..constants import (
     FILE_ENCODING,
     JOIN_CHAR,
 )
+from ..locale_resolution import (
+    canonical_locale,
+    orthographic_compatibility,
+    resolve_locale,
+)
 from ..portable_normalization import join_seq, make_join_re
 from .legacy_preprocessing import known_legacy_g2p_rules
 
@@ -87,6 +92,7 @@ class Vectorizer:
                 column sits in each emitted vector.
         """
         self.locale = None
+        self.policy_locale: str | None = None
         self.phoneset_name = phoneset_name
         self.remove_stress = remove_stress
         self.remove_accents = remove_accents
@@ -133,6 +139,7 @@ class Vectorizer:
             )
         else:
             self.locale = self.canonical_locale_for(locale or DEFAULT_LOCALE)
+            self.policy_locale = self.locale
             self.load_letter_preprocessing(letter_preprocessing)
 
     @property
@@ -178,15 +185,26 @@ class Vectorizer:
     def setup_locale(self, locale: str | None) -> None:
         """Resolve *locale* and load its transliterators and join config."""
         self.locale = self.canonical_locale_for(locale or DEFAULT_LOCALE)
-
-        # French marks liaison context with a padding symbol so the tree can
-        # condition on a following word boundary.
-        if self.locale.startswith("fr"):
-            self.liaison_pad = "#"
+        # setup_locale may switch an existing Vectorizer (notably when loading
+        # a snapshotless model). Clear every locale-owned value before loading
+        # the target so missing rules or joins cannot leak from the old locale.
+        self.policy_locale = None
+        self.liaison_pad = None
+        self.config = None
+        self.norm_transliterator = None
+        self.g2p_transliterator = None
+        self.lett_join_re = None
+        self.phon_join_re = None
 
         locale_dir = self._resolve_locale_dir()
         if not locale_dir:
             return
+
+        # French marks liaison context with a padding symbol so the tree can
+        # condition on a following word boundary. This belongs to the selected
+        # policy, not an unresolved request that merely starts with ``fr``.
+        if self.policy_locale and self.policy_locale.startswith("fr"):
+            self.liaison_pad = "#"
 
         self._load_transliterators(locale_dir)
         self._load_config(locale_dir)
@@ -195,7 +213,13 @@ class Vectorizer:
         """Find locale config directory, falling back to default if needed."""
         module_dir = Path(__file__).parent.parent
         data_dir = module_dir / "config" / "locales"
-        locale_dir = data_dir / self.locale
+        available = [path.name for path in data_dir.iterdir() if path.is_dir()]
+        resolution = resolve_locale(
+            self.locale, available, orthographic_compatibility()
+        )
+        resolved = resolution.resolved
+        locale_dir = data_dir / resolved if resolved else data_dir / self.locale
+        self.policy_locale = resolved or "default"
         default_dir = data_dir / "default"
 
         if locale_dir.exists():
@@ -275,6 +299,7 @@ class Vectorizer:
         config["remove_accents"] = self.remove_accents
         config["filter_non_letters"] = self.filter_non_letters
         config["locale"] = self.locale
+        config["policy_locale"] = self.policy_locale
         config["phoneset_name"] = self.phoneset_name
         config["cased"] = self.cased
         config["remove_stress"] = self.remove_stress
@@ -439,11 +464,7 @@ class Vectorizer:
 
     @staticmethod
     def canonical_locale_for(locale):
-        if len(locale) == 5:
-            lang = locale[:2]
-            region = locale[-2:]
-            locale = lang.lower() + "_" + region.upper()
-        return locale
+        return canonical_locale(locale)
 
     def vectorize_word(self, word: str) -> list[list[str]]:
         """Returns letter vectors for one line (word)"""

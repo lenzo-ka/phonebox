@@ -20,8 +20,10 @@ from .core.multigram_g2p import MultigramG2P
 from .core.vectorizer import Vectorizer
 from .dictionary import Dictionary
 from .locales import (
+    LocaleResolution,
     canonical_locale,
     load_locale_defaults,
+    resolve_locale,
     supplement_defaults,
 )
 
@@ -35,7 +37,9 @@ __all__ = [
     "MultigramG2P",
     "Vectorizer",
     # Locale-aware defaults
+    "LocaleResolution",
     "canonical_locale",
     "load_locale_defaults",
+    "resolve_locale",
     "supplement_defaults",
 ]

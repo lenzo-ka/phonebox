@@ -41,7 +41,12 @@ def add_vectorizer_args(
     hand-written original while sharing one definition and one set of defaults.
     """
     parser.add_argument(
-        "--locale", default=DEFAULT_LOCALE, help="Language locale (e.g. en_US)"
+        "--locale",
+        default=DEFAULT_LOCALE,
+        help=(
+            "Language locale (case-insensitive; bare, hyphenated, or underscored, "
+            "e.g. en, en-US)"
+        ),
     )
     parser.add_argument(
         "--phoneset", default=DEFAULT_PHONESET, help="Phoneset name (e.g. cmu, ipa)"

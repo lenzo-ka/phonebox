@@ -37,7 +37,14 @@ Examples:
         help="Build complete model from dictionary",
         description="Build a complete G2P model (align + train + export)",
     )
-    build_parser.add_argument("locale", nargs="?", help="Language locale (e.g., en_US)")
+    build_parser.add_argument(
+        "locale",
+        nargs="?",
+        help=(
+            "Language locale (case-insensitive; bare, hyphenated, or underscored, "
+            "e.g. en, en-US)"
+        ),
+    )
     build_parser.add_argument("dict", nargs="?", help="Dictionary file path")
     build_parser.add_argument("-o", "--output", help="Output model file")
     build_parser.add_argument(
@@ -87,7 +94,13 @@ Examples:
         help="Train decision tree model",
         description="Train a decision tree from aligned data",
     )
-    train_parser.add_argument("locale", help="Language locale")
+    train_parser.add_argument(
+        "locale",
+        help=(
+            "Language locale (case-insensitive; bare, hyphenated, or underscored, "
+            "e.g. it, it-IT)"
+        ),
+    )
     train_parser.add_argument("-d", "--dict", help="Dictionary file")
     train_parser.add_argument("-a", "--alignments", help="Alignment file")
     train_parser.add_argument("--vectors", help="Vectorized data file")

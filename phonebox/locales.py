@@ -35,6 +35,12 @@ from pathlib import Path
 from typing import Any
 
 from .constants import FILE_ENCODING
+from .locale_resolution import (
+    LocaleResolution,
+    canonical_locale,
+    locale_candidates,
+    resolve_locale,
+)
 from .utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -44,28 +50,22 @@ def _locales_dir() -> Path:
     return Path(__file__).parent / "config" / "locales"
 
 
-def canonical_locale(locale: str) -> str:
-    """Normalise BCP47-ish locale tags to the on-disk directory form.
-
-    >>> canonical_locale("en-us")
-    'en_US'
-    >>> canonical_locale("fr_FR")
-    'fr_FR'
-    """
-    if len(locale) == 5 and locale[2] in ("-", "_"):
-        return f"{locale[:2].lower()}_{locale[3:].upper()}"
-    return locale
-
-
 def load_locale_defaults(locale: str) -> dict[str, Any]:
     """Load ``defaults.json`` for ``locale`` (with default-locale fallback).
 
     Returns ``{}`` if no ``defaults.json`` exists anywhere — callers
     should treat missing keys as "no preference, use built-in defaults".
     """
-    locale = canonical_locale(locale)
     base = _locales_dir()
-    candidates = [base / locale / "defaults.json", base / "default" / "defaults.json"]
+    # Supplement defaults affect phone output, so exemplar-profile
+    # compatibility is intentionally not used here.
+    candidates = [
+        *(
+            base / candidate / "defaults.json"
+            for candidate in locale_candidates(locale)
+        ),
+        base / "default" / "defaults.json",
+    ]
     for p in candidates:
         if p.is_file():
             try:
@@ -81,4 +81,10 @@ def supplement_defaults(locale: str) -> dict[str, Any]:
     return load_locale_defaults(locale).get("supplement", {}) or {}
 
 
-__all__ = ["canonical_locale", "load_locale_defaults", "supplement_defaults"]
+__all__ = [
+    "LocaleResolution",
+    "canonical_locale",
+    "load_locale_defaults",
+    "resolve_locale",
+    "supplement_defaults",
+]

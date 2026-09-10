@@ -4,17 +4,18 @@
 from __future__ import annotations
 
 import argparse
+import itertools
 import json
 import sys
 from importlib.metadata import version
 from pathlib import Path
 from typing import Any
 
-FORMAT_VERSION = 1
+FORMAT_VERSION = 2
 DEFAULT_OUTPUT = Path("phonebox/config/exemplars.json")
 KINDS = ("standard", "auxiliary")
 EXPECTED_VERSIONS = {
-    "icukit": "0.3.0",
+    "icukit": "0.4.0",
     "icukit-pyicu": "78.3.0",
     "ICU": "78.3",
     "Unicode": "17.0",
@@ -59,7 +60,7 @@ def generate() -> dict[str, Any]:
         import icukit
     except ImportError as error:
         raise RuntimeError(
-            "generation requires icukit==0.3.0 and icukit-pyicu==78.3.0"
+            "generation requires icukit==0.4.0 and icukit-pyicu==78.3.0"
         ) from error
     actual_versions = {
         "icukit": icukit.__version__,
@@ -98,6 +99,46 @@ def generate() -> dict[str, Any]:
     }
     profiles = sorted(set(locale_profiles.values()))
     profile_ids = {value: index for index, value in enumerate(profiles)}
+    locale_ids = sorted(locale_profiles)
+    languages = sorted({locale.split("_")[0] for locale in locale_ids})
+    alias_inputs = (
+        "".join(chars)
+        for chars in itertools.product("abcdefghijklmnopqrstuvwxyz", repeat=2)
+    )
+    language_aliases = {
+        language: canonical
+        for language in alias_inputs
+        if (canonical := icukit.canonicalize_locale(language)) != language
+        and canonical.isalpha()
+        and 2 <= len(canonical) <= 3
+    }
+    likely = {language: icukit.add_likely_subtags(language) for language in languages}
+    configured = sorted(
+        path.name
+        for path in (Path(__file__).parents[1] / "phonebox/config/locales").iterdir()
+        if path.is_dir() and path.name != "default"
+    )
+    configured_profiles = {
+        locale: locale_profiles[locale]
+        for locale in configured
+        if locale in locale_profiles
+    }
+    compatible = {}
+    for locale, profile in locale_profiles.items():
+        parts = locale.split("_")
+        if len(parts) > 1 and len(parts[1]) == 4:
+            continue
+        language = locale.split("_", 1)[0]
+        matches = [
+            candidate
+            for candidate, candidate_profile in configured_profiles.items()
+            if candidate.split("_", 1)[0] == language and candidate_profile == profile
+        ]
+        likely_parts = likely[language].split("_")
+        preferred = "_".join((likely_parts[0], *likely_parts[2:]))
+        matches.sort(key=lambda candidate: (candidate != preferred, candidate))
+        if matches:
+            compatible[locale] = matches
     return {
         "format": FORMAT_VERSION,
         "generator": {
@@ -105,12 +146,25 @@ def generate() -> dict[str, Any]:
             "backend": actual_versions["icukit-pyicu"],
             "icu": actual_versions["ICU"],
             "unicode": actual_versions["Unicode"],
+            "source": {
+                "icu": "https://icu.unicode.org/",
+                "cldr": "https://cldr.unicode.org/",
+            },
+            "license": {
+                "id": "Unicode-3.0",
+                "notice": "LICENSE-UNICODE",
+            },
         },
         "kinds": list(KINDS),
         "inventories": [unique[value] for value in encoded_inventories],
         "profiles": [list(value) for value in profiles],
         "locales": {
             locale: profile_ids[value] for locale, value in locale_profiles.items()
+        },
+        "locale_resolution": {
+            "language_aliases": language_aliases,
+            "likely": likely,
+            "orthographic_compatible": compatible,
         },
     }
 

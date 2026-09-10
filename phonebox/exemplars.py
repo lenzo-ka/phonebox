@@ -10,7 +10,9 @@ from functools import cache, lru_cache
 from importlib.resources import files
 from typing import Any
 
-_FORMAT_VERSION = 1
+from .locale_resolution import canonical_locale
+
+_FORMAT_VERSION = 2
 _KINDS = ("standard", "auxiliary")
 
 
@@ -64,17 +66,6 @@ def _data() -> dict[str, Any]:
     return data
 
 
-@lru_cache(maxsize=1)
-def _locale_aliases() -> dict[str, str]:
-    aliases: dict[str, str] = {}
-    for locale in _data()["locales"]:
-        key = locale.replace("-", "_").casefold()
-        if key in aliases and aliases[key] != locale:
-            raise RuntimeError(f"ambiguous normalized locale ID: {locale}")
-        aliases[key] = locale
-    return aliases
-
-
 def supported_locales() -> tuple[str, ...]:
     """Return every locale ID represented in the pinned ICU inventory."""
     return tuple(_data()["locales"])
@@ -87,10 +78,8 @@ def get_exemplars(locale: str, kind: str = "standard") -> ExemplarInventory:
         raise ValueError(
             f"unknown exemplar kind {kind!r}; expected standard or auxiliary"
         )
-    if not isinstance(locale, str) or not locale:
-        raise ValueError("locale must be a non-empty string")
-    canonical = _locale_aliases().get(locale.replace("-", "_").casefold())
-    if canonical is None:
+    canonical = canonical_locale(locale)
+    if canonical not in _data()["locales"]:
         raise KeyError(f"unknown exemplar locale: {locale}")
     data = _data()
     profile = data["profiles"][data["locales"][canonical]]

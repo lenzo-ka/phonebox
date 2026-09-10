@@ -252,6 +252,7 @@ class MultigramG2P:
             meta["letter_preprocessing"] = (
                 self.preprocessor.export_letter_preprocessing()
             )
+            meta["policy_locale"] = self.preprocessor.policy_locale
         lm_path.write_text(
             json.dumps(self.lm.to_dict(), indent=2, ensure_ascii=False) + "\n",
             encoding=FILE_ENCODING,
@@ -307,6 +308,10 @@ class MultigramG2P:
                 phoneset_name=inst.phoneset_name or "ipa",
                 letter_preprocessing=snapshot,
             )
+            policy_locale = meta.get("policy_locale")
+            if policy_locale is not None and not isinstance(policy_locale, str):
+                raise ValueError("malformed policy_locale metadata")
+            vectorizer.policy_locale = policy_locale
             inst.preprocessor = vectorizer
         return inst
 
