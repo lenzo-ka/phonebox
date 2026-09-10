@@ -2,7 +2,7 @@
 
 Compare **G2PDecisionTree** (1:1, cart tree) and **MultigramG2P** (n:m, joint EM
 + unit n-gram Viterbi) on held-out IPA lexicon slices. Use the **`phonebox compare`**
-CLI or the thin repo-root wrappers (`compare_g2p*.py`).
+CLI or the structured APIs in `phonebox.eval`.
 
 ## Environment
 
@@ -21,19 +21,19 @@ Lexicons: `es_ipa.tsv`, `fr_ipa.tsv`, `de_ipa.tsv`, `en_ipa.tsv`, `pt_ipa.tsv`,
 | `phonebox compare locale …` | stdout | Single locale; all eval flags |
 | `phonebox compare all` | `docs/G2P_COMPARE.md` | Six locales; pretrained 1:1 + train n:m |
 | `phonebox compare all --no-config-joins` | `docs/G2P_COMPARE_NO_JOINS.md` | Both models on train split; joins off |
+| `phonebox compare sweep` | `docs/G2P_SWEEP.md` | Sweep n:m span and LM order |
+| `phonebox compare units` | stdout or `--output` | Inspect learned multigram units |
+| `phonebox compare accuracy DICTIONARY` | stdout | Train/test word and phone accuracy |
+| `phonebox compare experiments` | `--output-dir` | Normalization experiment reports |
 | `phonebox train-multigram …` | model + sidecars | Train/export n:m for `phonebox pronounce` |
 
-Repo-root wrappers (same logic): `compare_g2p.py`, `compare_g2p_all.py`,
-`compare_g2p_sweep.py`, `dump_units.py`, `run_g2p_experiments.py`.
-
-## Other scripts
+## Other workflows
 
 | Script | Output | Purpose |
 |--------|--------|---------|
-| `compare_g2p_sweep.py` | `docs/G2P_SWEEP.md` | n:m span × LM order (joins **on**) |
-| `dump_units.py` | `docs/G2P_UNITS.md` | Top EM multigram units (joins **on**) |
-| `run_g2p_experiments.py` | `docs/experiments/` | it_IT / pt_BR train-normalize A/B tests |
-| `run_full_eval.sh` | above (except no-joins) | Sequential regen |
+| `phonebox compare sweep` | `docs/G2P_SWEEP.md` | n:m span × LM order (joins **on**) |
+| `phonebox compare units` | `docs/G2P_UNITS.md` | Top EM multigram units (joins **on**) |
+| `phonebox compare experiments` | `docs/experiments/` | it_IT / pt_BR train-normalize A/B tests |
 
 ## Key flags (`compare locale`)
 
@@ -47,6 +47,45 @@ Repo-root wrappers (same logic): `compare_g2p.py`, `compare_g2p_all.py`,
 
 Locale `config.json` may set `"multigram": {"max_letter_span": 3}` (fr_FR,
 de_DE). Compare scripts read this via `Vectorizer.multigram_config()`.
+
+The same workflows are available as structured Python APIs from
+`phonebox.eval`: `run_g2p_sweep`, `analyze_multigram_units`,
+`evaluate_accuracy`, and `run_experiments`. They take explicit paths and
+configuration values; conventional filename and environment-variable defaults
+belong only to the CLI commands.
+
+CLI callers can also bypass those conventions directly:
+
+```bash
+phonebox compare sweep --lexicon it_IT=PATH/italian.tsv --locales it_IT
+phonebox compare units --lexicon it_IT=PATH/italian.tsv
+phonebox compare experiments \
+  --experiment it_IT baseline PATH/italian.tsv PATH/baseline.g2p.gz
+```
+
+Pronunciation-candidate workflows are also available without repository
+scripts:
+
+```bash
+phonebox score-prons INPUT.jsonl -m MODEL -o SCORED.jsonl
+phonebox find-suspicious SCORED.jsonl --triage -o REPORT_DIR
+```
+
+Their reusable scoring, filtering, and English/CMUdict triage helpers live in
+`phonebox.pronunciation_analysis`. Triage categories prioritize human review;
+they are not language detection or correctness judgments.
+
+For a narrow-context training run, use the ordinary trainer API or CLI options
+instead of a fixed-path preset:
+
+```bash
+phonebox train --locale en_US --phoneset cmu --lexicon DICTIONARY \
+  --output MODEL.g2p.gz --trainer sklearn --width 3 --remove-stress
+```
+
+Stress removal is optional. Without `--remove-stress`, training preserves stress
+markers, and `score-prons` passes candidate phones unchanged so the loaded
+model's saved preprocessing remains authoritative.
 
 ## Metrics (compare scripts)
 

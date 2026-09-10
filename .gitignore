@@ -7,9 +7,6 @@ pocketsphinx_build.log
 # Analysis and test scripts (temporary)
 build_*.py
 compare_*.py
-!compare_g2p.py
-!compare_g2p_all.py
-!compare_g2p_sweep.py
 evaluate_*.py
 final_*.py
 test_phase_loading.py

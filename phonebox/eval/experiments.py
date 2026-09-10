@@ -1,25 +1,15 @@
-#!/usr/bin/env python
-"""Run it_IT / pt_BR G2P experiments (error analysis + train-normalize policies).
+"""Run the supported Italian and Portuguese normalization experiments.
 
-Does not overwrite ``docs/G2P_COMPARE.md`` or ``docs/G2P_COMPARE_BASELINE.md``.
-Writes under ``docs/experiments/``.
-
-Requires PHONEDECODING_LEXICON_DIR and PHONEDECODING_G2P_DIR (same as compare_g2p_all).
-
-Example::
-
-    export PHONEDECODING_LEXICON_DIR=…/processed
-    export PHONEDECODING_G2P_DIR=…/build/g2p
-    python run_g2p_experiments.py --parallel-align
+The API accepts explicit :class:`ExperimentSpec` paths and writes its report
+under the requested output directory. Environment and layout conveniences are
+confined to the CLI.
 """
 
 from __future__ import annotations
 
-import argparse
 import json
-import os
-import sys
 import time
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, cast
@@ -40,16 +30,17 @@ from phonebox.experiments.analysis import (
 from phonebox.experiments.equiv import equiv_for_locale
 from phonebox.experiments.normalize import NORMALIZE_POLICIES
 from phonebox.experiments.split import split_lexicon
+from phonebox.locale_resolution import resolve_locale
 
-_EXPERIMENTS: list[tuple[str, str, str, str]] = [
-    ("it_IT", "it_ipa.tsv", "it-it/it-it-ipa.g2p.gz", "baseline"),
-    ("it_IT", "it_ipa.tsv", "it-it/it-it-ipa.g2p.gz", "spelling_gated"),
-    ("it_IT", "it_ipa.tsv", "it-it/it-it-ipa.g2p.gz", "collapse_open"),
-    ("pt_BR", "pt_ipa.tsv", "pt-br/pt-br-ipa.g2p.gz", "baseline"),
-    ("pt_BR", "pt_ipa.tsv", "pt-br/pt-br-ipa.g2p.gz", "surface_final"),
-    ("pt_BR", "pt_ipa.tsv", "pt-br/pt-br-ipa.g2p.gz", "do_du"),
-    ("pt_BR", "pt_ipa.tsv", "pt-br/pt-br-ipa.g2p.gz", "citation_expand"),
-]
+
+@dataclass(frozen=True)
+class ExperimentSpec:
+    """One locale, lexicon, baseline model, and normalization policy run."""
+
+    locale: str
+    lexicon: Path
+    baseline_model: Path
+    policy: str = "baseline"
 
 
 def _write_locale_doc(
@@ -199,66 +190,86 @@ def _run_error_analysis(
     return b_table, m_table
 
 
-def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--lexicon-dir", type=Path, default=None)
-    ap.add_argument("--g2p-dir", type=Path, default=None)
-    ap.add_argument("--output-dir", type=Path, default=Path("docs/experiments"))
-    ap.add_argument("--seed", type=int, default=42)
-    ap.add_argument("--max-test", type=int, default=2000)
-    ap.add_argument("--em-iterations", type=int, default=15)
-    ap.add_argument("--parallel-align", action="store_true")
-    ap.add_argument("--skip-error-analysis", action="store_true")
-    ap.add_argument("--locales", nargs="*", choices=["it_IT", "pt_BR"])
-    ap.add_argument(
-        "--policies",
-        nargs="*",
-        help="Subset of normalize policy names (default: all for selected locales)",
-    )
-    args = ap.parse_args()
-
-    lex_dir = args.lexicon_dir or os.environ.get("PHONEDECODING_LEXICON_DIR")
-    g2p_dir = args.g2p_dir or os.environ.get("PHONEDECODING_G2P_DIR")
-    if not lex_dir or not g2p_dir:
-        print(
-            "Set PHONEDECODING_LEXICON_DIR and PHONEDECODING_G2P_DIR", file=sys.stderr
+def run_experiments(
+    experiments: list[ExperimentSpec],
+    *,
+    output_dir: Path = Path("docs/experiments"),
+    seed: int = 42,
+    max_test: int = 2000,
+    em_iterations: int = 15,
+    parallel_align: bool = False,
+    skip_error_analysis: bool = False,
+    locales: list[str] | None = None,
+    policies: list[str] | None = None,
+    quiet: bool = True,
+) -> list[dict[str, object]]:
+    """Run explicit Italian/Portuguese experiments and return their manifest."""
+    normalized_experiments = []
+    unsupported = set()
+    for spec in experiments:
+        resolution = resolve_locale(spec.locale, NORMALIZE_POLICIES)
+        if resolution.resolved is None:
+            unsupported.add(resolution.requested)
+            continue
+        normalized_experiments.append(
+            ExperimentSpec(
+                resolution.resolved,
+                spec.lexicon,
+                spec.baseline_model,
+                spec.policy,
+            )
         )
-        return 2
-
-    lex_root = Path(lex_dir)
-    g2p_root = Path(g2p_dir)
-    out_root = args.output_dir
+    if unsupported:
+        raise ValueError(
+            f"unsupported normalization experiment locales: {sorted(unsupported)}"
+        )
+    experiments = normalized_experiments
+    out_root = Path(output_dir)
     results_dir = out_root / "results"
     results_dir.mkdir(parents=True, exist_ok=True)
 
-    selected_locales = set(args.locales) if args.locales else {"it_IT", "pt_BR"}
+    selected_locales = {spec.locale for spec in experiments}
+    if locales:
+        selected_locales = set()
+        for locale in locales:
+            resolution = resolve_locale(locale, NORMALIZE_POLICIES)
+            if resolution.resolved is None:
+                raise ValueError(
+                    f"unsupported normalization experiment locale: "
+                    f"{resolution.requested}"
+                )
+            selected_locales.add(resolution.resolved)
     manifest: list[dict[str, object]] = []
     t_all = time.time()
 
-    for locale, lex_name, model_rel, policy in _EXPERIMENTS:
+    selected_specs: dict[str, ExperimentSpec] = {}
+    for spec in experiments:
+        locale, policy = spec.locale, spec.policy
         if locale not in selected_locales:
             continue
-        if args.policies and policy not in args.policies:
+        if policies and policy not in policies:
             continue
 
-        lexicon = lex_root / lex_name
-        model_path = g2p_root / model_rel
+        lexicon = Path(spec.lexicon)
+        model_path = Path(spec.baseline_model)
+        selected_specs.setdefault(locale, spec)
         label = f"{locale}_{policy}"
-        print(f"\n=== {label} ===", flush=True)
+        if not quiet:
+            print(f"\n=== {label} ===", flush=True)
 
         train_norm = None if policy == "baseline" else policy
         summary = run_compare(
             lexicon=lexicon,
             locale=locale,
-            seed=args.seed,
-            max_test=args.max_test,
-            em_iterations=args.em_iterations,
-            parallel_align=args.parallel_align,
+            seed=seed,
+            max_test=max_test,
+            em_iterations=em_iterations,
+            parallel_align=parallel_align,
             phone_equiv=equiv_for_locale(locale),
             train_normalize_policy=train_norm,
             experiment_label=label,
             baseline_model=model_path,
-            quiet=False,
+            quiet=quiet,
         )
         result_path = results_dir / f"{label}.json"
         result_path.write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
@@ -270,27 +281,26 @@ def main() -> int:
         by_locale.setdefault(str(loc), []).append(entry)
 
     for locale in sorted(by_locale):
-        lexicon = lex_root / ("it_ipa.tsv" if locale == "it_IT" else "pt_ipa.tsv")
-        model_rel = (
-            "it-it/it-it-ipa.g2p.gz" if locale == "it_IT" else "pt-br/pt-br-ipa.g2p.gz"
-        )
+        spec = selected_specs[locale]
+        lexicon = Path(spec.lexicon)
         pairs = load_lexicon(lexicon)
-        _test, train_raw = split_lexicon(pairs, seed=args.seed, max_test=args.max_test)
+        _test, train_raw = split_lexicon(pairs, seed=seed, max_test=max_test)
         audits = {
             policy: audit_normalize_delta(train_raw, locale, policy)
             for policy in NORMALIZE_POLICIES[locale]
         }
         error_sections: list[str] = []
-        if not args.skip_error_analysis:
-            print(f"\n--- error analysis {locale} ---", flush=True)
+        if not skip_error_analysis:
+            if not quiet:
+                print(f"\n--- error analysis {locale} ---", flush=True)
             b_tab, m_tab = _run_error_analysis(
                 locale,
                 lexicon,
-                g2p_root / model_rel,
-                seed=args.seed,
-                max_test=args.max_test,
-                parallel_align=args.parallel_align,
-                em_iterations=args.em_iterations,
+                Path(spec.baseline_model),
+                seed=seed,
+                max_test=max_test,
+                parallel_align=parallel_align,
+                em_iterations=em_iterations,
             )
             error_sections = [b_tab, m_tab]
 
@@ -339,7 +349,7 @@ def main() -> int:
         "```bash",
         "export PHONEDECODING_LEXICON_DIR=…/processed",
         "export PHONEDECODING_G2P_DIR=…/build/g2p",
-        "python run_g2p_experiments.py --parallel-align",
+        "phonebox compare experiments --parallel-align",
         "```",
         "",
     ]
@@ -349,9 +359,9 @@ def main() -> int:
         encoding="utf-8",
     )
 
-    print(f"\nWrote {out_root} in {time.time() - t_all:.0f}s", flush=True)
-    return 0
+    if not quiet:
+        print(f"\nWrote {out_root} in {time.time() - t_all:.0f}s", flush=True)
+    return manifest
 
 
-if __name__ == "__main__":
-    raise SystemExit(main())
+__all__ = ["ExperimentSpec", "run_experiments"]

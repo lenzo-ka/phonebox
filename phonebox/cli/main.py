@@ -19,6 +19,8 @@ Commands:
     vectorize       Convert alignments to feature vectors
     check           Validate lexicon against phoneset
     suggest-joins   Discover letter/phone joins (multigram EM)
+    score-prons     Score pronunciation candidates in JSONL
+    find-suspicious Analyze scored pronunciation entries
 """
 
 from __future__ import annotations
@@ -35,6 +37,10 @@ from .commands.dict import setup_dict_commands
 from .commands.model import setup_model_commands
 from .commands.normalize import setup_normalize_command
 from .commands.pronounce import setup_pronounce_command
+from .commands.pronunciation_analysis import (
+    setup_find_suspicious_command,
+    setup_score_prons_command,
+)
 from .commands.recipe import setup_recipe_commands
 from .commands.suggest_joins import setup_suggest_joins_command
 from .commands.train import setup_train_command
@@ -79,6 +85,8 @@ Quality / locale tuning:
   check        Validate lexicon against canonical phoneset
   suggest-joins  Discover config.json join candidates (multigram EM)
   compare      1:1 vs n:m eval (locale or all six IPA locales)
+  score-prons  Score pronunciation candidates in JSONL
+  find-suspicious  Analyze scored pronunciation entries
 
 Low-Level:
   align        Align letters to phonemes (EM algorithm)
@@ -132,6 +140,8 @@ For more help:
     setup_train_multigram_command(subparsers)
     setup_compare_commands(subparsers)
     setup_suggest_joins_command(subparsers)
+    setup_score_prons_command(subparsers)
+    setup_find_suspicious_command(subparsers)
 
     # Parse arguments
     arguments = sys.argv[1:] if argv is None else argv

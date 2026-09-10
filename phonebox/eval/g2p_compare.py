@@ -1,19 +1,17 @@
 #!/usr/bin/env python
 """Compare 1:1 G2PDecisionTree vs MultigramG2P on a held-out lexicon slice.
 
-Library module; also exposed as ``phonebox compare`` and ``compare_g2p.py``.
+Library module; also exposed through ``phonebox compare``.
 See ``docs/G2P_EVAL.md``.
 """
 
 from __future__ import annotations
 
-import argparse
 import sys
 import time
 from collections import defaultdict
 from collections.abc import Callable
 from pathlib import Path
-from typing import cast
 
 from phonebox.constants import (
     DEFAULT_MAX_TEST_ENTRIES,
@@ -156,6 +154,7 @@ def evaluate(
     test_set: list[tuple[str, list[str]]],
     gold_variants: dict[str, set[tuple[str, ...]]] | None = None,
     phone_equiv: frozenset[tuple[str, str]] | None = None,
+    quiet: bool = True,
 ) -> dict[str, float]:
     word_ok = word_ok_relaxed = 0
     phone_ok = 0
@@ -165,7 +164,8 @@ def evaluate(
         try:
             pred = predict(word)
         except Exception as exc:
-            print(f"  [{name}] {word!r}: {exc}", file=sys.stderr)
+            if not quiet:
+                print(f"  [{name}] {word!r}: {exc}", file=sys.stderr)
             pred = []
         gold = gold_variants.get(word) if gold_variants else None
         if pred == expected:
@@ -315,7 +315,7 @@ def run_compare(
     skip_multigram: bool = False,
     baseline_model: Path | None = None,
     use_exceptions: bool = False,
-    quiet: bool = False,
+    quiet: bool = True,
 ) -> dict[str, object]:
     """Run comparison; return metadata plus per-model metric dicts."""
     if not lexicon.is_file():
@@ -438,6 +438,7 @@ def run_compare(
             test_eval,
             gold_variants=gold_variants,
             phone_equiv=equiv,
+            quiet=quiet,
         )
         results.append(("G2PDecisionTree", time.time() - t0, m))
 
@@ -473,6 +474,7 @@ def run_compare(
             test_eval,
             gold_variants=gold_variants,
             phone_equiv=equiv,
+            quiet=quiet,
         )
         results.append(("MultigramG2P", time.time() - t0, m))
 
@@ -527,148 +529,3 @@ def print_results_table(
         print(
             f"\nPER delta (1:1 − multigram): {d_per:+.2f} pp → lower PER wins ({winner})"
         )
-
-
-def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--lexicon", required=True, type=Path)
-    ap.add_argument("--locale", required=True)
-    ap.add_argument("--phoneset", default=DEFAULT_MULTIGRAM_PHONESET)
-    ap.add_argument("--seed", type=int, default=DEFAULT_SPLIT_SEED)
-    ap.add_argument(
-        "--test-fraction",
-        type=float,
-        default=DEFAULT_TEST_FRACTION,
-        help=f"Held-out fraction (default {DEFAULT_TEST_FRACTION}).",
-    )
-    ap.add_argument(
-        "--max-test",
-        type=int,
-        default=DEFAULT_MAX_TEST_ENTRIES,
-        help=f"Cap test entries (default {DEFAULT_MAX_TEST_ENTRIES}).",
-    )
-    ap.add_argument("--max-letter-span", type=int, default=2)
-    ap.add_argument("--max-phone-span", type=int, default=2)
-    ap.add_argument("--em-iterations", type=int, default=15)
-    ap.add_argument(
-        "--lm-order",
-        type=int,
-        default=2,
-        choices=[1, 2, 3],
-        help="Unit n-gram order for joint decode (default 2).",
-    )
-    ap.add_argument(
-        "--decode-beam",
-        type=int,
-        default=0,
-        help="Beam width for joint decode (0 = exact Viterbi).",
-    )
-    ap.add_argument(
-        "--parallel-align",
-        action="store_true",
-        help="Parallel multigram EM E-step (off by default).",
-    )
-    ap.add_argument(
-        "--parallel-viterbi",
-        action="store_true",
-        help="Parallel post-EM Viterbi batch (defaults on when --parallel-align).",
-    )
-    ap.add_argument(
-        "-v",
-        "--verbose",
-        action="store_true",
-        help="Per-iteration EM / phase timings on stderr.",
-    )
-    ap.add_argument(
-        "--vowel-equiv",
-        action="store_true",
-        help="Alias for --relaxed-per (Italian e/ɛ, o/ɔ).",
-    )
-    ap.add_argument(
-        "--relaxed-per",
-        action="store_true",
-        help="PERr column: locale phone-equivalence (it_IT, pt_BR).",
-    )
-    ap.add_argument(
-        "--train-normalize",
-        default=None,
-        metavar="POLICY",
-        help="Train-split phone policy (see phonebox.experiments.normalize); test gold unchanged.",
-    )
-    ap.add_argument(
-        "--experiment",
-        default=None,
-        help="Label stored in experiment result metadata.",
-    )
-    ap.add_argument("--skip-baseline", action="store_true")
-    ap.add_argument("--skip-multigram", action="store_true")
-    ap.add_argument(
-        "--baseline-model",
-        type=Path,
-        default=None,
-        help="Load 1:1 G2PDecisionTree from disk instead of training on the train split.",
-    )
-    ap.add_argument(
-        "--use-exceptions",
-        action="store_true",
-        help="Hybrid mode: train-split lexicon lookup for 1:1 and n:m (default: off).",
-    )
-    ap.add_argument(
-        "--no-config-joins",
-        action="store_true",
-        help="Disable locale config.json joins; train 1:1 on train split (ignore --baseline-model).",
-    )
-    args = ap.parse_args()
-
-    try:
-        summary = run_compare(
-            lexicon=args.lexicon,
-            locale=args.locale,
-            phoneset=args.phoneset,
-            seed=args.seed,
-            test_fraction=args.test_fraction,
-            max_test=args.max_test,
-            max_letter_span=args.max_letter_span,
-            max_phone_span=args.max_phone_span,
-            em_iterations=args.em_iterations,
-            lm_order=args.lm_order,
-            decode_beam=args.decode_beam,
-            parallel_align=args.parallel_align,
-            parallel_viterbi=args.parallel_viterbi,
-            verbose=args.verbose,
-            vowel_equiv=args.vowel_equiv,
-            phone_equiv=equiv_for_locale(args.locale)
-            if args.relaxed_per or args.vowel_equiv
-            else None,
-            train_normalize_policy=args.train_normalize,
-            experiment_label=args.experiment,
-            no_config_joins=args.no_config_joins,
-            skip_baseline=args.skip_baseline,
-            skip_multigram=args.skip_multigram,
-            baseline_model=args.baseline_model,
-            use_exceptions=args.use_exceptions,
-        )
-    except FileNotFoundError as exc:
-        print(exc, file=sys.stderr)
-        return 2
-
-    rows = [
-        (
-            cast(str, r["model"]),
-            cast(float, r["train_s"]),
-            cast(
-                dict[str, float],
-                {k: r[k] for k in r if k not in ("model", "train_s")},
-            ),
-        )
-        for r in cast(list[dict[str, object]], summary["results"])
-    ]
-    print_results_table(
-        rows,
-        show_relaxed_per=args.relaxed_per or args.vowel_equiv,
-    )
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())

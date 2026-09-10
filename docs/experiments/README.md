@@ -29,5 +29,5 @@ Per-run metrics: `results/<locale>_<policy>.json`
 ```bash
 export PHONEDECODING_LEXICON_DIR=…/processed
 export PHONEDECODING_G2P_DIR=…/build/g2p
-python run_g2p_experiments.py --parallel-align
+phonebox compare experiments --parallel-align
 ```
