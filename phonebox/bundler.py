@@ -33,7 +33,9 @@ def _ensure_cart_format(model_path: str) -> tuple[str, bool]:
     with tempfile.NamedTemporaryFile(suffix=".cart", delete=False) as tmp:
         cart_path = tmp.name
 
-    dt._cart.export(cart_path, store_distributions=dt._cart.store_distributions)
+    # Re-export through phonebox so the temporary CART retains the loaded
+    # vectorizer metadata, including its exact preprocessing snapshot.
+    dt.export(cart_path)
     return cart_path, True
 
 

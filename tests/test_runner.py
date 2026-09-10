@@ -16,6 +16,7 @@ from cartlet import read_cart_metadata
 from phonebox import G2P
 from phonebox.bundler import bundle_g2p
 from phonebox.core.vectorizer import make_join_re
+from phonebox.portable_normalization import PortableNormalizationError
 from phonebox.runner import G2PRunner
 
 
@@ -163,3 +164,73 @@ class TestBundledStandalone:
         _, _, phones_str = result.stdout.strip().partition("\t")
         assert phones_str.split() == g2p("xyz")
         assert g2p("xyz") == []  # sanity check on the heavy path
+
+
+@pytest.mark.parametrize(
+    ("locale", "dictionary_text", "variants", "expected"),
+    [
+        (
+            "es_MX",
+            "n N\nñ NY\nu U\nü W\n",
+            ("ñ", "N\u0303", "ü", "U\u0308"),
+            (("NY",), ("NY",), ("W",), ("W",)),
+        ),
+        (
+            "it_IT",
+            "e E\nè EH\no O\nò OH\n",
+            ("è", "e\u0300", "ò", "o\u0300", "é"),
+            (("EH",), ("EH",), ("OH",), ("OH",), ("E",)),
+        ),
+    ],
+)
+def test_locale_normalization_matches_library_runner_and_stdlib_bundle(
+    tmp_path, locale, dictionary_text, variants, expected
+):
+    dictionary = tmp_path / "letters.dict"
+    dictionary.write_text(dictionary_text, encoding="utf-8")
+    g2p = G2P.train(
+        dictionary,
+        locale=locale,
+        phoneset="ipa",
+        use_dict_fallback=False,
+        verbose=False,
+    )
+    cart_path = tmp_path / "letters.cart"
+    g2p._dt.export(str(cart_path), include_exceptions=False)
+    model_path = tmp_path / "letters.g2p.gz"
+    g2p._dt.export(str(model_path), include_exceptions=False)
+
+    runner = G2PRunner(str(cart_path))
+    bundle_path = tmp_path / "letters.py"
+    bundle_g2p(str(model_path), str(bundle_path))
+
+    for word, phones in zip(variants, expected, strict=True):
+        assert tuple(g2p.pronounce(word)) == phones
+        assert tuple(runner.pronounce(word)) == phones
+        result = subprocess.run(
+            [sys.executable, "-S", str(bundle_path), word],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        assert tuple(result.stdout.strip().partition("\t")[2].split()) == phones
+
+
+def test_bundle_refuses_nonportable_icu_without_writing_output(tmp_path):
+    dictionary = tmp_path / "letters.dict"
+    dictionary.write_text("a A\n", encoding="utf-8")
+    g2p = G2P.train(
+        dictionary,
+        locale="en_US",
+        phoneset="ipa",
+        norm_xlit=True,
+        use_dict_fallback=False,
+        verbose=False,
+    )
+    cart_path = tmp_path / "letters.cart"
+    g2p._dt.export(str(cart_path), include_exceptions=False)
+    bundle_path = tmp_path / "letters.py"
+
+    with pytest.raises(PortableNormalizationError, match="Latin"):
+        bundle_g2p(str(cart_path), str(bundle_path))
+    assert not bundle_path.exists()
