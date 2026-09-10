@@ -32,6 +32,11 @@ phonebox bundle model.g2p.gz -o g2p.py
 Copy the single bundled file to your deployment target. No installation needed
 beyond the Python standard library.
 
+The bundle embeds the model's saved letter preprocessing, so later changes to
+installed locale rules do not change its predictions. Bundling reports a clear
+error when a model used ICU syntax that the standard-library runtime cannot
+reproduce exactly. Such models remain usable through the full phonebox library.
+
 ## Deployment Scenarios
 
 ### Web Service (Python/FastAPI)

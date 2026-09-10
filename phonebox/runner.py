@@ -32,6 +32,10 @@ from cartlet import Predictor
 
 from .constants import AETHER, CONTEXT_WINDOW_SIZE, EPSILON, JOIN_CHAR
 from .core.vectorizer import join_seq, make_join_re
+from .portable_normalization import (
+    apply_portable_preprocessing,
+    compile_letter_preprocessing,
+)
 
 
 class G2PRunner(Predictor):
@@ -64,6 +68,12 @@ class G2PRunner(Predictor):
         self.join_char = meta.get("join_char", JOIN_CHAR)
         self.cased = meta.get("cased", False)
         self.exceptions = meta.get("exceptions", {})
+        self.letter_preprocessing = meta.get("letter_preprocessing")
+        self.portable_preprocessing = (
+            compile_letter_preprocessing(self.letter_preprocessing)
+            if self.letter_preprocessing is not None
+            else None
+        )
 
         self.center_position = (self.width - 1) // 2
         self.padding = [self.aether] * self.center_position
@@ -88,12 +98,17 @@ class G2PRunner(Predictor):
         Returns:
             List of feature vectors (one per cooked letter token)
         """
-        if not self.cased:
-            word = word.lower()
+        if self.portable_preprocessing is not None:
+            letters = apply_portable_preprocessing(word, self.portable_preprocessing)
+        else:
+            # Models predating the preprocessing snapshot retain their legacy
+            # metadata-only lowercase-and-join behavior.
+            if not self.cased:
+                word = word.lower()
 
-        letters = list(word)
-        if self.lett_join_re is not None:
-            letters = join_seq(self.lett_join_re, letters, self.join_char)
+            letters = list(word)
+            if self.lett_join_re is not None:
+                letters = join_seq(self.lett_join_re, letters, self.join_char)
 
         padded = self.padding + letters + self.padding
         return [padded[i : i + self.width] for i in range(len(letters))]

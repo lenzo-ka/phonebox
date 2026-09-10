@@ -18,6 +18,11 @@ Zero dependencies beyond Python stdlib.
 
 from __future__ import annotations
 
+from ..portable_normalization import (
+    apply_portable_preprocessing,
+    compile_letter_preprocessing,
+)
+
 # NOTE: This file is appended to cartlet's predict.py during bundling.
 # The Predictor class, load_embedded(), etc. are defined above.
 #
@@ -69,6 +74,12 @@ class G2PPredictor(Predictor):  # type: ignore[name-defined]  # noqa: F821
         self.join_char = meta.get("join_char", self.DEFAULT_JOIN_CHAR)
         self.cased = meta.get("cased", self.DEFAULT_CASED)
         self.exceptions = meta.get("exceptions", {})
+        self.letter_preprocessing = meta.get("letter_preprocessing")
+        self.portable_preprocessing = (
+            compile_letter_preprocessing(self.letter_preprocessing)
+            if self.letter_preprocessing is not None
+            else None
+        )
 
         self.center_position = (self.width - 1) // 2
         self.padding = [self.aether] * self.center_position
@@ -89,12 +100,15 @@ class G2PPredictor(Predictor):  # type: ignore[name-defined]  # noqa: F821
 
     def vectorize_word(self, word):
         """Convert word to context vectors (applies digraph joining)."""
-        if not self.cased:
-            word = word.lower()
-
-        letters = list(word)
-        if self.lett_join_re is not None:
-            letters = _join_seq(self.lett_join_re, letters, self.join_char)
+        if self.portable_preprocessing is not None:
+            letters = apply_portable_preprocessing(word, self.portable_preprocessing)
+        else:
+            # Compatibility for models created before preprocessing snapshots.
+            if not self.cased:
+                word = word.lower()
+            letters = list(word)
+            if self.lett_join_re is not None:
+                letters = _join_seq(self.lett_join_re, letters, self.join_char)
 
         padded = self.padding + letters + self.padding
         return [padded[i : i + self.width] for i in range(len(letters))]
