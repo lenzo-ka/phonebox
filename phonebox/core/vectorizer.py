@@ -400,12 +400,15 @@ class Vectorizer:
         self.cased = snapshot["cased"]
         self.remove_accents = snapshot["remove_accents"]
         self.filter_non_letters = snapshot["filter_non_letters"]
-        self.spelling_rewrites = dict(snapshot["spelling_rewrites"])
+        saved_rewrites = dict(snapshot["spelling_rewrites"])
+        self.spelling_rewrites = {}
         self.join_char = snapshot["join_char"]
         self.lett_join_re = make_join_re(joins)
         saved_join_config = deepcopy((self.config or {}).get("join", {}))
         saved_join_config["letters"] = list(joins)
         self.config = {"join": saved_join_config}
+        self.spelling_rewrites = saved_rewrites
+        self._normalize_spelling_rewrites()
         self.letter_preprocessing = deepcopy(snapshot)
 
     @staticmethod

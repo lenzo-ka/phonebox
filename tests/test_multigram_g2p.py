@@ -255,6 +255,10 @@ def test_present_malformed_preprocessing_metadata_is_not_legacy(tmp_path):
             "spelling_rewrites",
         ),
         (
+            lambda snapshot: snapshot["spelling_rewrites"].update({"X": "q"}),
+            "use the cooked character 'x'",
+        ),
+        (
             lambda snapshot: snapshot["source"].update(
                 {"g2p_rules": ":: definitely-not-a-transliterator ;"}
             ),
