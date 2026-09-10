@@ -37,6 +37,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+config = [
+    "PyYAML>=6.0",
+]
 icu = [
     # Legacy escape hatch for environments that prefer linking against a
     # system ICU. Same surface API (`import icu`) — but on modern macOS
@@ -52,6 +55,7 @@ dev = [
     "build>=1.0",
     "setuptools>=77.0",
     "wheel",
+    "PyYAML>=6.0",
     "icukit==0.4.0",
     "icukit-pyicu==78.3.0",
 ]

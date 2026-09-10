@@ -50,7 +50,7 @@ class TestCLIHelp:
         )
         assert result.returncode == 0
         assert "benchmark" in result.stdout
-        assert "build" in result.stdout
+        assert "train" in result.stdout
 
     def test_subcommand_help(self):
         """Test g2p model help."""
@@ -63,15 +63,64 @@ class TestCLIHelp:
         assert "benchmark" in result.stdout
 
     def test_subcommand_help_nested(self):
-        """Test g2p model help build."""
+        """Test g2p model help train."""
         result = subprocess.run(
-            [sys.executable, "-m", "phonebox.cli.main", "model", "help", "build"],
+            [sys.executable, "-m", "phonebox.cli.main", "model", "help", "train"],
             capture_output=True,
             text=True,
         )
         assert result.returncode == 0
-        assert "dict" in result.stdout.lower()
+        assert "alignments" in result.stdout.lower()
         assert "output" in result.stdout.lower()
+
+    @pytest.mark.parametrize(
+        "arguments",
+        [
+            ["--alignments", "a.txt", "--vectors", "v.txt", "-o", "m.g2p.gz"],
+            ["-o", "m.g2p.gz"],
+            ["--alignments", "a.txt"],
+            ["--alignments", "", "-o", "m.g2p.gz"],
+            ["--alignments", "a.txt", "-o", ""],
+        ],
+    )
+    def test_model_train_requires_one_prepared_input_and_output(self, arguments):
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "phonebox.cli.main",
+                "model",
+                "train",
+                "en_US",
+                *arguments,
+            ],
+            capture_output=True,
+            text=True,
+        )
+        assert result.returncode == 2
+        assert "error:" in result.stderr.lower()
+
+    def test_model_train_rejects_missing_prepared_file_before_training(self, tmp_path):
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "phonebox.cli.main",
+                "model",
+                "train",
+                "en_US",
+                "--alignments",
+                str(tmp_path / "missing.alignments"),
+                "-o",
+                str(tmp_path / "model.g2p.gz"),
+            ],
+            capture_output=True,
+            text=True,
+        )
+        assert result.returncode == 2
+        assert "prepared input not found" in result.stderr
+        assert "Traceback" not in result.stderr
+        assert not (tmp_path / "model.g2p.gz").exists()
 
     def test_model_no_subcommand(self):
         """Test g2p model (no subcommand shows help)."""
@@ -121,7 +170,7 @@ class TestCLIHelp:
 
     def test_help_alias_handles_nested_command(self):
         result = subprocess.run(
-            [sys.executable, "-m", "phonebox", "help", "model", "build"],
+            [sys.executable, "-m", "phonebox", "help", "model", "train"],
             capture_output=True,
             text=True,
         )
@@ -418,7 +467,7 @@ class TestCommandGroupStructure:
         )
         assert result.returncode == 0
 
-        expected = ["build", "train", "benchmark"]
+        expected = ["train", "benchmark"]
         for cmd in expected:
             assert cmd in result.stdout, f"Model subcommand '{cmd}' not found"
 
@@ -501,78 +550,6 @@ class TestCLIErrors:
         )
         assert result.returncode != 0
         assert "invalid choice" in result.stderr.lower()
-
-
-class TestModelBuildPruning:
-    """Pruning surface area for phonebox model build."""
-
-    def test_prune_flag_is_advertised(self):
-        """--prune should be visible in model build --help."""
-        result = subprocess.run(
-            [
-                sys.executable,
-                "-m",
-                "phonebox.cli.main",
-                "model",
-                "build",
-                "--help",
-            ],
-            capture_output=True,
-            text=True,
-        )
-        assert result.returncode == 0
-        assert "--prune" in result.stdout
-        assert "--validation-split" in result.stdout
-        assert "--test-split" in result.stdout
-
-    def test_model_build_with_prune(self, tmp_path):
-        """phonebox model build --prune should produce a working model."""
-        dict_file = tmp_path / "prune.dict"
-        # Toy dict with enough rows so 20% validation isn't empty.
-        dict_file.write_text(
-            "\n".join(
-                [
-                    "cat K AE T",
-                    "bat B AE T",
-                    "hat HH AE T",
-                    "mat M AE T",
-                    "rat R AE T",
-                    "sat S AE T",
-                    "fat F AE T",
-                    "pat P AE T",
-                    "dog D AO G",
-                    "fog F AO G",
-                    "log L AO G",
-                    "bog B AO G",
-                    "cog K AO G",
-                    "hog HH AO G",
-                    "jog JH AO G",
-                    "frog F R AO G",
-                ]
-            )
-        )
-
-        model_path = tmp_path / "model.g2p.gz"
-        result = subprocess.run(
-            [
-                sys.executable,
-                "-m",
-                "phonebox.cli.main",
-                "model",
-                "build",
-                "en_US",
-                str(dict_file),
-                "-o",
-                str(model_path),
-                "--prune",
-                "--validation-split",
-                "0.2",
-            ],
-            capture_output=True,
-            text=True,
-        )
-        assert result.returncode == 0, result.stderr
-        assert model_path.exists()
 
 
 def test_train_multigram_rejects_uncooked_rewrite_source(tmp_path):

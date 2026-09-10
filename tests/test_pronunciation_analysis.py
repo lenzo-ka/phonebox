@@ -78,7 +78,7 @@ def test_score_api_with_real_small_trained_model(tmp_path):
         "rat R AE T\nmat M AE T\nsat S AE T\nfat F AE T\n",
         encoding="utf-8",
     )
-    g2p = G2P.train(dictionary, locale="en_US", verbose=False)
+    g2p = G2P.train(dictionary, locale="en_US", prune=False, verbose=False)
     assert g2p.has_distributions
     assert score_pronunciations(g2p, "cat", ["K AE T", "K AH T"]) == {
         "K AE T": 1.0,

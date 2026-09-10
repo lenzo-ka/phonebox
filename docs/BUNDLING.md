@@ -7,7 +7,8 @@ using `phonebox bundle`. Multigram models are not supported by this bundler.
 
 ```bash
 # Train a model
-phonebox model build en_US dictionary.txt -o model.g2p.gz --remove-stress
+phonebox train --locale en_US --phoneset cmu \
+  --lexicon dictionary.txt -o model.g2p.gz --remove-stress
 
 # Bundle for deployment
 phonebox bundle model.g2p.gz -o g2p.py

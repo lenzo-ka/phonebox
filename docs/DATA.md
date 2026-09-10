@@ -53,10 +53,12 @@ d.process(remove_stress=True, output="data/cmudict/cmudict_nostress.dict")
 
 ```bash
 # With stress markers
-phonebox model build en_US data/cmudict/cmudict.dict -o models/en_US_stress.g2p.gz
+phonebox train --locale en_US --phoneset cmu \
+  --lexicon data/cmudict/cmudict.dict -o models/en_US_stress.g2p.gz
 
 # Without stress markers (PocketSphinx-style)
-phonebox model build en_US data/cmudict/cmudict_nostress.dict \
+phonebox train --locale en_US --phoneset cmu \
+  --lexicon data/cmudict/cmudict_nostress.dict \
   -o models/en_US_nostress.g2p.gz \
   --remove-stress
 ```
@@ -69,7 +71,8 @@ phonebox recipe cmudict pocketsphinx -o g2p.py
 
 # Or step by step:
 phonebox dict fetch cmudict
-phonebox model build en_US data/cmudict/cmudict.dict -o model.g2p.gz --remove-stress
+phonebox train --locale en_US --phoneset cmu \
+  --lexicon data/cmudict/cmudict.dict -o model.g2p.gz --remove-stress
 ```
 
 ## Manifest

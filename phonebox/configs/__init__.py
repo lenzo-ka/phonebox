@@ -7,15 +7,14 @@ Available presets:
 - fast: Quick training for experimentation
 - accurate: Thorough training (more EM iterations); slower, higher-quality
 
-Usage:
+Usage::
+
     from phonebox.configs import get_builtin_config
+    from phonebox.config_builder import train_from_config
 
     config = get_builtin_config('pocketsphinx')
+    config.update(dictionary='mydict.txt', output='model.g2p.gz')
     model = train_from_config(config)
-
-Or via CLI:
-    phonebox model build --config phonebox:pocketsphinx \
-        --dict mydict.txt --output model.jsonl.gz
 """
 
 from __future__ import annotations

@@ -67,6 +67,16 @@ Case-insensitive is typical for G2P since pronunciation rarely depends on case.
 Set to True for languages where case affects pronunciation.
 """
 
+# Primary dictionary-training workflow defaults. Public Python and CLI/config
+# adapters import these values so their signatures cannot drift independently.
+DEFAULT_TRAIN_PHONESET = "ipa"
+DEFAULT_TRAIN_REMOVE_STRESS = False
+DEFAULT_TRAIN_PRUNE = True
+DEFAULT_TRAIN_VALIDATION_SPLIT = 0.05
+DEFAULT_TRAIN_TEST_SPLIT = 0.0
+DEFAULT_TRAINER = "native"
+DEFAULT_TRAIN_PARALLEL_ALIGN = False
+
 
 # =============================================================================
 # EM Alignment Defaults

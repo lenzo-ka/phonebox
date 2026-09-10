@@ -6,7 +6,7 @@ You download CMUdict and train a model:
 
 ```bash
 # Train with original dictionary
-phonebox model build en_US data/cmudict/cmudict.dict -o model.g2p.gz
+phonebox train --locale en_US --phoneset cmu --lexicon data/cmudict/cmudict.dict -o model.g2p.gz
 
 # Model embeds: dict_hash = "git:a1b2c3d4"
 ```
@@ -27,7 +27,7 @@ cp data/cmudict/cmudict.dict data/cmudict/cmudict_edited.dict
 vim data/cmudict/cmudict_edited.dict  # Make your fixes
 
 # Train with version suffix
-phonebox model build en_US data/cmudict/cmudict_edited.dict \
+phonebox train --locale en_US --phoneset cmu --lexicon data/cmudict/cmudict_edited.dict \
   -o model_v1.g2p.gz
 
 # Model embeds: dict_hash = "git:a1b2c3d4-v1"
@@ -44,15 +44,15 @@ You maintain a curated dictionary:
 
 ```bash
 # Initial version
-phonebox model build en_US my_dict.txt -o production.g2p.gz
+phonebox train --locale en_US --lexicon my_dict.txt -o production.g2p.gz
 
 # First update
 vim my_dict.txt  # Add 100 new words
-phonebox model build en_US my_dict.txt -o production_v2.g2p.gz
+phonebox train --locale en_US --lexicon my_dict.txt -o production_v2.g2p.gz
 
 # Second update
 vim my_dict.txt  # Fix pronunciations
-phonebox model build en_US my_dict.txt -o production_v3.g2p.gz
+phonebox train --locale en_US --lexicon my_dict.txt -o production_v3.g2p.gz
 ```
 
 Now you can track exactly which version each model uses:
@@ -74,7 +74,7 @@ cp cmudict.dict cmudict_patched.dict
 vim cmudict_patched.dict  # Fix specific words
 
 # Train patched model
-phonebox model build en_US cmudict_patched.dict \
+phonebox train --locale en_US --phoneset cmu --lexicon cmudict_patched.dict \
   -o model_patched.g2p.gz
 
 # Model embeds: dict_hash = "git:a1b2c3d4"
@@ -90,7 +90,7 @@ cp cmudict.dict cmudict_patched.dict
 # ... apply same patches ...
 
 # Retrain
-phonebox model build en_US cmudict_patched.dict \
+phonebox train --locale en_US --phoneset cmu --lexicon cmudict_patched.dict \
   -o model_patched_new.g2p.gz
 
 # Model embeds: dict_hash = "git:b2c3d4e5-patched"
@@ -108,13 +108,13 @@ You maintain several variants for different use cases:
 
 ```bash
 # Formal speech variant
-phonebox model build en_US dict.txt -o model_formal.g2p.gz
+phonebox train --locale en_US --lexicon dict.txt -o model_formal.g2p.gz
 
 # Casual speech variant
-phonebox model build en_US dict_casual.txt -o model_casual.g2p.gz
+phonebox train --locale en_US --lexicon dict_casual.txt -o model_casual.g2p.gz
 
 # Regional dialect
-phonebox model build en_US dict_regional.txt -o model_regional.g2p.gz
+phonebox train --locale en_US --lexicon dict_regional.txt -o model_regional.g2p.gz
 ```
 
 ## Checking Version Compatibility

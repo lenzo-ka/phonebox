@@ -80,6 +80,7 @@ def test_public_g2p_folds_accented_aiu_to_trained_plain_spellings(tmp_path):
         dictionary,
         locale="it_IT",
         phoneset="ipa",
+        prune=False,
         use_dict_fallback=False,
         verbose=False,
     )
@@ -105,6 +106,7 @@ def test_italian_accented_words_match_runner_and_bundle(tmp_path):
         dictionary,
         locale="it_IT",
         phoneset="ipa",
+        prune=False,
         use_dict_fallback=False,
         verbose=False,
     )
@@ -143,6 +145,7 @@ def test_it_snapshot_and_known_legacy_policy_remain_distinct(tmp_path):
         dictionary,
         locale="it_IT",
         phoneset="ipa",
+        prune=False,
         use_dict_fallback=False,
         output=model_path,
         verbose=False,

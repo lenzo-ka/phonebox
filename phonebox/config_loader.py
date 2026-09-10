@@ -30,11 +30,18 @@ from cartlet import PROB_HIGH_CONFIDENCE
 from .constants import (
     DEFAULT_CASED,
     DEFAULT_LOCALE,
+    DEFAULT_MAX_COMBINATIONS,
     DEFAULT_MAX_ITERATIONS,
     DEFAULT_MIN_SAMPLES_LEAF,
     DEFAULT_MIN_SAMPLES_SPLIT,
-    DEFAULT_PHONESET,
     DEFAULT_STORE_DISTRIBUTIONS,
+    DEFAULT_TRAIN_PARALLEL_ALIGN,
+    DEFAULT_TRAIN_PHONESET,
+    DEFAULT_TRAIN_PRUNE,
+    DEFAULT_TRAIN_REMOVE_STRESS,
+    DEFAULT_TRAIN_TEST_SPLIT,
+    DEFAULT_TRAIN_VALIDATION_SPLIT,
+    DEFAULT_TRAINER,
     FILE_ENCODING,
 )
 
@@ -60,7 +67,7 @@ def load_config(path: str) -> dict[str, Any]:
         preset_name = path.split(":", 1)[1]
         from .configs import get_builtin_config
 
-        return get_builtin_config(preset_name)
+        return _validate_config(get_builtin_config(preset_name), path)
 
     path_obj = Path(path)
 
@@ -70,12 +77,18 @@ def load_config(path: str) -> dict[str, Any]:
     suffix = path_obj.suffix.lower()
 
     if suffix in {".yaml", ".yml"}:
-        return _load_yaml(path_obj)
+        return _validate_config(_load_yaml(path_obj), path)
     if suffix == ".toml":
-        return _load_toml(path_obj)
+        return _validate_config(_load_toml(path_obj), path)
     if suffix == ".json":
-        return _load_json(path_obj)
+        return _validate_config(_load_json(path_obj), path)
     raise ValueError(f"Unsupported config format: {suffix}")
+
+
+def _validate_config(value: Any, source: str) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        raise ValueError(f"Config {source!r} must contain a mapping/object")
+    return value
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -83,10 +96,15 @@ def _load_yaml(path: Path) -> dict[str, Any]:
     try:
         import yaml
     except ImportError as e:
-        raise ImportError("PyYAML required for YAML configs: pip install pyyaml") from e
+        raise ImportError(
+            "YAML config requires the 'config' extra: pip install phonebox[config]"
+        ) from e
 
     with open(path, encoding=FILE_ENCODING) as f:
-        return yaml.safe_load(f)
+        try:
+            return yaml.safe_load(f)
+        except yaml.YAMLError as error:
+            raise ValueError(f"Invalid YAML config {path}: {error}") from error
 
 
 def _load_toml(path: Path) -> dict[str, Any]:
@@ -176,8 +194,8 @@ def merge_configs(*configs: dict[str, Any]) -> dict[str, Any]:
 # Default config template
 DEFAULT_CONFIG = {
     "locale": DEFAULT_LOCALE,
-    "phoneset": DEFAULT_PHONESET,
-    "remove_stress": True,
+    "phoneset": DEFAULT_TRAIN_PHONESET,
+    "remove_stress": DEFAULT_TRAIN_REMOVE_STRESS,
     "remove_accents": None,  # Auto-detect based on phoneset
     "filter_non_letters": False,  # Remove non-letter chars (except -'.)
     "cased": DEFAULT_CASED,
@@ -187,20 +205,17 @@ DEFAULT_CONFIG = {
     # in memory with the alignment table and finishes the same job in a
     # fraction of the wall-clock. Override via --trainer sklearn on the
     # CLI if you really want it.
-    "trainer": "native",
+    "trainer": DEFAULT_TRAINER,
     "max_iterations": DEFAULT_MAX_ITERATIONS,
-    # None here means "unset" — the trainer falls back to
-    # constants.DEFAULT_MAX_COMBINATIONS (10000) downstream. max_combinations=0
-    # (unbounded) used to be the default but blew up to 200+ GB RSS on French;
-    # the 10000 cap keeps >99% of entries while staying memory-bounded.
-    "max_combinations": None,
+    # Zero explicitly disables the bound; the shared default is finite.
+    "max_combinations": DEFAULT_MAX_COMBINATIONS,
     "min_samples_split": DEFAULT_MIN_SAMPLES_SPLIT,
     "min_samples_leaf": DEFAULT_MIN_SAMPLES_LEAF,
     "store_distributions": DEFAULT_STORE_DISTRIBUTIONS,
     "min_confidence": PROB_HIGH_CONFIDENCE,
     "criterion": "entropy",
-    "parallel_align": False,
-    "validation_split": 0.05,  # 5% for pruning
-    "test_split": 0.05,  # 5% for evaluation (train gets 90%)
-    "prune": False,  # Enable pruning with validation data
+    "parallel_align": DEFAULT_TRAIN_PARALLEL_ALIGN,
+    "validation_split": DEFAULT_TRAIN_VALIDATION_SPLIT,
+    "test_split": DEFAULT_TRAIN_TEST_SPLIT,
+    "prune": DEFAULT_TRAIN_PRUNE,
 }

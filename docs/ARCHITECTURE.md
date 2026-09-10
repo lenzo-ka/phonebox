@@ -130,14 +130,13 @@ The CLI uses a unified `phonebox` command with subcommands:
 | `phonebox pronounce` | Get pronunciations | `phonebox pronounce hello world -m model.g2p.gz` |
 | `phonebox normalize` | Preview model-independent text tokenization | `phonebox normalize "Hello, world!"` |
 | `phonebox bundle` | Bundle a decision-tree model into a standalone runner | `phonebox bundle model.g2p.gz -o g2p.py` |
-| `phonebox model build` | Build complete model | `phonebox model build en_US dict.txt -o model.g2p.gz` |
 | `phonebox model train` | Train from aligned data | `phonebox model train en_US --alignments aligned.txt -o model.g2p.gz` |
 | `phonebox model benchmark` | Benchmark performance | `phonebox model benchmark model.g2p.gz` |
 | `phonebox dict fetch` | Fetch dictionaries | `phonebox dict fetch cmudict` |
 | `phonebox dict export-vectors` | Export feature vectors | `phonebox dict export-vectors dict.txt -o vectors.tsv` |
 | `phonebox align` | Align letters to phonemes | `phonebox align dict.txt --locale en_US` |
 | `phonebox vectorize` | Convert alignments to vectors | `phonebox vectorize alignments.txt -o vectors.txt` |
-| `phonebox train` | Train 1:1 G2P (safe defaults) | `phonebox train --locale en_US --lexicon dict.tsv -o model.g2p.gz` |
+| `phonebox train` | Train 1:1 G2P from a dictionary | `phonebox train --locale en_US --lexicon dict.tsv -o model.g2p.gz` |
 | `phonebox train-multigram` | Train n:m MultigramG2P | `phonebox train-multigram --locale it_IT --lexicon it.tsv -o model.g2p.gz` |
 | `phonebox compare locale` | Single-locale 1:1 vs n:m eval | `phonebox compare locale --lexicon fr_ipa.tsv --locale fr_FR` |
 | `phonebox compare all` | Six-locale eval markdown | `phonebox compare all` |
@@ -167,7 +166,7 @@ Dictionary Sources
          ├── Normalize
          └── Deduplicate
          ↓
-    [Dictionary.train_g2p_model()]
+    [train_g2p()]
          ├── EMAlign.align()
          ├── Vectorizer.vectorize()
          └── DecisionTree.train()
@@ -187,6 +186,18 @@ Dictionary Sources
 - User-facing API for pronunciation
 - Thin wrapper around DecisionTree
 - Simple, Pythonic interface
+
+### `training.py`
+
+- Owns the dictionary-to-model workflow used by `train_g2p`, `G2P.train`,
+  `Dictionary.train_g2p_model`, and `phonebox train`
+- Constructs the model, calls `G2PDecisionTree.train_from_dict` once, and writes
+  optional alignment checkpoints and model output
+- Defaults to IPA, native serial training, pruning with a 5% validation split,
+  stored leaf distributions, and preserved stress
+
+`phonebox model train` starts from prepared alignments or vectors and keeps its
+lower-level configuration surface.
 
 ### `dictionary.py` (Dictionary class)
 - Dictionary lifecycle management

@@ -7,15 +7,14 @@
 # =============================================================================
 
 locale: en_US           # Language locale
-phoneset: cmu           # Phoneset: 'cmu' (CMU Arpabet) or 'xsampa' (X-SAMPA)
+phoneset: ipa           # Phoneset tag; use 'cmu' explicitly for CMU Arpabet
 
 # =============================================================================
 # Preprocessing Options
 # =============================================================================
 
 remove_stress: false    # Remove stress markers from phonemes (0,1,2)
-remove_accents: false   # Remove accents from letters (café → cafe)
-                        # Note: Auto-enabled to true when phoneset='cmu'
+remove_accents: null    # Auto-enable only when phoneset='cmu'; set explicitly to override
 filter_non_letters: false  # Keep only letters, hyphens, apostrophes, periods
 cased: false            # Case-insensitive (lowercase everything)
 
@@ -30,8 +29,7 @@ trainer: native         # Trainer: 'native' (Python) or 'sklearn' (2.1x faster)
 # =============================================================================
 
 max_iterations: 100     # Maximum EM iterations (typically converges in 10-30)
-max_combinations: 0     # Max alignment combinations (0 = unlimited)
-                        # Set to 4096 for memory-constrained or very long words
+max_combinations: 10000 # Max alignment combinations (0 = unlimited)
 min_change_ratio: 0.0   # Stop when change ratio drops below this (0 = run until convergence)
 
 # =============================================================================
@@ -49,15 +47,14 @@ criterion: entropy      # Split criterion: 'entropy' or 'gini'
 # =============================================================================
 
 validation_split: 0.05  # Validation set for pruning (5%)
-test_split: 0.05        # Test set for evaluation (5%)
-                        # Train automatically gets remainder (90%)
-prune: false            # Enable pruning using validation data
+test_split: 0.0         # Optional held-out evaluation fraction
+prune: true             # Enable pruning using validation data
 
 # =============================================================================
 # Advanced Options
 # =============================================================================
 
-parallel_align: true    # Parallel EM alignment (faster but can have macOS issues)
+parallel_align: false   # Opt in only when worker memory duplication is acceptable
 norm_xlit: false        # Apply normalizing transliteration (ICU-based)
 use_dict_fallback: true # Use exceptions dictionary for hybrid lookup
 min_dist_entropy: 0.1   # Minimum entropy to store distribution
@@ -77,6 +74,5 @@ min_dist_entropy: 0.1   # Minimum entropy to store distribution
 # Most users should start with a preset (pocketsphinx, xsampa, fast, accurate)
 # and only override specific values.
 #
-# To use:
-#   phonebox model build --config phonebox:defaults \
-#     --dict mydict.txt --output model.jsonl.gz
+# CLI: phonebox train --config path/to/this-file.yaml \
+#        --lexicon mydict.txt --output model.g2p.gz

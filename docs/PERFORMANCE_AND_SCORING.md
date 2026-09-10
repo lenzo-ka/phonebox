@@ -4,22 +4,23 @@ This document covers recent improvements to training performance and new tools f
 
 ## Performance Improvements
 
-### Parallel Alignment (2x Speedup)
+### Parallel Alignment
 
-The EM alignment phase now runs in parallel using multiprocessing:
+Alignment is serial by default to avoid duplicating large lexicons across
+worker processes. Enable multiprocessing explicitly when memory permits:
 
 ```bash
-# Enabled by default
-phonebox model build en_US dict.txt -o model.g2p.gz
+# Safe serial default
+phonebox train --locale en_US --lexicon dict.txt -o model.g2p.gz
 
-# Disable via config
-phonebox model build en_US dict.txt -o model.g2p.gz -c no_parallel.yaml
+# Opt in to parallel alignment
+phonebox train --locale en_US --lexicon dict.txt -o model.g2p.gz --parallel-align
 ```
 
 **Performance:**
 - Alignment phase: 82s → 43s (48% faster)
 - Overall training: 5.6min → 5.1min (10% faster)
-- Uses (cpu_count - 1) worker processes
+- Parallel mode uses worker processes
 - Robust Ctrl-C handling with proper cleanup
 
 ### Detailed Stage Timing
@@ -53,7 +54,7 @@ Models now include probability distributions by default, enabling:
 
 ```bash
 # Distributions are enabled by default
-phonebox model build en_US dict.txt -o model.g2p.gz
+phonebox train --locale en_US --lexicon dict.txt -o model.g2p.gz
 ```
 
 **Model size impact:** +27% (425KB → 540KB)

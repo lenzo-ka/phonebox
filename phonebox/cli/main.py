@@ -13,8 +13,8 @@ Commands:
     pronounce       Get pronunciations (1:1 or n:m model)
     normalize       Normalize text for G2P (preview tokenization)
     bundle          Create standalone G2P predictor
-    model           Model operations (build, train, benchmark)
-    dict            Dictionary operations (fetch, export-vectors)
+    model           Prepared-input training and model benchmarking
+    dict            Dictionary operations (fetch, process, export-vectors)
     align           Align letters to phonemes
     vectorize       Convert alignments to feature vectors
     check           Validate lexicon against phoneset
@@ -79,8 +79,8 @@ Using Models:
 Building Models:
   train        Train 1:1 G2P from a lexicon (safe defaults)
   train-multigram  Train n:m MultigramG2P (+ .units.json sidecar)
-  model        Model operations (build, train, benchmark)
-  dict         Dictionary operations (fetch, export-vectors)
+  model        Prepared-input training and model benchmarking
+  dict         Dictionary operations (fetch, process, export-vectors)
 
 Quality / locale tuning:
   check        Validate lexicon against canonical phoneset

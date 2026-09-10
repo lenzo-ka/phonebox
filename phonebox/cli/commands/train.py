@@ -42,10 +42,7 @@ from __future__ import annotations
 import argparse
 import logging
 import sys
-import time
 from pathlib import Path
-
-from ...constants import DEFAULT_MAX_COMBINATIONS, DICT_ENCODING, FILE_ENCODING
 
 
 def setup_train_command(subparsers):
@@ -57,18 +54,23 @@ def setup_train_command(subparsers):
     )
     parser.add_argument(
         "--locale",
-        required=True,
+        default=None,
         help="Locale tag (case-insensitive; bare, hyphenated, or underscored, e.g. fr, fr-FR)",
     )
     parser.add_argument(
         "--lexicon",
-        required=True,
+        default=None,
         help="Pronunciation dictionary TSV (word\\tphone phone ...)",
     )
-    parser.add_argument("-o", "--output", required=True, help="Model output (.g2p.gz)")
+    parser.add_argument("-o", "--output", default=None, help="Model output (.g2p.gz)")
+    parser.add_argument(
+        "-c",
+        "--config",
+        help="TOML/JSON config, or YAML with phonebox[config] installed",
+    )
     parser.add_argument(
         "--phoneset",
-        default="ipa",
+        default=None,
         help="Phoneset tag — drives locale config lookups (default: ipa)",
     )
     parser.add_argument(
@@ -80,33 +82,37 @@ def setup_train_command(subparsers):
     parser.add_argument(
         "--max-combinations",
         type=int,
-        default=DEFAULT_MAX_COMBINATIONS,
-        help=f"Cap on alignment combinations per word "
-        f"(default: {DEFAULT_MAX_COMBINATIONS}; set 0 to disable).",
+        default=None,
+        help="Cap on alignment combinations per word (default: 10000; 0 disables)",
     )
     parser.add_argument(
-        "--no-prune",
-        dest="prune",
-        action="store_false",
-        default=True,
-        # `%%` because argparse treats `%` as a format specifier in help.
-        help="Skip post-train pruning (default: prune with 5%% validation).",
+        "--prune",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="Prune with validation data (default: enabled)",
     )
     parser.add_argument(
         "--validation-split",
         type=float,
-        default=0.05,
+        default=None,
         help="Fraction held out for pruning (default: 0.05).",
     )
     parser.add_argument(
+        "--test-split",
+        type=float,
+        default=None,
+        help="Fraction reserved for held-out evaluation (default: 0).",
+    )
+    parser.add_argument(
         "--trainer",
-        default="native",
+        default=None,
         choices=["native", "sklearn"],
         help="Tree trainer backend (default: native — safer on big lexicons).",
     )
     parser.add_argument(
         "--parallel-align",
-        action="store_true",
+        action=argparse.BooleanOptionalAction,
+        default=None,
         help="Enable EMAlign multiprocessing pool. Off by default because "
         "the fork pool duplicates the lexicon per worker.",
     )
@@ -114,21 +120,27 @@ def setup_train_command(subparsers):
     parser.add_argument(
         "--store-distributions",
         action=argparse.BooleanOptionalAction,
-        default=True,
+        default=None,
         help="Store leaf distributions for pronunciation scoring (default: enabled)",
     )
     parser.add_argument(
         "--remove-stress",
-        action="store_true",
+        action=argparse.BooleanOptionalAction,
+        default=None,
         help="Strip phoneset stress markers while loading the lexicon",
     )
-    parser.add_argument("-v", "--verbose", action="store_true", help="Verbose")
+    parser.add_argument("--cased", action=argparse.BooleanOptionalAction, default=None)
+    parser.add_argument(
+        "--norm-xlit", action=argparse.BooleanOptionalAction, default=None
+    )
+    parser.add_argument("--max-iterations", type=int, default=None)
+    parser.add_argument("-v", "--verbose", action="store_true", default=None)
     parser.set_defaults(func=handle_train)
 
 
 def handle_train(args) -> int:
-    # Late imports so `phonebox --help` stays fast.
-    from ...core.g2p_model import G2PDecisionTree
+    from ...config_loader import load_config
+    from ...training import train_g2p_from_config
 
     logging.basicConfig(
         stream=sys.stdout,
@@ -137,64 +149,55 @@ def handle_train(args) -> int:
     )
     log = logging.getLogger("phonebox.train")
 
-    lex = Path(args.lexicon)
+    try:
+        config = load_config(args.config) if args.config else {}
+    except (ImportError, OSError, ValueError) as error:
+        print(f"Error: {error}", file=sys.stderr)
+        return 2
+    overrides = {
+        "locale": args.locale,
+        "dictionary": args.lexicon,
+        "output": args.output,
+        "phoneset": args.phoneset,
+        "alignments_out": args.alignments_out,
+        "max_combinations": args.max_combinations,
+        "prune": args.prune,
+        "validation_split": args.validation_split,
+        "test_split": args.test_split,
+        "trainer": args.trainer,
+        "parallel_align": args.parallel_align,
+        "width": args.width,
+        "store_distributions": args.store_distributions,
+        "remove_stress": args.remove_stress,
+        "cased": args.cased,
+        "norm_xlit": args.norm_xlit,
+        "max_iterations": args.max_iterations,
+        "verbose": args.verbose,
+    }
+    config.update({key: value for key, value in overrides.items() if value is not None})
+    if not config.get("locale"):
+        print("Error: no locale specified (use --locale or --config)", file=sys.stderr)
+        return 2
+    lexicon = config.get("dictionary")
+    if not lexicon:
+        print(
+            "Error: no lexicon specified (use --lexicon or --config)", file=sys.stderr
+        )
+        return 2
+    lex = Path(lexicon)
     if not lex.is_file():
         print(f"Error: lexicon not found: {lex}", file=sys.stderr)
         return 2
+    if not config.get("output"):
+        print("Error: no output specified (use --output or --config)", file=sys.stderr)
+        return 2
 
-    out = Path(args.output)
-    out.parent.mkdir(parents=True, exist_ok=True)
-    align_out = (
-        Path(args.alignments_out)
-        if args.alignments_out
-        else (out.with_name(out.stem.replace(".g2p", "") + "_alignments.txt"))
-    )
-
-    t0 = time.time()
-
-    def step(msg: str) -> None:
-        log.info("[%7.1fs] %s", time.time() - t0, msg)
-
-    step(
-        f"init G2PDecisionTree(locale={args.locale!r}, phoneset={args.phoneset!r}, "
-        f"trainer={args.trainer!r}, parallel_align={args.parallel_align}, "
-        f"max_combinations={args.max_combinations})"
-    )
-    dt = G2PDecisionTree(
-        locale=args.locale,
-        phoneset_name=args.phoneset,
-        verbose=True,
-        trainer=args.trainer,
-        parallel_align=args.parallel_align,
-        max_combinations=args.max_combinations,
-        width=args.width,
-        store_distributions=args.store_distributions,
-        remove_stress=args.remove_stress,
-    )
-
-    step(f"load_prondict {lex}")
-    with lex.open(encoding=DICT_ENCODING) as f:
-        dt.load_prondict(f)
-
-    step("em.align")
-    dt.em.align()
-
-    step(f"write alignments -> {align_out}")
-    with align_out.open("w", encoding=FILE_ENCODING) as f:
-        dt.em.write(f)
-
-    step("load_alignments (convert to feature vectors)")
-    dt.load_alignments()
-
-    step(f"train (prune={args.prune}, validation_split={args.validation_split})")
-    metrics = dt.train(
-        prune=args.prune,
-        validation_split=args.validation_split if args.prune else 0.0,
-    )
-    step(f"train metrics: {metrics}")
-
-    step(f"export -> {out}")
-    dt.export(str(out))
-
-    step("done")
+    try:
+        result = train_g2p_from_config(config)
+    except (ImportError, OSError, ValueError) as error:
+        print(f"Error: {error}", file=sys.stderr)
+        return 2
+    log.info("Training metrics: %s", result.metrics)
+    log.info("Model: %s", result.output_path)
+    log.info("Alignments: %s", result.alignments_path)
     return 0

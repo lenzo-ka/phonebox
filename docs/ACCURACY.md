@@ -89,7 +89,7 @@ The splitter refuses to grow branches that lack support:
 Tune these in your YAML config or pass them to `DecisionTree(...)`. They run
 during training and shape what gets built.
 
-### Post-pruning (opt-in, recommended)
+### Post-pruning
 
 After the tree is built, hold out a slice of the training data and walk the
 tree bottom-up: collapse any subtree whose children don't help on the
@@ -97,12 +97,12 @@ held-out rows. This is "reduced-error pruning" and it directly attacks
 overfitting because the validation rows weren't used to choose splits.
 
 ```bash
-# CLI: prune with a 5% validation hold-out
-phonebox model build en_US dict.txt -o model.g2p.gz --prune
+# CLI default: prune with a 5% validation hold-out
+phonebox train --locale en_US --lexicon dict.txt -o model.g2p.gz
 
 # Custom split, plus a 5% held-out test slice for honest measurement
-phonebox model build en_US dict.txt -o model.g2p.gz \
-  --prune --validation-split 0.05 --test-split 0.05
+phonebox train --locale en_US --lexicon dict.txt -o model.g2p.gz \
+  --validation-split 0.05
 
 # Recipe: prune end-to-end
 phonebox recipe cmudict pocketsphinx -o g2p.py --prune
