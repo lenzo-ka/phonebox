@@ -201,6 +201,39 @@ class TestBundledStandalone:
         assert training["trainer"] == "metadata-sentinel"
         assert metadata["dict_hash"] == expected_hash
 
+    def test_failed_non_cart_export_removes_temporary_cart(self, tmp_path, monkeypatch):
+        g2p, _ = _train_with_letter_join(tmp_path, ["c h"])
+        model_path = tmp_path / "model.g2p.gz"
+        g2p.save(str(model_path))
+        temporary_cart = tmp_path / "temporary.cart"
+
+        class TemporaryFile:
+            name = str(temporary_cart)
+
+            def __init__(self, *_args, **_kwargs):
+                pass
+
+            def __enter__(self):
+                temporary_cart.touch()
+                return self
+
+            def __exit__(self, *_args):
+                return False
+
+        monkeypatch.setattr(
+            "phonebox.bundler.tempfile.NamedTemporaryFile", TemporaryFile
+        )
+        monkeypatch.setattr(
+            "cartlet.DecisionTree.export",
+            lambda *_args, **_kwargs: (_ for _ in ()).throw(
+                RuntimeError("export failed")
+            ),
+        )
+
+        with pytest.raises(RuntimeError, match="export failed"):
+            bundle_g2p(str(model_path), str(tmp_path / "bundle.py"))
+        assert not temporary_cart.exists()
+
     @pytest.mark.parametrize("word", ["cat", "chat", "rich", "cool", "much"])
     def test_bundle_matches_heavy(self, tmp_path, word):
         g2p, cart_path = _train_with_letter_join(tmp_path, ["c h"])

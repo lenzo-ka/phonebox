@@ -103,6 +103,11 @@ def _compile_rules(rules, label):
             source_scalar = _exact_scalar(source)
             replacement_scalar = _exact_scalar(replacement)
             if source_scalar is not None and replacement_scalar is not None:
+                if source_scalar in replacements:
+                    unsupported.append(
+                        f"{label}: duplicate replacement source {source_scalar!r}"
+                    )
+                    continue
                 replacements[source_scalar] = replacement_scalar
                 continue
         unsupported.append(f"{label}: {statement}")

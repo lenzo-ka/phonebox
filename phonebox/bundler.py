@@ -38,12 +38,16 @@ def _ensure_cart_format(model_path: str) -> tuple[str, bool]:
     # G2PDecisionTree.export would replace training-time settings with the
     # loader's defaults and could lose fields unknown to this version.
     source_metadata = deepcopy(dt._model_header.get("metadata", {}))
-    dt._cart.export(
-        cart_path,
-        metadata=source_metadata,
-        store_distributions=dt._cart.store_distributions,
-        format=".cart",
-    )
+    try:
+        dt._cart.export(
+            cart_path,
+            metadata=source_metadata,
+            store_distributions=dt._cart.store_distributions,
+            format=".cart",
+        )
+    except Exception:
+        Path(cart_path).unlink(missing_ok=True)
+        raise
     return cart_path, True
 
 

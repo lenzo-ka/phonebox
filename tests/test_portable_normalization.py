@@ -178,6 +178,20 @@ def test_multicharacter_join_marker_is_rejected():
         compile_letter_preprocessing(_snapshot(None, join_char="ab"))
 
 
+@pytest.mark.parametrize(
+    "rules",
+    [
+        ":: NFC; x > y; x > z; :: Any-Lower; :: Null; :: [^-.[:L:]] Remove;",
+        ":: NFC; x > y; \\u0078 > z; :: Any-Lower; :: Null; :: [^-.[:L:]] Remove;",
+    ],
+)
+def test_replacement_block_rejects_duplicate_source_scalars(rules):
+    with pytest.raises(
+        PortableNormalizationError, match="duplicate replacement source"
+    ):
+        compile_letter_preprocessing(_snapshot(rules, cased=True))
+
+
 def test_all_shipped_locale_g2p_rules_are_portable():
     locale_root = Path(__file__).parents[1] / "phonebox" / "config" / "locales"
     for rule_path in locale_root.glob("*/g2p.xlit"):
