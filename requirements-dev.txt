@@ -25,6 +25,10 @@ myst-parser>=0.18
 graphviz>=0.20
 matplotlib>=3.5.0
 
+# Pinned exemplar generation
+icukit==0.3.0
+icukit-pyicu==78.3.0
+
 # Development tools
 ipython>=8.0
 ipdb>=0.13

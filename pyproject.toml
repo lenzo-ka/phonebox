@@ -48,6 +48,8 @@ dev = [
     "ruff>=0.4.0",
     "mypy>=1.0",
     "pre-commit>=3.0",
+    "icukit==0.3.0",
+    "icukit-pyicu==78.3.0",
 ]
 docs = [
     "sphinx>=5.0",
@@ -74,6 +76,7 @@ exclude = ["tests*", "docs*", "examples*"]
 
 [tool.setuptools.package-data]
 phonebox = ["py.typed"]
+"phonebox.config" = ["exemplars.json"]
 "phonebox.config.locales" = ["**/*.json", "**/*.xlit"]
 "phonebox.configs" = ["*.yaml"]
 
@@ -103,6 +106,7 @@ exclude = ["venv/", "build/", ".eggs/"]
 [[tool.mypy.overrides]]
 module = [
     "icu",
+    "icukit",
     "yaml",
     "graphviz",
     "matplotlib.*",
