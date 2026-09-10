@@ -1,35 +1,15 @@
 #!/usr/bin/env python
-"""Run 1:1 (pretrained) vs n:m (train split) G2P comparison for all IPA locales.
+"""Structured multi-locale 1:1 versus n:m evaluation and report rendering.
 
-Also invoked as ``phonebox compare all``. Loads existing ``*-ipa.g2p.gz``
-decision-tree models (tree only — embedded lexicon exceptions are disabled) and
-trains MultigramG2P on the held-out train slice. Writes ``docs/G2P_COMPARE.md``.
-
-Use ``--use-exceptions`` for hybrid eval (train-split lookup on both 1:1 and n:m).
-
-Requires environment variables (no hard-coded paths outside this repo):
-
-  PHONEDECODING_LEXICON_DIR  directory with ``es_ipa.tsv``, ``fr_ipa.tsv``, …
-  PHONEDECODING_G2P_DIR      parent of ``es-mx/``, ``fr-fr/``, … model dirs
-
-Example::
-
-    export PHONEDECODING_LEXICON_DIR=/path/to/lexicons/processed
-    export PHONEDECODING_G2P_DIR=/path/to/build/g2p
-    python compare_g2p_all.py --parallel-align
-
-    # Fair join-off baseline (both models train split; no G2P_DIR):
-    python compare_g2p_all.py --no-config-joins --parallel-align
-
-See ``docs/G2P_EVAL.md`` for metrics and flags.
+The API accepts explicit locale-to-lexicon and locale-to-model mappings. The
+``phonebox compare all`` adapter owns conventional directory and environment
+defaults.
 """
 
 from __future__ import annotations
 
-import argparse
-import os
-import sys
-import time
+from collections.abc import Mapping
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import cast
@@ -42,15 +22,6 @@ from phonebox.constants import (
 from phonebox.eval.g2p_compare import run_compare
 from phonebox.experiments.equiv import equiv_for_locale
 from phonebox.experiments.metrics import G2P_METRICS_FOOTER
-
-_LOCALES: list[tuple[str, str, str]] = [
-    ("es_MX", "es_ipa.tsv", "es-mx/es-mx-ipa.g2p.gz"),
-    ("fr_FR", "fr_ipa.tsv", "fr-fr/fr-fr-ipa.g2p.gz"),
-    ("de_DE", "de_ipa.tsv", "de-de/de-de-ipa.g2p.gz"),
-    ("en_US", "en_ipa.tsv", "en-us/en-us-ipa.g2p.gz"),
-    ("pt_BR", "pt_ipa.tsv", "pt-br/pt-br-ipa.g2p.gz"),
-    ("it_IT", "it_ipa.tsv", "it-it/it-it-ipa.g2p.gz"),
-]
 
 
 def _metric_row(
@@ -69,10 +40,23 @@ def _metric_row(
     return "| " + " | ".join(cells) + " |"
 
 
-def _write_markdown(
-    path: Path, summaries: list[dict[str, object]], *, args: argparse.Namespace
+@dataclass(frozen=True)
+class CompareAllConfig:
+    """Settings needed to render a multi-locale comparison."""
+
+    no_config_joins: bool = False
+    seed: int = DEFAULT_SPLIT_SEED
+    max_test: int = DEFAULT_MAX_TEST_ENTRIES
+    em_iterations: int = 15
+    parallel_align: bool = False
+    use_exceptions: bool = False
+
+
+def write_compare_all(
+    path: Path, summaries: list[dict[str, object]], *, config: CompareAllConfig
 ) -> None:
-    no_joins = args.no_config_joins
+    """Write multi-locale summaries as the established Markdown report."""
+    no_joins = config.no_config_joins
     title = (
         "# G2P comparison: 1:1 vs n:m (no config joins)"
         if no_joins
@@ -122,13 +106,13 @@ def _write_markdown(
             "",
             "## Setup",
             "",
-            f"- Seed: {args.seed}",
-            f"- Test cap: {args.max_test} entries (10% split, shuffled)",
+            f"- Seed: {config.seed}",
+            f"- Test cap: {config.max_test} entries (10% split, shuffled)",
             one_one_line,
-            f"- n:m: MultigramG2P v3 joint decode + LM, EM iterations={args.em_iterations}",
+            f"- n:m: MultigramG2P v3 joint decode + LM, EM iterations={config.em_iterations}",
             joins_line,
-            f"- Parallel align: {args.parallel_align}",
-            f"- Exceptions / lexicon lookup: {'train split only' if args.use_exceptions else 'off (pure G2P)'}",
+            f"- Parallel align: {config.parallel_align}",
+            f"- Exceptions / lexicon lookup: {'train split only' if config.use_exceptions else 'off (pure G2P)'}",
             "",
             baseline_note,
             "Multigram trains on the train split only; test words are never in its exception table.",
@@ -207,9 +191,8 @@ def _write_markdown(
 
 def run_compare_all(
     *,
-    lexicon_dir: Path,
-    g2p_dir: Path | None,
-    output: Path,
+    lexicons: Mapping[str, Path],
+    baseline_models: Mapping[str, Path] | None,
     no_config_joins: bool = False,
     seed: int = DEFAULT_SPLIT_SEED,
     max_test: int = DEFAULT_MAX_TEST_ENTRIES,
@@ -217,27 +200,17 @@ def run_compare_all(
     parallel_align: bool = False,
     use_exceptions: bool = False,
     locales: list[str] | None = None,
-) -> int:
-    """Run six-locale comparison; write markdown to ``output``."""
-    lex_root = lexicon_dir
-    g2p_root = g2p_dir
-    if not lex_root.is_dir():
-        print(f"Invalid lexicon dir: {lex_root}", file=sys.stderr)
-        return 2
-    if not no_config_joins and (g2p_root is None or not g2p_root.is_dir()):
-        print(f"Invalid g2p dir: {g2p_root}", file=sys.stderr)
-        return 2
-
-    selected = set(locales) if locales else None
+    quiet: bool = True,
+) -> list[dict[str, object]]:
+    """Compare explicit locale lexicons/models and return structured summaries."""
+    if not no_config_joins and baseline_models is None:
+        raise ValueError("baseline_models is required when config joins are enabled")
+    selected = locales or list(lexicons)
     summaries: list[dict[str, object]] = []
-    t_all = time.time()
 
-    for locale, lex_name, model_rel in _LOCALES:
-        if selected is not None and locale not in selected:
-            continue
-        lexicon = lex_root / lex_name
-        model_path = None if no_config_joins else g2p_root / model_rel
-        print(f"\n=== {locale} ===", flush=True)
+    for locale in selected:
+        lexicon = Path(lexicons[locale])
+        model_path = None if no_config_joins else Path(baseline_models[locale])
         summary = run_compare(
             lexicon=lexicon,
             locale=locale,
@@ -250,93 +223,11 @@ def run_compare_all(
             baseline_model=model_path,
             skip_multigram=False,
             use_exceptions=use_exceptions,
+            quiet=quiet,
         )
-        summary["baseline_model_rel"] = None if no_config_joins else model_rel
+        summary["baseline_model"] = None if no_config_joins else str(model_path)
         summaries.append(summary)
-
-    if not summaries:
-        print("No locales ran.", file=sys.stderr)
-        return 1
-
-    ns = argparse.Namespace(
-        no_config_joins=no_config_joins,
-        seed=seed,
-        max_test=max_test,
-        em_iterations=em_iterations,
-        parallel_align=parallel_align,
-        use_exceptions=use_exceptions,
-    )
-
-    _write_markdown(output, summaries, args=ns)
-    print(f"\nWrote {output} ({time.time() - t_all:.0f}s total)", flush=True)
-    return 0
+    return summaries
 
 
-def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument(
-        "--lexicon-dir",
-        type=Path,
-        default=None,
-        help="Override PHONEDECODING_LEXICON_DIR",
-    )
-    ap.add_argument(
-        "--g2p-dir",
-        type=Path,
-        default=None,
-        help="Override PHONEDECODING_G2P_DIR",
-    )
-    ap.add_argument("--output", type=Path, default=None)
-    ap.add_argument(
-        "--no-config-joins",
-        action="store_true",
-        help="Disable locale joins; train 1:1 on train split (fair vs n:m). Writes G2P_COMPARE_NO_JOINS.md.",
-    )
-    ap.add_argument("--seed", type=int, default=DEFAULT_SPLIT_SEED)
-    ap.add_argument("--max-test", type=int, default=DEFAULT_MAX_TEST_ENTRIES)
-    ap.add_argument("--em-iterations", type=int, default=15)
-    ap.add_argument("--parallel-align", action="store_true")
-    ap.add_argument(
-        "--use-exceptions",
-        action="store_true",
-        help="Train-split hybrid lookup for both 1:1 and n:m (default: pure G2P).",
-    )
-    ap.add_argument(
-        "--locales", nargs="*", help="Subset of locale tags, e.g. es_MX it_IT"
-    )
-    args = ap.parse_args()
-    if args.output is None:
-        args.output = (
-            Path("docs/G2P_COMPARE_NO_JOINS.md")
-            if args.no_config_joins
-            else Path("docs/G2P_COMPARE.md")
-        )
-
-    lex_dir = args.lexicon_dir or os.environ.get("PHONEDECODING_LEXICON_DIR")
-    g2p_dir = args.g2p_dir or os.environ.get("PHONEDECODING_G2P_DIR")
-    if not lex_dir:
-        print("Set PHONEDECODING_LEXICON_DIR or pass --lexicon-dir", file=sys.stderr)
-        return 2
-    if not args.no_config_joins and not g2p_dir:
-        print(
-            "Set PHONEDECODING_G2P_DIR or pass --g2p-dir (not needed for --no-config-joins)",
-            file=sys.stderr,
-        )
-        return 2
-
-    return run_compare_all(
-        lexicon_dir=Path(lex_dir),
-        g2p_dir=Path(g2p_dir) if g2p_dir else None,
-        output=args.output,
-        no_config_joins=args.no_config_joins,
-        seed=args.seed,
-        max_test=args.max_test,
-        em_iterations=args.em_iterations,
-        parallel_align=args.parallel_align,
-        use_exceptions=args.use_exceptions,
-        locales=args.locales,
-    )
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())
+__all__ = ["CompareAllConfig", "run_compare_all", "write_compare_all"]

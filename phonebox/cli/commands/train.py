@@ -110,6 +110,18 @@ def setup_train_command(subparsers):
         help="Enable EMAlign multiprocessing pool. Off by default because "
         "the fork pool duplicates the lexicon per worker.",
     )
+    parser.add_argument("--width", type=int, default=None, help="Odd context width")
+    parser.add_argument(
+        "--store-distributions",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Store leaf distributions for pronunciation scoring (default: enabled)",
+    )
+    parser.add_argument(
+        "--remove-stress",
+        action="store_true",
+        help="Strip phoneset stress markers while loading the lexicon",
+    )
     parser.add_argument("-v", "--verbose", action="store_true", help="Verbose")
     parser.set_defaults(func=handle_train)
 
@@ -151,11 +163,13 @@ def handle_train(args) -> int:
     dt = G2PDecisionTree(
         locale=args.locale,
         phoneset_name=args.phoneset,
-        remove_stress=False,
         verbose=True,
         trainer=args.trainer,
         parallel_align=args.parallel_align,
         max_combinations=args.max_combinations,
+        width=args.width,
+        store_distributions=args.store_distributions,
+        remove_stress=args.remove_stress,
     )
 
     step(f"load_prondict {lex}")

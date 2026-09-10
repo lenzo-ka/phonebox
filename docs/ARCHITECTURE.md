@@ -20,6 +20,8 @@ phonebox/
 │   └── vectorizer.py           # Feature vectorization
 │
 ├── experiments/                # G2P eval helpers (normalize, equiv, split)
+├── eval/                       # Structured comparison and analysis workflows
+├── pronunciation_analysis.py  # Candidate scoring and triage APIs
 │
 ├── cli/                        # Command-line tools
 │   ├── main.py                 # Entry point for unified CLI
@@ -30,7 +32,8 @@ phonebox/
 │       ├── dict.py             # phonebox dict (fetch, process, export-vectors...)
 │       ├── model.py            # phonebox model (build, train, benchmark...)
 │       ├── normalize.py        # phonebox normalize
-│       ├── pronounce.py        # phonebox pronounce (1:1 only)
+│       ├── pronounce.py        # phonebox pronounce (1:1 and n:m)
+│       ├── pronunciation_analysis.py # score-prons and find-suspicious
 │       ├── recipe.py           # phonebox recipe
 │       ├── suggest_joins.py    # phonebox suggest-joins (multigram EM)
 │       ├── train.py            # phonebox train (1:1 safe defaults)
@@ -45,8 +48,8 @@ phonebox/
 ├── cart/                       # Bundled CART predictor template
 │   └── g2p_predict.py          # Python predictor template
 │
-├── tools/                      # Standalone utilities
-│   └── count_diphones.py       # Count letter/phone bigrams from EM logs
+├── tools/                      # Development artifact generators
+│   └── generate_exemplars.py   # Build the pinned ICU exemplar inventory
 │
 └── utils/                      # Core utilities
     ├── icu_utils.py            # ICU transliteration
@@ -133,10 +136,16 @@ The CLI uses a unified `phonebox` command with subcommands:
 | `phonebox dict export-vectors` | Export feature vectors | `phonebox dict export-vectors dict.txt -o vectors.tsv` |
 | `phonebox align` | Align letters to phonemes | `phonebox align dict.txt --locale en_US` |
 | `phonebox vectorize` | Convert alignments to vectors | `phonebox vectorize alignments.txt -o vectors.txt` |
-| `phonebox train` | Train 1:1 G2P (safe defaults) | `phonebox train --locale en_US dict.tsv -o model.g2p.gz` |
+| `phonebox train` | Train 1:1 G2P (safe defaults) | `phonebox train --locale en_US --lexicon dict.tsv -o model.g2p.gz` |
 | `phonebox train-multigram` | Train n:m MultigramG2P | `phonebox train-multigram --locale it_IT --lexicon it.tsv -o model.g2p.gz` |
 | `phonebox compare locale` | Single-locale 1:1 vs n:m eval | `phonebox compare locale --lexicon fr_ipa.tsv --locale fr_FR` |
 | `phonebox compare all` | Six-locale eval markdown | `phonebox compare all` |
+| `phonebox compare sweep` | Sweep n:m span and LM order | `phonebox compare sweep --lexicon it_IT=it.tsv` |
+| `phonebox compare units` | Inspect learned n:m units | `phonebox compare units --lexicon it_IT=it.tsv` |
+| `phonebox compare accuracy` | Train/test dictionary accuracy | `phonebox compare accuracy dict.tsv` |
+| `phonebox compare experiments` | Run normalization experiments | `phonebox compare experiments --experiment it_IT baseline it.tsv baseline.g2p.gz` |
+| `phonebox score-prons` | Score pronunciation candidates | `phonebox score-prons input.jsonl -m model.g2p.gz` |
+| `phonebox find-suspicious` | Analyze scored candidates | `phonebox find-suspicious scored.jsonl --triage` |
 | `phonebox check` | Validate lexicon vs phoneset | `phonebox check --lexicon lex.tsv --phoneset phones.json` |
 | `phonebox suggest-joins` | Discover join candidates | `phonebox suggest-joins --locale fr_FR --lexicon fr.tsv -o joins.json` |
 

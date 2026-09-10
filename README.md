@@ -10,6 +10,12 @@ CMUdict / PocketSphinx workflows are the main English use case; measured phone
 error rates and IPA locale benchmarks are in
 [`docs/G2P_EVAL.md`](docs/G2P_EVAL.md).
 
+Phonebox is an alpha `0.x` library. Each `0.X.0` release may make breaking
+changes to Python APIs, CLI commands, model tooling, and repository workflows;
+treat it like a new major version when upgrading. Patch releases within one
+`0.X` line are intended to remain compatible. Pin the minor release when a
+stable integration surface is required.
+
 ## Features
 
 - **Measured accuracy**: reported phone error rates on CMUdict (see docs/BENCHMARKS.md); neural G2P methods can be more accurate
@@ -111,7 +117,9 @@ phonebox compare locale --lexicon … --locale it_IT
 phonebox train-multigram --locale it_IT --lexicon it_ipa.tsv -o model.g2p.gz
 ```
 
-Repo wrappers: `compare_g2p_all.py`, `compare_g2p_sweep.py`, `dump_units.py`.
+Use `phonebox compare all`, `phonebox compare sweep`, and
+`phonebox compare units` for evaluation workflows. The same structured
+operations are importable from `phonebox.eval`.
 See [`docs/G2P_EVAL.md`](docs/G2P_EVAL.md).
 
 ### Examples

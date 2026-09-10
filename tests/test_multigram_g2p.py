@@ -3,7 +3,7 @@
 These are sanity tests: train on a tiny lexicon, verify the model can
 reproduce its training data and generalize to held-out variants. Real
 quality comparisons against the 1:1 G2PDecisionTree live in the
-join-discovery report and the eval script in scripts/.
+join-discovery report and the ``phonebox compare`` workflows.
 """
 
 from __future__ import annotations
@@ -72,7 +72,7 @@ def test_training_produces_a_predictor_and_inventory(tmp_path):
     assertions reliable — EM doesn't have enough mass to prune spurious
     compression units like ``(a, t) → /a/`` that only appear in one or
     two training words. Real-data evaluation (Italian/Spanish full
-    lexicons, see compare_g2p.py) gives the proper
+    lexicons, see ``phonebox compare locale``) gives the proper
     accuracy picture.
     """
     lex = _toy_lexicon(tmp_path)
