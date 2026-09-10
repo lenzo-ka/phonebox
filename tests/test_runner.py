@@ -16,7 +16,6 @@ from cartlet import read_cart_metadata
 from phonebox import G2P
 from phonebox.bundler import bundle_g2p
 from phonebox.core.vectorizer import make_join_re
-from phonebox.portable_normalization import PortableNormalizationError
 from phonebox.runner import G2PRunner
 
 
@@ -202,7 +201,20 @@ def test_locale_normalization_matches_library_runner_and_stdlib_bundle(
 
     runner = G2PRunner(str(cart_path))
     bundle_path = tmp_path / "letters.py"
-    bundle_g2p(str(model_path), str(bundle_path))
+    bundle_result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "phonebox.cli.main",
+            "bundle",
+            str(model_path),
+            "-o",
+            str(bundle_path),
+        ],
+        capture_output=True,
+        text=True,
+    )
+    assert bundle_result.returncode == 0, bundle_result.stderr
 
     for word, phones in zip(variants, expected, strict=True):
         assert tuple(g2p.pronounce(word)) == phones
@@ -231,6 +243,19 @@ def test_bundle_refuses_nonportable_icu_without_writing_output(tmp_path):
     g2p._dt.export(str(cart_path), include_exceptions=False)
     bundle_path = tmp_path / "letters.py"
 
-    with pytest.raises(PortableNormalizationError, match="Latin"):
-        bundle_g2p(str(cart_path), str(bundle_path))
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "phonebox.cli.main",
+            "bundle",
+            str(cart_path),
+            "-o",
+            str(bundle_path),
+        ],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 1
+    assert "Latin" in result.stderr
     assert not bundle_path.exists()
