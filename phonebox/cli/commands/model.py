@@ -41,9 +41,10 @@ Examples:
             "e.g. it, it-IT)"
         ),
     )
-    train_parser.add_argument("-a", "--alignments", help="Alignment file")
-    train_parser.add_argument("--vectors", help="Vectorized data file")
-    train_parser.add_argument("-o", "--output", help="Output model file")
+    prepared_input = train_parser.add_mutually_exclusive_group(required=True)
+    prepared_input.add_argument("-a", "--alignments", help="Alignment file")
+    prepared_input.add_argument("--vectors", help="Vectorized data file")
+    train_parser.add_argument("-o", "--output", required=True, help="Output model file")
     train_parser.add_argument("--remove-stress", action="store_true")
     train_parser.add_argument("--cased", action="store_true")
     train_parser.add_argument("--max-iterations", type=int)

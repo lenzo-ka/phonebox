@@ -73,6 +73,31 @@ class TestCLIHelp:
         assert "alignments" in result.stdout.lower()
         assert "output" in result.stdout.lower()
 
+    @pytest.mark.parametrize(
+        "arguments",
+        [
+            ["--alignments", "a.txt", "--vectors", "v.txt", "-o", "m.g2p.gz"],
+            ["-o", "m.g2p.gz"],
+            ["--alignments", "a.txt"],
+        ],
+    )
+    def test_model_train_requires_one_prepared_input_and_output(self, arguments):
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "phonebox.cli.main",
+                "model",
+                "train",
+                "en_US",
+                *arguments,
+            ],
+            capture_output=True,
+            text=True,
+        )
+        assert result.returncode == 2
+        assert "error:" in result.stderr.lower()
+
     def test_model_no_subcommand(self):
         """Test g2p model (no subcommand shows help)."""
         result = subprocess.run(
