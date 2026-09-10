@@ -949,6 +949,8 @@ class G2PDecisionTree:
                 if not isinstance(snapshot, dict):
                     raise ValueError("malformed letter_preprocessing metadata")
                 v.load_letter_preprocessing(snapshot)
+            else:
+                v._use_legacy_locale_preprocessing()
 
             # Load embedded exceptions dictionary (saved under metadata).
             exceptions = pick("exceptions", None)

@@ -137,6 +137,18 @@ policy. Version 3 sidecars without this snapshot keep their historical
 lowercase, per-character library behavior; the CLI retains its locale-metadata
 cooking for those legacy models.
 
+For Spanish, acute `í` and `ú` remain distinct graphemes because they can mark
+a vowel where plain `i` or `u` is a glide, as in `hacia`/`hacía` and
+`continuo`/`continúo`. Acute marks on `á`, `é`, and `ó` continue to fold for
+the segmental G2P contract. This preserves a useful input distinction; it is
+not a broad accuracy claim.
+
+Snapshot-absent Spanish CART models and legacy multigram CLI inference use the
+frozen policy shipped immediately before this change. New models use and save
+the current policy. Models older than that known policy, or trained with
+unrecorded custom locale rules, cannot be reconstructed exactly from metadata
+they never saved.
+
 1:1 inference: `phonebox pronounce -m tree-only.g2p.gz` (no sidecar).
 
 ## Related CLI

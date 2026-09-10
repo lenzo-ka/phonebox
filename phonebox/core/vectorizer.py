@@ -22,6 +22,7 @@ from ..constants import (
     JOIN_CHAR,
 )
 from ..portable_normalization import join_seq, make_join_re
+from .legacy_preprocessing import known_legacy_g2p_rules
 
 # Per-phoneset stress markers; applied only when ``remove_stress=True``.
 # Add more known phonesets here as needed. Unknown phonesets get no-op
@@ -248,6 +249,16 @@ class Vectorizer:
         """Disable locale ``config.json`` letter/phone joins (xlit still applies)."""
         self.lett_join_re = None
         self.phon_join_re = None
+
+    def _use_legacy_locale_preprocessing(self) -> bool:
+        """Restore known pre-snapshot rules for this saved model's locale."""
+        rules = known_legacy_g2p_rules(self.locale)
+        if rules is None:
+            return False
+        self.g2p_transliterator = RuleTransliterator(rules=rules)
+        if not self.g2p_transliterator:
+            raise ValueError("invalid packaged legacy g2p transliterator rules")
+        return True
 
     def export_config(self):
         """Serialize the cook-affecting state into the config persisted with a
