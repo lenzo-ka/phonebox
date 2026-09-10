@@ -9,13 +9,19 @@ class PortableNormalizationError(ValueError):
 
 
 _NORMAL_FORMS = {"NFC", "NFD", "NFKC", "NFKD"}
-_UNICODE_ESCAPE_RE = re.compile(r"\\u([0-9A-Fa-f]{4,8})")
-_FILTER_RE = re.compile(r"^\[\^(.+)\[:L:\]\]\s+Remove$", re.IGNORECASE)
+_UNICODE_SCALAR_RE = re.compile(r"\\u([0-9A-Fa-f]{4,6})")
+_FILTER_RE = re.compile(r"^\[\^([\\.'-]*)\[:L:\]\]\s+Remove$", re.IGNORECASE)
 
 
-def _decode_rule_text(value):
-    value = _UNICODE_ESCAPE_RE.sub(lambda match: chr(int(match.group(1), 16)), value)
-    return re.sub(r"\\(.)", r"\1", value)
+def _exact_scalar(value):
+    """Return one literal scalar from the narrow supported ICU syntax."""
+    escaped = _UNICODE_SCALAR_RE.fullmatch(value)
+    if escaped:
+        scalar = chr(int(escaped.group(1), 16))
+        return scalar if not 0xD800 <= ord(scalar) <= 0xDFFF else None
+    if len(value) == 1 and not value.isspace() and value not in "[]().*+?{}|^$\\'\"":
+        return value
+    return None
 
 
 def _rule_statements(rules):
@@ -28,8 +34,16 @@ def _rule_statements(rules):
 def _compile_rules(rules, label):
     operations: list[dict[str, object]] = []
     unsupported = []
+    replacements: dict[str, str] = {}
+
+    def flush_replacements():
+        if replacements:
+            operations.append({"op": "map_chars", "map": dict(replacements)})
+            replacements.clear()
+
     for statement in _rule_statements(rules or ""):
         if statement.startswith("::"):
+            flush_replacements()
             directive = statement[2:].strip()
             if directive in _NORMAL_FORMS:
                 operations.append({"op": "normalize", "form": directive})
@@ -38,11 +52,11 @@ def _compile_rules(rules, label):
             elif directive == "Null":
                 continue
             elif directive.lower() == "[:m:] remove":
-                operations.append({"op": "remove_marks"})
+                operations.append({"op": "remove_mark_characters"})
             else:
                 match = _FILTER_RE.fullmatch(directive)
                 if match:
-                    keep = _decode_rule_text(match.group(1))
+                    keep = match.group(1).replace("\\-", "-")
                     operations.append(
                         {"op": "filter", "categories": ["L"], "keep": keep}
                     )
@@ -52,14 +66,13 @@ def _compile_rules(rules, label):
 
         if statement.count(">") == 1:
             source, replacement = (part.strip() for part in statement.split(">", 1))
-            source = _decode_rule_text(source)
-            replacement = _decode_rule_text(replacement)
-            if len(source) == 1:
-                operations.append(
-                    {"op": "replace", "source": source, "replacement": replacement}
-                )
+            source_scalar = _exact_scalar(source)
+            replacement_scalar = _exact_scalar(replacement)
+            if source_scalar is not None and replacement_scalar is not None:
+                replacements[source_scalar] = replacement_scalar
                 continue
         unsupported.append(f"{label}: {statement}")
+    flush_replacements()
     return operations, unsupported
 
 
@@ -99,7 +112,7 @@ def compile_letter_preprocessing(snapshot):
     if not cased:
         operations.append({"op": "lower"})
     if remove_accents:
-        operations.append({"op": "remove_marks"})
+        operations.append({"op": "remove_accents"})
     if filter_non_letters:
         operations.append(
             {"op": "filter", "categories": ["L", "Mn", "Mc"], "keep": "-.'"}
@@ -159,10 +172,14 @@ def _apply_operations(text, operations):
             text = text.replace(operation["source"], operation["replacement"])
         elif op == "lower":
             text = text.lower()
-        elif op == "remove_marks":
+        elif op == "remove_accents":
             text = unicodedata.normalize("NFD", text)
             text = "".join(ch for ch in text if unicodedata.category(ch) != "Mn")
             text = unicodedata.normalize("NFC", text)
+        elif op == "remove_mark_characters":
+            text = "".join(
+                ch for ch in text if not unicodedata.category(ch).startswith("M")
+            )
         elif op == "filter":
             categories = tuple(operation["categories"])
             keep = operation["keep"]

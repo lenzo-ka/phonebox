@@ -100,6 +100,16 @@ def test_rewrites_are_simultaneous_and_joins_follow_them():
     assert apply_portable_preprocessing("xh", program) == ["c₊h"]
 
 
+def test_consecutive_icu_replacements_are_one_simultaneous_pass():
+    program = compile_letter_preprocessing(_snapshot("x > y; y > z;", cased=True))
+    assert apply_portable_preprocessing("xy", program) == ["y", "z"]
+
+
+def test_icu_mark_removal_removes_all_mark_categories_without_decomposition():
+    program = compile_letter_preprocessing(_snapshot(":: [:M:] Remove;", cased=True))
+    assert apply_portable_preprocessing("a\u0903", program) == ["a"]
+
+
 @pytest.mark.parametrize(
     "rules",
     [
@@ -107,6 +117,9 @@ def test_rewrites_are_simultaneous_and_joins_follow_them():
         ":: Fullwidth-Halfwidth ;",
         "[:Pd:] > \\- ;",
         "a b > c ;",
+        ":: [^a-z[:L:]] Remove ;",
+        ". > x ;",
+        "a > 'b' ;",
     ],
 )
 def test_unsupported_icu_invalidates_the_whole_program(rules):
