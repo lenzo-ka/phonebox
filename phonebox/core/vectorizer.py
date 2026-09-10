@@ -365,6 +365,10 @@ class Vectorizer:
         source = snapshot.get("source")
         if not isinstance(source, dict):
             raise ValueError("malformed letter preprocessing source")
+        missing_source_keys = {"norm_rules", "g2p_rules"} - source.keys()
+        if missing_source_keys:
+            missing = ", ".join(sorted(missing_source_keys))
+            raise ValueError(f"missing letter preprocessing source fields: {missing}")
         required = {
             "join_char": str,
             "letter_joins": list,

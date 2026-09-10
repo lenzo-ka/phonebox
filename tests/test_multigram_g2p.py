@@ -264,6 +264,10 @@ def test_present_malformed_preprocessing_metadata_is_not_legacy(tmp_path):
             ),
             "invalid saved g2p transliterator rules",
         ),
+        (
+            lambda snapshot: snapshot["source"].pop("g2p_rules"),
+            "missing letter preprocessing source fields: g2p_rules",
+        ),
     ],
 )
 def test_snapshot_validation_fails_at_model_load(tmp_path, mutate, message):
