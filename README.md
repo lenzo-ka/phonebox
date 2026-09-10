@@ -9,6 +9,8 @@ for those properties, and neural G2P methods will generally score better.
 CMUdict / PocketSphinx workflows are the main English use case; measured phone
 error rates and IPA locale benchmarks are in
 [`docs/G2P_EVAL.md`](docs/G2P_EVAL.md).
+The reproducible held-out CMUdict comparison of CART and multigram models is in
+[`docs/CMUDICT_COMPARISON.md`](docs/CMUDICT_COMPARISON.md).
 
 Phonebox is an alpha `0.x` library. Each `0.X.0` release may make breaking
 changes to Python APIs, CLI commands, model tooling, and repository workflows;

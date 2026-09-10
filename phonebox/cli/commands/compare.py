@@ -204,14 +204,14 @@ def setup_compare_commands(subparsers) -> None:
 
 
 def handle_compare_all(args) -> int:
-    lex_dir = args.lexicon_dir or os.environ.get("PHONEDECODING_LEXICON_DIR")
-    g2p_dir = args.g2p_dir or os.environ.get("PHONEDECODING_G2P_DIR")
+    lex_dir = args.lexicon_dir or os.environ.get("PHONEBOX_LEXICON_DIR")
+    g2p_dir = args.g2p_dir or os.environ.get("PHONEBOX_MODEL_DIR")
     if not lex_dir:
-        print("Set PHONEDECODING_LEXICON_DIR or pass --lexicon-dir", file=sys.stderr)
+        print("Set PHONEBOX_LEXICON_DIR or pass --lexicon-dir", file=sys.stderr)
         return 2
     if not args.no_config_joins and not g2p_dir:
         print(
-            "Set PHONEDECODING_G2P_DIR or pass --g2p-dir (not needed for --no-config-joins)",
+            "Set PHONEBOX_MODEL_DIR or pass --g2p-dir (not needed for --no-config-joins)",
             file=sys.stderr,
         )
         return 2
@@ -355,7 +355,7 @@ def handle_compare_sweep(args) -> int:
     locales = args.locales or list(paths) or ["fr_FR", "de_DE", "pt_BR", "en_US"]
     if not paths:
         lexicons = _required_dir(
-            args.lexicon_dir, "PHONEDECODING_LEXICON_DIR", "--lexicon-dir"
+            args.lexicon_dir, "PHONEBOX_LEXICON_DIR", "--lexicon-dir"
         )
         if lexicons is None:
             return 2
@@ -419,7 +419,7 @@ def handle_compare_units(args) -> int:
         return 2
     if not paths:
         lexicons = _required_dir(
-            args.lexicon_dir, "PHONEDECODING_LEXICON_DIR", "--lexicon-dir"
+            args.lexicon_dir, "PHONEBOX_LEXICON_DIR", "--lexicon-dir"
         )
         if lexicons is None:
             return 2
@@ -495,9 +495,9 @@ def handle_compare_experiments(args) -> int:
             ]
         else:
             lexicons = _required_dir(
-                args.lexicon_dir, "PHONEDECODING_LEXICON_DIR", "--lexicon-dir"
+                args.lexicon_dir, "PHONEBOX_LEXICON_DIR", "--lexicon-dir"
             )
-            models = _required_dir(args.g2p_dir, "PHONEDECODING_G2P_DIR", "--g2p-dir")
+            models = _required_dir(args.g2p_dir, "PHONEBOX_MODEL_DIR", "--g2p-dir")
             if lexicons is None or models is None:
                 return 2
             definitions = [

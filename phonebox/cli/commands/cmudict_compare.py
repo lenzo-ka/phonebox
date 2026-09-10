@@ -47,11 +47,11 @@ def handle_compare_cmudict(args: argparse.Namespace) -> int:
             with tempfile.TemporaryDirectory() as tmp:
                 lexicon = fetch_cmudict(Path(tmp) / "cmudict.dict")
                 result = run_cmudict_comparison(
-                    lexicon, em_iterations=args.em_iterations
+                    lexicon, em_iterations=args.em_iterations, progress=print
                 )
         else:
             result = run_cmudict_comparison(
-                args.lexicon, em_iterations=args.em_iterations
+                args.lexicon, em_iterations=args.em_iterations, progress=print
             )
     except (OSError, ValueError, urllib.error.URLError) as exc:
         print(f"CMUdict comparison failed: {exc}", file=sys.stderr)

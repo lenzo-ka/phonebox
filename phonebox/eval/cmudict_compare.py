@@ -11,6 +11,7 @@ import tempfile
 import time
 import urllib.request
 from collections import defaultdict
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -112,6 +113,7 @@ def run_cmudict_comparison(
     em_iterations: int = 10,
     max_letter_span: int = 2,
     max_phone_span: int = 2,
+    progress: Callable[[str], None] | None = None,
 ) -> dict[str, Any]:
     """Train both models on identical word groups and return snapshot results."""
     validate_cmudict(lexicon)
@@ -120,6 +122,7 @@ def run_cmudict_comparison(
     revision, dirty = _git_revision(root)
     conditions: list[dict[str, Any]] = []
     for remove_stress in (False, True):
+        stress = "removed" if remove_stress else "preserved"
         vec = Vectorizer(
             locale="en_US", phoneset_name="cmu", remove_stress=remove_stress
         )
@@ -165,9 +168,13 @@ def run_cmudict_comparison(
         gold = {display[key]: variants for key, variants in grouped.items()}
 
         started = time.perf_counter()
+        if progress is not None:
+            progress(f"training CART ({stress} stress)")
         cart = train_baseline("en_US", "cmu", train_lines, remove_stress=remove_stress)
         cart_seconds = time.perf_counter() - started
         started = time.perf_counter()
+        if progress is not None:
+            progress(f"training multigram ({stress} stress)")
         multigram = train_multigram(
             train_cooked,
             max_letter_span,
@@ -195,7 +202,7 @@ def run_cmudict_comparison(
             multigram_bytes = _artifact_bytes(list(out.glob("multigram*")))
         conditions.append(
             {
-                "stress": "removed" if remove_stress else "preserved",
+                "stress": stress,
                 "train_words": len(train_keys),
                 "train_entries": len(train_raw),
                 "test_words": len(grouped),
@@ -306,12 +313,13 @@ def render_markdown(result: dict[str, Any]) -> str:
         "Artifact size includes every file required to reload the exported model.",
         "Training time includes each model's phone cooking, alignment, and fit. The "
         "CART export is gzip-compressed while multigram uses JSON sidecars, so size is "
-        "the current complete export footprint rather than normalized complexity.",
+        "the current complete export footprint rather than normalized complexity. "
+        "Prediction errors and empty outputs are counted explicitly.",
         "",
         "## Results",
         "",
-        "| Stress | Model | Train words | Test words | Train s | Size bytes | WER% | WERv% | PER% | PERv% |",
-        "|---|---|---:|---:|---:|---:|---:|---:|---:|---:|",
+        "| Stress | Model | Train words | Test words | Train s | Size bytes | WER% | WERv% | PER% | PERv% | Errors | Empty |",
+        "|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
     ]
     for condition in result["conditions"]:
         for model in condition["models"]:
@@ -320,8 +328,24 @@ def render_markdown(result: dict[str, Any]) -> str:
                 f"{condition['train_words']} | {condition['test_words']} | "
                 f"{model['train_seconds']:.2f} | {model['artifact_bytes']} | "
                 f"{model['wer_pct']:.2f} | {model['wer_relaxed_pct']:.2f} | "
-                f"{model['per_reference_pct']:.2f} | {model['per_variant_pct']:.2f} |"
+                f"{model['per_reference_pct']:.2f} | {model['per_variant_pct']:.2f} | "
+                f"{model['prediction_errors']} | {model['empty_predictions']} |"
             )
+    lines.extend(["", "## Interpretation", ""])
+    for condition in result["conditions"]:
+        winner = min(condition["models"], key=lambda model: model["per_variant_pct"])
+        lines.append(
+            f"- With stress {condition['stress']}, {winner['model']} has the lower "
+            f"variant-aware phone error ({winner['per_variant_pct']:.2f}%)."
+        )
+    lines.extend(
+        [
+            "- Variant-aware WER/PER credit alternate held-out pronunciations; compare "
+            "them within the same stress condition.",
+            "- Export byte totals reflect the current gzip CART and JSON-sidecar "
+            "multigram formats, not normalized algorithm complexity.",
+        ]
+    )
     phonebox = result["phonebox"]
     runtime = result["runtime"]
     lines.extend(

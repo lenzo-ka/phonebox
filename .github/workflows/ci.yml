@@ -38,6 +38,10 @@ jobs:
         if: matrix.python-version == '3.12' && matrix.os == 'ubuntu-latest'
         run: python -m phonebox exemplars generate --output phonebox/config/exemplars.json --check
 
+      - name: Verify CMUdict benchmark report
+        if: matrix.python-version == '3.12' && matrix.os == 'ubuntu-latest'
+        run: python -m phonebox compare cmudict --check docs/cmudict-comparison.json docs/CMUDICT_COMPARISON.md
+
       - name: Run tests with coverage
         if: matrix.python-version == '3.12' && matrix.os == 'ubuntu-latest'
         run: |

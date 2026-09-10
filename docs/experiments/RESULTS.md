@@ -40,8 +40,8 @@ Last run: 2026-05-21 (seed 42, 2000 test, EM 15, parallel align).
 ## Reproduce
 
 ```bash
-export PHONEDECODING_LEXICON_DIR=…/processed
-export PHONEDECODING_G2P_DIR=…/build/g2p
+export PHONEBOX_LEXICON_DIR=lexicons
+export PHONEBOX_MODEL_DIR=models
 phonebox compare experiments --parallel-align
 ```
 

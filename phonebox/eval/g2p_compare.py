@@ -157,6 +157,7 @@ def evaluate(
     quiet: bool = True,
 ) -> dict[str, float]:
     word_ok = word_ok_relaxed = 0
+    prediction_errors = empty_predictions = 0
     phone_ok = 0
     phone_den = 0
     reference_phone_den = 0
@@ -167,9 +168,12 @@ def evaluate(
         try:
             pred = predict(word)
         except Exception as exc:
+            prediction_errors += 1
             if not quiet:
                 print(f"  [{name}] {word!r}: {exc}", file=sys.stderr)
             pred = []
+        if not pred:
+            empty_predictions += 1
         gold = gold_variants.get(word) if gold_variants else None
         if pred == expected:
             word_ok += 1
@@ -215,6 +219,8 @@ def evaluate(
         "per_equiv_pct": 100.0 * edit_sum_equiv / phone_den if phone_den else 0.0,
         "pos_acc_pct": 100.0 * phone_ok / phone_den if phone_den else 0.0,
         "n_test": n_test,
+        "prediction_errors": prediction_errors,
+        "empty_predictions": empty_predictions,
     }
 
 
@@ -508,7 +514,7 @@ def run_compare(
         "n_entries": len(pairs),
         "n_test": len(test_eval),
         "n_multi_pron": n_multi,
-        "baseline_model": str(baseline_model) if baseline_model else None,
+        "baseline_model": baseline_model.name if baseline_model else None,
         "use_exceptions": use_exceptions,
         "phone_equiv": equiv is not None,
         "results": [

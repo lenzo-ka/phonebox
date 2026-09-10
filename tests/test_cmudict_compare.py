@@ -47,6 +47,19 @@ def test_variant_per_uses_same_best_gold_policy_for_predictor():
     assert insertion_metrics["per_reference_pct"] == 200
 
 
+def test_evaluate_counts_prediction_failures_and_empty_outputs():
+    def fail(_word):
+        raise RuntimeError("broken predictor")
+
+    failed = evaluate("model", fail, [("x", ["A"])], quiet=True)
+    assert failed["prediction_errors"] == 1
+    assert failed["empty_predictions"] == 1
+
+    empty = evaluate("model", lambda _word: [], [("x", ["A"])], quiet=True)
+    assert empty["prediction_errors"] == 0
+    assert empty["empty_predictions"] == 1
+
+
 def test_validate_cmudict_rejects_unpinned_content(tmp_path):
     path = tmp_path / "cmudict.dict"
     path.write_text("word W ER D\n")
@@ -92,6 +105,8 @@ def test_renderer_reads_metrics_from_json_snapshot():
                         "per_pct": 5.0,
                         "per_reference_pct": 5.0,
                         "per_variant_pct": 4.0,
+                        "prediction_errors": 0,
+                        "empty_predictions": 0,
                     }
                 ],
             }
