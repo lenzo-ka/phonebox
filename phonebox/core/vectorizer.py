@@ -21,6 +21,7 @@ from ..constants import (
     FILE_ENCODING,
     JOIN_CHAR,
 )
+from ..lexicon import parse_dict_line
 from ..locale_resolution import (
     canonical_locale,
     orthographic_compatibility,
@@ -504,20 +505,18 @@ class Vectorizer:
 
         line = ud.normalize("NFC", line.strip())
 
-        # Remove trailing comment if present. Skip this in alignment-line
-        # mode (letters_spaced=True) because fr_FR's liaison_pad IS the
-        # literal '#' character and appears as a letter token in EM
-        # alignments (e.g. "o e u f #\tœ ε f ε"); stripping at '#' there
-        # would drop the tab and lose the phone side entirely, returning
-        # (None, None) and crashing load_alignments downstream.
-        if not letters_spaced and "#" in line:
-            line = line.split("#")[0].strip()
-
-        # Skip empty lines after comment removal
         if not line:
             return None, None
 
-        # Handle both tab and space separated formats
+        # Dictionary lines use the shared parser. Alignment lines retain their
+        # separate grammar because a literal '#' may be a French liaison token.
+        if not letters_spaced:
+            parsed = parse_dict_line(line)
+            if parsed is None:
+                return None, None
+            letters_str, phones = parsed
+            cooked = phones if phones_cooked else self.cook_phones(phones)
+            return self.cook_letters(list(letters_str), g2p=True), cooked
         if "\t" in line:
             parts = line.split("\t")
             if len(parts) < 2:
@@ -528,15 +527,6 @@ class Vectorizer:
             if len(parts) < 2:
                 return None, None
             letters_str, phones_str = parts
-
-        # Strip CMUdict-style variant suffix `(N)` from the word the same way
-        # `dictionary.parse_dict_line` does. The xlit's `[^-.'[:L:]] Remove`
-        # rule normally drops these parens+digits as a side effect, but only
-        # when PyICU is available; without that, lexicon entries like
-        # `œufs(2)` leak `(`, `2`, `)` into training letters and exception
-        # keys. This makes the behavior consistent regardless of ICU.
-        if not letters_spaced:
-            letters_str = re.sub(r"\(\d+\)$", "", letters_str)
 
         letters_list = letters_str.split(" ") if letters_spaced else list(letters_str)
         letters_list = self.cook_letters(letters_list, g2p=True)

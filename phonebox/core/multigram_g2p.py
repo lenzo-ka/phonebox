@@ -28,7 +28,7 @@ from ..constants import (
     EPSILON,
     FILE_ENCODING,
 )
-from ..dictionary import parse_dict_line
+from ..lexicon import parse_dict_line
 from ..utils.io import is_dict_comment
 from ..utils.logging_config import get_logger
 from .joint_decode import joint_decode

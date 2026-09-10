@@ -431,7 +431,7 @@ class TestCommandGroupStructure:
         )
         assert result.returncode == 0
 
-        expected = ["fetch", "export-vectors"]
+        expected = ["fetch", "process", "export-vectors"]
         for cmd in expected:
             assert cmd in result.stdout, f"Dict subcommand '{cmd}' not found"
 

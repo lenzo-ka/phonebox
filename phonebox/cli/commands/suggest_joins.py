@@ -128,21 +128,16 @@ def setup_suggest_joins_command(subparsers):
 
 
 def _load_pairs(path: Path) -> list[tuple[list[str], list[str]]]:
-    """Read a TSV lexicon. Strips ``(N)`` variants like parse_dict_line."""
-    import re
+    """Read a pronunciation lexicon with the shared dictionary parser."""
+    from ...lexicon import parse_dict_line
 
-    variant_re = re.compile(r"\(\d+\)$")
     pairs: list[tuple[list[str], list[str]]] = []
     with path.open(encoding=DICT_ENCODING) as f:
         for line in f:
-            line = line.rstrip("\n")
-            if not line or line.startswith(("#", ";;;")):
+            parsed = parse_dict_line(line)
+            if parsed is None:
                 continue
-            parts = line.split("\t")
-            if len(parts) < 2:
-                continue
-            word = variant_re.sub("", parts[0])
-            phones = parts[1].split()
+            word, phones = parsed
             if not word or not phones:
                 continue
             pairs.append((list(word), phones))
