@@ -52,8 +52,20 @@ is opt-in through the mapping argument; the generic resolver does not infer it.
 Install the development requirements, then run:
 
 ```bash
-python tools/generate_exemplars.py
-python tools/generate_exemplars.py --check
+python -m phonebox exemplars generate --output phonebox/config/exemplars.json
+python -m phonebox exemplars generate --output phonebox/config/exemplars.json --check
+```
+
+The CLI delegates to the development API, which is also available in an installed
+package. Generation requires `phonebox[dev]`; importing the API or reading the
+committed inventory does not import ICU.
+
+```python
+from phonebox.dev.exemplars import check_exemplars, generate_exemplars, write_exemplars
+
+inventory = generate_exemplars()  # Return the structured inventory without writing.
+write_exemplars("exemplars.json")
+assert check_exemplars("exemplars.json")
 ```
 
 The checked-in JSON records icukit 0.4.0, the icukit-pyicu 78.3.0 backend,

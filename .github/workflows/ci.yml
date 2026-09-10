@@ -36,7 +36,7 @@ jobs:
 
       - name: Verify generated exemplar inventory
         if: matrix.python-version == '3.12' && matrix.os == 'ubuntu-latest'
-        run: python tools/generate_exemplars.py --check
+        run: python -m phonebox exemplars generate --output phonebox/config/exemplars.json --check
 
       - name: Run tests with coverage
         if: matrix.python-version == '3.12' && matrix.os == 'ubuntu-latest'

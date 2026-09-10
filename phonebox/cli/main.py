@@ -34,6 +34,7 @@ from .commands.bundle import setup_bundle_command
 from .commands.check import setup_check_command
 from .commands.compare import setup_compare_commands
 from .commands.dict import setup_dict_commands
+from .commands.exemplars import setup_exemplar_commands
 from .commands.model import setup_model_commands
 from .commands.normalize import setup_normalize_command
 from .commands.pronounce import setup_pronounce_command
@@ -54,7 +55,7 @@ def _normalize_help_aliases(argv: list[str]) -> list[str]:
         return argv
     if argv[0] == "help":
         return [*argv[1:], "--help"] if len(argv) > 1 else ["--help"]
-    command_groups = {"compare", "dict", "model"}
+    command_groups = {"compare", "dict", "model", "exemplars"}
     if argv[0] in command_groups and len(argv) > 1 and argv[1] == "help":
         return [argv[0], *argv[2:], "--help"]
     return argv
@@ -87,6 +88,7 @@ Quality / locale tuning:
   compare      1:1 vs n:m eval (locale or all six IPA locales)
   score-prons  Score pronunciation candidates in JSONL
   find-suspicious  Analyze scored pronunciation entries
+  exemplars    Generate or verify pinned ICU orthographic data (dev extra)
 
 Low-Level:
   align        Align letters to phonemes (EM algorithm)
@@ -142,6 +144,7 @@ For more help:
     setup_suggest_joins_command(subparsers)
     setup_score_prons_command(subparsers)
     setup_find_suspicious_command(subparsers)
+    setup_exemplar_commands(subparsers)
 
     # Parse arguments
     arguments = sys.argv[1:] if argv is None else argv

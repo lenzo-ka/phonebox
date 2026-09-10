@@ -30,6 +30,7 @@ phonebox/
 │       ├── bundle.py           # phonebox bundle
 │       ├── check.py            # phonebox check
 │       ├── dict.py             # phonebox dict (fetch, process, export-vectors...)
+│       ├── exemplars.py        # phonebox exemplars generate
 │       ├── model.py            # phonebox model (build, train, benchmark...)
 │       ├── normalize.py        # phonebox normalize
 │       ├── pronounce.py        # phonebox pronounce (1:1 and n:m)
@@ -48,8 +49,8 @@ phonebox/
 ├── cart/                       # Bundled CART predictor template
 │   └── g2p_predict.py          # Python predictor template
 │
-├── tools/                      # Development artifact generators
-│   └── generate_exemplars.py   # Build the pinned ICU exemplar inventory
+├── dev/                        # Development APIs with optional dependencies
+│   └── exemplars.py            # Pinned ICU artifact generation and verification
 │
 └── utils/                      # Core utilities
     ├── icu_utils.py            # ICU transliteration

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import importlib.util
 import json
 import subprocess
 import sys
@@ -66,13 +65,22 @@ def test_reader_import_has_no_icu_dependency():
     subprocess.run([sys.executable, "-c", code], cwd=ROOT, check=True)
 
 
-def test_generator_mechanics_preserve_native_ranges_and_strings():
-    spec = importlib.util.spec_from_file_location(
-        "generate_exemplars", ROOT / "tools/generate_exemplars.py"
+def test_generator_import_and_cli_help_do_not_require_icu():
+    code = (
+        "import sys; sys.modules['icu']=None; sys.modules['icukit']=None; "
+        "from phonebox.dev.exemplars import generate_exemplars; "
+        "from phonebox.cli.main import main; "
+        "main(['exemplars', 'generate', '--help'])"
     )
-    assert spec and spec.loader
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    result = subprocess.run(
+        [sys.executable, "-c", code], cwd=ROOT, capture_output=True, text=True
+    )
+    assert result.returncode == 0, result.stderr
+    assert "--check" in result.stdout
+
+
+def test_generator_mechanics_preserve_native_ranges_and_strings():
+    from phonebox.dev import exemplars as module
 
     class NativeSet:
         def getRangeCount(self):
@@ -87,7 +95,7 @@ def test_generator_mechanics_preserve_native_ranges_and_strings():
         def strings(self):
             return iter(["ch"])
 
-    assert module.inventory(NativeSet()) == {"c": "x", "r": [[97, 99]], "s": ["ch"]}
+    assert module._inventory(NativeSet()) == {"c": "x", "r": [[97, 99]], "s": ["ch"]}
     with pytest.raises(RuntimeError, match=r"expected .*ICU=78\.3.*found .*ICU=77\.1"):
         module.validate_versions(
             {
