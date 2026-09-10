@@ -6,8 +6,13 @@ Tests for CLI commands and subcommands.
 import subprocess
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
+
+from phonebox.cli.commands.bundle import handle_bundle
+from phonebox.cli.commands.pronounce import handle_pronounce
+from phonebox.cli.main import main
 
 
 class TestCLIHelp:
@@ -95,7 +100,32 @@ class TestCLIHelp:
             text=True,
         )
         assert result.returncode == 0
-        assert "Normalize text" in result.stdout
+        assert "locale-specific grapheme transformations" in result.stdout
+        assert "pronounce_text" in result.stdout
+
+    def test_main_accepts_argv_without_mutating_sys_argv(self, capsys):
+        original = list(sys.argv)
+        assert main(["normalize", "¡cafe\u0301!"]) == 0
+        assert capsys.readouterr().out == "café\n"
+        assert sys.argv == original
+
+    def test_package_module_entry_point(self):
+        result = subprocess.run(
+            [sys.executable, "-m", "phonebox", "normalize", "¡hola!"],
+            capture_output=True,
+            text=True,
+        )
+        assert result.returncode == 0
+        assert result.stdout == "hola\n"
+
+    def test_help_alias_handles_nested_command(self):
+        result = subprocess.run(
+            [sys.executable, "-m", "phonebox", "help", "model", "build"],
+            capture_output=True,
+            text=True,
+        )
+        assert result.returncode == 0
+        assert "--output" in result.stdout
 
 
 class TestPronounceCommand:
@@ -233,6 +263,49 @@ class TestPronounceCommand:
         )
         assert result.returncode != 0
         assert "required" in result.stderr.lower() or "error" in result.stderr.lower()
+
+    def test_invalid_confidence_options_return_usage_error(self, capsys):
+        args = SimpleNamespace(
+            confidence_detailed=True,
+            with_confidence=False,
+            nbest=None,
+            confidence_method="average",
+        )
+        assert handle_pronounce(args) == 2
+        assert "requires --with-confidence" in capsys.readouterr().err
+
+    def test_prediction_error_returns_failure_status(self, monkeypatch, capsys):
+        class BrokenG2P:
+            def __init__(self, **_kwargs):
+                pass
+
+            def pronounce(self, _word):
+                raise RuntimeError("broken model")
+
+        monkeypatch.setattr("phonebox.converter.G2P", BrokenG2P)
+        args = SimpleNamespace(
+            model="tree.g2p.gz",
+            words=["hello"],
+            nbest=None,
+            with_confidence=False,
+            confidence_detailed=False,
+            confidence_method="average",
+            locale=None,
+            phoneset=None,
+        )
+        assert handle_pronounce(args) == 1
+        assert "broken model" in capsys.readouterr().err
+
+
+def test_bundle_rejects_multigram_sidecar_before_loading(tmp_path, capsys):
+    model = tmp_path / "model.g2p.gz"
+    model.write_bytes(b"not needed")
+    model.with_suffix(".gz.units.json").write_text("{}", encoding="utf-8")
+    output = tmp_path / "g2p.py"
+
+    assert handle_bundle(SimpleNamespace(model=str(model), output=str(output))) == 1
+    assert "MultigramG2P" in capsys.readouterr().err
+    assert not output.exists()
 
 
 class TestBenchmarkCommand:

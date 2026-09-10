@@ -103,6 +103,10 @@ def bundle_g2p(model_path: str, output_path: str) -> None:
         with open(portable_path, encoding=FILE_ENCODING) as f:
             portable_code = f.read()
 
+        normalize_path = Path(__file__).parent / "normalize.py"
+        with open(normalize_path, encoding=FILE_ENCODING) as f:
+            normalize_code = f.read()
+
         # Strip the file prelude; keep everything from class G2PPredictor onward.
         class_marker = "class G2PPredictor"
         if class_marker in g2p_code:
@@ -111,7 +115,15 @@ def bundle_g2p(model_path: str, output_path: str) -> None:
 
         # The generated file receives the exact compiler/interpreter source
         # used by G2PRunner, avoiding a second standalone implementation.
-        output = cart_code + "\n\n\n" + portable_code + "\n\n\n" + g2p_code
+        output = (
+            cart_code
+            + "\n\n\n"
+            + portable_code
+            + "\n\n\n"
+            + normalize_code
+            + "\n\n\n"
+            + g2p_code
+        )
 
         with open(output_path, "w", encoding=FILE_ENCODING) as f:
             f.write(output)

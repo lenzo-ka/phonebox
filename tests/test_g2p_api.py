@@ -198,6 +198,9 @@ hat HH AE T
         assert lv.remove_accents is True
         assert lv.phoneset_name == "ipa"
         assert lv.lett_join_re is not None
+        assert loaded.locale == lv.locale
+        assert loaded.phoneset == lv.phoneset_name
+        assert loaded.remove_stress == lv.remove_stress
 
 
 if __name__ == "__main__":

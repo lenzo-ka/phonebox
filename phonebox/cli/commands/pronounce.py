@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import sys
+from math import prod
 from pathlib import Path
 
 from ...normalize import normalize_nfc
@@ -54,7 +55,10 @@ def setup_pronounce_command(subparsers):
         "--confidence-method",
         choices=["average", "product"],
         default="average",
-        help="Overall confidence method (requires --with-confidence)",
+        help=(
+            "Combine emitted-phone confidences: average is their arithmetic mean; "
+            "product multiplies them (requires --with-confidence)"
+        ),
     )
     pronounce_parser.add_argument(
         "--locale",
@@ -69,6 +73,20 @@ def setup_pronounce_command(subparsers):
 
 def handle_pronounce(args):
     """Handle 'phonebox pronounce' command with user-friendly input."""
+    if args.confidence_detailed and not args.with_confidence:
+        print(
+            "Error: --confidence-detailed requires --with-confidence", file=sys.stderr
+        )
+        return 2
+    if args.nbest and args.with_confidence:
+        print(
+            "Error: --nbest cannot be combined with --with-confidence", file=sys.stderr
+        )
+        return 2
+    if args.confidence_method != "average" and not args.with_confidence:
+        print("Error: --confidence-method requires --with-confidence", file=sys.stderr)
+        return 2
+
     model_path = Path(args.model)
     multigram = _multigram_sidecar(model_path).is_file()
 
@@ -127,36 +145,17 @@ def handle_pronounce(args):
         def pronounce_word(w: str) -> list[str]:
             return tree_g2p.pronounce(w)
 
-    # Determine input source
-    if args.words:
-        words = args.words
-    elif not sys.stdin.isatty():
-        words = []
-        for line in sys.stdin:
-            line = normalize_nfc(line)
-            if not is_dict_comment(line):
-                words.extend(line.split())
-    else:
-        # Interactive mode
-        print("G2P mode. Enter words (Ctrl+D to exit):", file=sys.stderr)
-        words = []
-        try:
-            while True:
-                try:
-                    line = normalize_nfc(input("> "))
-                    if not is_dict_comment(line):
-                        words.extend(line.split())
-                except EOFError:
-                    break
-        except KeyboardInterrupt:
-            print("\nInterrupted", file=sys.stderr)
-            return 130
+        if args.locale or args.phoneset:
+            print(
+                "Error: --locale and --phoneset apply only to legacy multigram models",
+                file=sys.stderr,
+            )
+            return 2
 
-    for word in words:
+    def process_word(word: str) -> bool:
         word = normalize_nfc(word)
-
         if not word:
-            continue
+            return True
 
         try:
             # N-best mode
@@ -180,9 +179,7 @@ def handle_pronounce(args):
                 else:
                     # Overall confidence
                     if args.confidence_method == "product":
-                        overall_conf = 1.0
-                        for c in confidences:
-                            overall_conf *= c
+                        overall_conf = prod(confidences)
                     else:  # average
                         overall_conf = (
                             sum(confidences) / len(confidences) if confidences else 1.0
@@ -196,5 +193,31 @@ def handle_pronounce(args):
 
         except Exception as e:
             print(f"{word}\t[ERROR: {e}]", file=sys.stderr)
+            return False
+        return True
 
-    return 0
+    failed = False
+    if args.words:
+        for word in args.words:
+            failed = not process_word(word) or failed
+    elif not sys.stdin.isatty():
+        for line in sys.stdin:
+            line = normalize_nfc(line)
+            if not is_dict_comment(line):
+                for word in line.split():
+                    failed = not process_word(word) or failed
+    else:
+        print("G2P mode. Enter words (Ctrl+D to exit):", file=sys.stderr)
+        try:
+            while True:
+                line = normalize_nfc(input("> "))
+                if not is_dict_comment(line):
+                    for word in line.split():
+                        failed = not process_word(word) or failed
+        except EOFError:
+            pass
+        except KeyboardInterrupt:
+            print("\nInterrupted", file=sys.stderr)
+            return 130
+
+    return 1 if failed else 0
