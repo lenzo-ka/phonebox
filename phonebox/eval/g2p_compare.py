@@ -267,6 +267,7 @@ def train_multigram(
     decode_beam: int = 0,
     use_dict_fallback: bool = False,
     exceptions: dict[str, list[str]] | None = None,
+    preprocessor=None,
 ):
     from phonebox.core.multigram_g2p import MultigramG2P
 
@@ -277,6 +278,7 @@ def train_multigram(
         em_max_iterations=em_iters,
         lm_order=lm_order,
         decode_beam=decode_beam,
+        preprocessor=preprocessor,
         verbose=verbose,
         parallel_align=parallel_align,
         parallel_viterbi=parallel_viterbi or parallel_align,
@@ -455,13 +457,13 @@ def run_compare(
             decode_beam=decode_beam,
             use_dict_fallback=use_exceptions,
             exceptions=train_exceptions,
+            preprocessor=vec,
         )
         if not quiet:
             print(f"  done in {time.time() - t0:.1f}s", flush=True)
 
         def mg_predict(word: str) -> list[str]:
-            letters = vec.cook_letters(word, g2p=True)
-            pred = multigram.pronounce_letters(letters, word=word)
+            pred = multigram.pronounce(word)
             cooked = vec.cook_phones(pred)
             return cooked if cooked else pred
 

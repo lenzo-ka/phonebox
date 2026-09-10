@@ -476,6 +476,32 @@ class TestModelBuildPruning:
         assert model_path.exists()
 
 
+def test_train_multigram_rejects_uncooked_rewrite_source(tmp_path):
+    lexicon = tmp_path / "tiny.dict"
+    lexicon.write_text("x K\n", encoding="utf-8")
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "phonebox.cli.main",
+            "train-multigram",
+            "--locale",
+            "en_US",
+            "--lexicon",
+            str(lexicon),
+            "--output",
+            str(tmp_path / "model.g2p"),
+            "--spelling-rewrite",
+            "X=q",
+        ],
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 2
+    assert "use the cooked character 'x'" in result.stderr
+
+
 class TestCLIIntegration:
     """Integration tests for CLI workflows."""
 
