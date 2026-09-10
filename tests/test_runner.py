@@ -7,6 +7,7 @@ through the runner or executed as a bundled standalone script.
 
 from __future__ import annotations
 
+import gzip
 import json
 import subprocess
 import sys
@@ -104,6 +105,67 @@ class TestRunnerLetterJoining:
             check=True,
         )
 
+    def test_snapshot_fields_override_conflicting_outer_metadata(self, tmp_path):
+        g2p, _ = _train_with_letter_join(tmp_path, ["c h"])
+        metadata = g2p._dt.vectorizer.export_config()
+        metadata["cased"] = True
+        metadata["join_char"] = "+"
+        cart_path = tmp_path / "conflicting.cart"
+        g2p._dt._cart.export(str(cart_path), metadata=metadata)
+
+        runner = G2PRunner(str(cart_path))
+        assert runner.cased is False
+        assert runner.join_char == "₊"
+        assert runner.uncook(["k₊s"]) == ["k", "s"]
+
+        bundle_path = tmp_path / "conflicting.py"
+        bundle_g2p(str(cart_path), str(bundle_path))
+        probe = (
+            "import json,runpy; "
+            f"ns=runpy.run_path({str(bundle_path)!r}); "
+            "g=ns['G2PPredictor'].from_embedded(); "
+            "print(json.dumps([g.cased,g.join_char,g.uncook(['k₊s'])]))"
+        )
+        result = subprocess.run(
+            [sys.executable, "-S", "-c", probe],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        assert json.loads(result.stdout) == [False, "₊", ["k", "s"]]
+
+    def test_snapshot_liaison_pad_matches_full_vector_windows(self, tmp_path):
+        g2p, _ = _train_with_letter_join(tmp_path, ["c h"])
+        vectorizer = g2p._dt.vectorizer
+        vectorizer.config["join"]["letters"] = []
+        vectorizer.lett_join_re = None
+        vectorizer.norm_transliterator = None
+        vectorizer.g2p_transliterator = None
+        vectorizer.liaison_pad = "#"
+        cart_path = tmp_path / "liaison.cart"
+        g2p.save(str(cart_path))
+
+        expected = vectorizer.vectorize_word("cat")
+        runner = G2PRunner(str(cart_path))
+        assert runner.vectorize_word("cat") == expected
+        assert [row[runner.center_position] for row in expected] == list("cat#")
+
+        bundle_path = tmp_path / "liaison.py"
+        bundle_g2p(str(cart_path), str(bundle_path))
+        probe = (
+            "import json,runpy; "
+            f"ns=runpy.run_path({str(bundle_path)!r}); "
+            "g=ns['G2PPredictor'].from_embedded(); "
+            "print(json.dumps(g.vectorize_word('cat')))"
+        )
+        result = subprocess.run(
+            [sys.executable, "-S", "-c", probe],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        assert json.loads(result.stdout) == expected
+
     @pytest.mark.parametrize("word", ["cat", "chat", "rich", "cool", "much", "batch"])
     def test_runner_matches_heavy(self, tmp_path, word):
         g2p, cart_path = _train_with_letter_join(tmp_path, ["c h"])
@@ -200,6 +262,53 @@ class TestBundledStandalone:
         assert training["min_change_ratio"] == 0.125
         assert training["trainer"] == "metadata-sentinel"
         assert metadata["dict_hash"] == expected_hash
+
+    def test_non_cart_bundle_preserves_flat_legacy_metadata(self, tmp_path):
+        g2p, _ = _train_with_letter_join(tmp_path, ["c h"])
+        nested_path = tmp_path / "nested.g2p.gz"
+        g2p.save(str(nested_path))
+        with gzip.open(nested_path, "rt", encoding="utf-8") as source:
+            lines = source.readlines()
+        header = json.loads(lines[0])
+        metadata = header.pop("metadata")
+        metadata.pop("letter_preprocessing")
+        metadata.update(
+            {
+                "width": 5,
+                "cased": True,
+                "join_char": "+",
+                "join": {"letters": ["c h"]},
+                "exceptions": {"chat": ["LEGACY"]},
+            }
+        )
+        header.update(metadata)
+        legacy_path = tmp_path / "legacy.g2p.gz"
+        with gzip.open(legacy_path, "wt", encoding="utf-8") as target:
+            target.write(json.dumps(header) + "\n")
+            target.writelines(lines[1:])
+
+        bundle_path = tmp_path / "legacy.py"
+        bundle_g2p(str(legacy_path), str(bundle_path))
+        probe = (
+            "import json,runpy; "
+            f"ns=runpy.run_path({str(bundle_path)!r}); "
+            "g=ns['G2PPredictor'].from_embedded(); "
+            "print(json.dumps([g.width,g.cased,g.join_char,"
+            "g.metadata['join']['letters'],g.exceptions]))"
+        )
+        result = subprocess.run(
+            [sys.executable, "-S", "-c", probe],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        assert json.loads(result.stdout) == [
+            5,
+            True,
+            "+",
+            ["c h"],
+            {"chat": ["LEGACY"]},
+        ]
 
     def test_failed_non_cart_export_removes_temporary_cart(self, tmp_path, monkeypatch):
         g2p, _ = _train_with_letter_join(tmp_path, ["c h"])

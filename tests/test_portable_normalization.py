@@ -8,6 +8,9 @@ from phonebox.portable_normalization import (
     PortableNormalizationError,
     apply_portable_preprocessing,
     compile_letter_preprocessing,
+    compile_metadata_preprocessing,
+    join_seq,
+    make_join_re,
 )
 
 
@@ -176,6 +179,36 @@ def test_rewrite_source_must_survive_all_preceding_cooking():
 def test_multicharacter_join_marker_is_rejected():
     with pytest.raises(PortableNormalizationError, match="at most one character"):
         compile_letter_preprocessing(_snapshot(None, join_char="ab"))
+
+
+@pytest.mark.parametrize(
+    ("join_char", "joins"),
+    [(" ", ["a b"]), ("₊", ["a  b"]), ("₊", [" a b"]), ("₊", ["a\tb"])],
+)
+def test_portable_joins_use_vectorizer_boundary_semantics(join_char, joins):
+    program = compile_letter_preprocessing(
+        _snapshot(None, cased=True, join_char=join_char, joins=joins)
+    )
+    expected = join_seq(make_join_re(joins), list("ab"), join_char)
+    assert apply_portable_preprocessing("ab", program) == expected
+
+
+def test_metadata_liaison_pad_is_appended_before_preprocessing():
+    metadata = {
+        "letter_preprocessing": _snapshot(None, cased=True),
+        "liaison_pad": "#",
+    }
+    program = compile_metadata_preprocessing(metadata)
+    assert apply_portable_preprocessing("ab", program) == ["a", "b", "#"]
+
+
+def test_multicharacter_liaison_pad_is_rejected():
+    metadata = {
+        "letter_preprocessing": _snapshot(None, cased=True),
+        "liaison_pad": "##",
+    }
+    with pytest.raises(PortableNormalizationError, match="liaison_pad"):
+        compile_metadata_preprocessing(metadata)
 
 
 @pytest.mark.parametrize(

@@ -18,6 +18,9 @@ Unicode normalization, locale spelling rules, and configured grapheme joins.
 The bundle compiles those saved rules into a small standard-library program;
 it does not read locale files at runtime. Older models without saved
 preprocessing retain the legacy lowercase-and-join behavior.
+When both the snapshot and older outer metadata contain the same preprocessing
+fields, the snapshot is authoritative, matching full-library model loading.
+Saved scalar liaison padding is also applied before the snapshot operations.
 
 The portable rule language intentionally supports the transformations used by
 the shipped locale G2P rules: Unicode normalization, exact character

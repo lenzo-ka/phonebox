@@ -37,7 +37,12 @@ def _ensure_cart_format(model_path: str) -> tuple[str, bool]:
     # Preserve the source metadata verbatim. Reconstructing it through
     # G2PDecisionTree.export would replace training-time settings with the
     # loader's defaults and could lose fields unknown to this version.
-    source_metadata = deepcopy(dt._model_header.get("metadata", {}))
+    if "metadata" in dt._model_header:
+        source_metadata = deepcopy(dt._model_header["metadata"])
+    else:
+        # Older cartlet headers stored phonebox configuration at top level.
+        # Preserve that exact legacy representation through conversion.
+        source_metadata = deepcopy(dt._model_header)
     try:
         dt._cart.export(
             cart_path,

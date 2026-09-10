@@ -21,6 +21,8 @@ from __future__ import annotations
 from ..portable_normalization import (
     apply_portable_preprocessing,
     compile_metadata_preprocessing,
+    join_seq,
+    make_join_re,
 )
 
 # NOTE: This file is appended to cartlet's predict.py during bundling.
@@ -76,12 +78,15 @@ class G2PPredictor(Predictor):  # type: ignore[name-defined]  # noqa: F821
         self.exceptions = meta.get("exceptions", {})
         self.letter_preprocessing = meta.get("letter_preprocessing")
         self.portable_preprocessing = compile_metadata_preprocessing(meta)
+        if self.portable_preprocessing is not None:
+            self.cased = self.portable_preprocessing["cased"]
+            self.join_char = self.portable_preprocessing["join_char"]
 
         self.center_position = (self.width - 1) // 2
         self.padding = [self.aether] * self.center_position
 
         letter_joins = meta.get("join", {}).get("letters", [])
-        self.lett_join_re = _make_join_re(letter_joins)
+        self.lett_join_re = make_join_re(letter_joins)
 
     @classmethod
     def from_embedded(cls):
@@ -104,7 +109,7 @@ class G2PPredictor(Predictor):  # type: ignore[name-defined]  # noqa: F821
                 word = word.lower()
             letters = list(word)
             if self.lett_join_re is not None:
-                letters = _join_seq(self.lett_join_re, letters, self.join_char)
+                letters = join_seq(self.lett_join_re, letters, self.join_char)
 
         padded = self.padding + letters + self.padding
         return [padded[i : i + self.width] for i in range(len(letters))]
@@ -191,41 +196,6 @@ class G2PPredictor(Predictor):  # type: ignore[name-defined]  # noqa: F821
     def __call__(self, word):
         """Allow direct calling: g2p('hello')"""
         return self.pronounce(word)
-
-
-# =============================================================================
-# Letter-joining helpers (stdlib-only)
-#
-# Kept module-level so they stay easy to inline into the bundled standalone
-# script. The .cart metadata trailer is parsed by cartlet's loader and
-# exposed as Predictor.metadata; the helpers below only handle the digraph
-# joining that's specific to G2P (not part of cartlet's domain).
-# =============================================================================
-
-
-def _make_join_re(join_list):
-    """Compile a regex matching any space-separated joining sequence, or None."""
-    import re
-
-    if not join_list:
-        return None
-    items = sorted(join_list, key=len, reverse=True)
-    items = [re.escape(x) for x in items]
-    return re.compile(r" (" + r"|".join(items) + r") ")
-
-
-def _join_seq(regex, seq, join_char):
-    """Collapse adjacent tokens in seq matched by regex using join_char."""
-    if not regex:
-        return list(seq)
-    as_str = " " + " ".join(seq) + " "
-    m = regex.search(as_str)
-    while m:
-        s = m.group(0)
-        joined = s[1:-1].replace(" ", join_char)
-        as_str = as_str.replace(s, " " + joined + " ")
-        m = regex.search(as_str)
-    return as_str[1:-1].split()
 
 
 # =============================================================================

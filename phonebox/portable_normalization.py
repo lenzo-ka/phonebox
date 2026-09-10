@@ -8,11 +8,39 @@ class PortableNormalizationError(ValueError):
     """Raised when saved preprocessing cannot be reproduced portably."""
 
 
+def make_join_re(join_list):
+    """Compile the token-boundary matcher shared by training and inference."""
+    if not join_list:
+        return None
+    items = [re.escape(item) for item in sorted(join_list, key=len, reverse=True)]
+    return re.compile(r" (" + r"|".join(items) + r")(?= )")
+
+
+def join_seq(regex, seq, join_char):
+    """Collapse matched token sequences with the configured join marker."""
+    if not regex:
+        return list(seq)
+    as_str = " " + " ".join(seq) + " "
+    joined = regex.sub(
+        lambda match: " " + match.group(1).replace(" ", join_char), as_str
+    )
+    return joined.split()
+
+
 def compile_metadata_preprocessing(metadata):
     """Compile a present snapshot; reserve ``None`` for legacy metadata."""
     if "letter_preprocessing" not in metadata:
         return None
-    return compile_letter_preprocessing(metadata["letter_preprocessing"])
+    program = compile_letter_preprocessing(metadata["letter_preprocessing"])
+    liaison_pad = metadata.get("liaison_pad")
+    if liaison_pad is not None and (
+        not isinstance(liaison_pad, str) or len(liaison_pad) != 1
+    ):
+        raise PortableNormalizationError(
+            "letter preprocessing liaison_pad must be one character or null"
+        )
+    program["liaison_pad"] = liaison_pad
+    return program
 
 
 _NORMAL_FORMS = {"NFC", "NFD", "NFKC", "NFKD"}
@@ -210,8 +238,10 @@ def compile_letter_preprocessing(snapshot):
     return {
         "version": 1,
         "operations": operations,
+        "cased": cased,
         "join_char": join_char,
         "letter_joins": list(joins),
+        "liaison_pad": None,
     }
 
 
@@ -256,31 +286,16 @@ def _apply_operations(text, operations):
 
 
 def _join_letters(letters, joins, join_char):
-    patterns = sorted((item.split() for item in joins), key=len, reverse=True)
-    output = []
-    index = 0
-    while index < len(letters):
-        match = next(
-            (
-                pattern
-                for pattern in patterns
-                if letters[index : index + len(pattern)] == pattern
-            ),
-            None,
-        )
-        if match:
-            output.append(join_char.join(match))
-            index += len(match)
-        else:
-            output.append(letters[index])
-            index += 1
-    return output
+    return join_seq(make_join_re(joins), letters, join_char)
 
 
 def apply_portable_preprocessing(text, program):
     """Apply a validated portable program and return cooked letter tokens."""
     if not isinstance(program, dict) or program.get("version") != 1:
         raise PortableNormalizationError("invalid portable preprocessing program")
+    liaison_pad = program.get("liaison_pad")
+    if liaison_pad is not None:
+        text += liaison_pad
     cooked = _apply_operations(text, program.get("operations", []))
     return _join_letters(
         list(cooked), program.get("letter_joins", []), program.get("join_char", "")

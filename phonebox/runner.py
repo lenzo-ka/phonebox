@@ -31,10 +31,11 @@ import sys
 from cartlet import Predictor
 
 from .constants import AETHER, CONTEXT_WINDOW_SIZE, EPSILON, JOIN_CHAR
-from .core.vectorizer import join_seq, make_join_re
 from .portable_normalization import (
     apply_portable_preprocessing,
     compile_metadata_preprocessing,
+    join_seq,
+    make_join_re,
 )
 
 
@@ -70,6 +71,9 @@ class G2PRunner(Predictor):
         self.exceptions = meta.get("exceptions", {})
         self.letter_preprocessing = meta.get("letter_preprocessing")
         self.portable_preprocessing = compile_metadata_preprocessing(meta)
+        if self.portable_preprocessing is not None:
+            self.cased = self.portable_preprocessing["cased"]
+            self.join_char = self.portable_preprocessing["join_char"]
 
         self.center_position = (self.width - 1) // 2
         self.padding = [self.aether] * self.center_position
