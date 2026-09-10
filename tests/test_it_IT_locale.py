@@ -69,7 +69,7 @@ def test_it_accent_policy_is_stable_across_case_and_normalization(letter, expect
 def test_public_g2p_folds_accented_aiu_to_trained_plain_spellings(tmp_path):
     dictionary = tmp_path / "italian-accents.dict"
     dictionary.write_text(
-        "citta k i t t a\ncosi k o z i\npiu p i u\nlagumina l a g u m i n a\n",
+        "citta tʃ i t t a\ncosi k o z i\npiu p j u\nlagumina l a ɡ u m i n a\n",
         encoding="utf-8",
     )
     g2p = G2P.train(
@@ -80,10 +80,10 @@ def test_public_g2p_folds_accented_aiu_to_trained_plain_spellings(tmp_path):
         verbose=False,
     )
     expected = {
-        "città": ["k", "i", "t", "t", "a"],
+        "città": ["tʃ", "i", "t", "t", "a"],
         "così": ["k", "o", "z", "i"],
-        "più": ["p", "i", "u"],
-        "lagúmina": ["l", "a", "g", "u", "m", "i", "n", "a"],
+        "più": ["p", "j", "u"],
+        "lagúmina": ["l", "a", "ɡ", "u", "m", "i", "n", "a"],
     }
     for word, phones in expected.items():
         assert g2p.pronounce(word) == phones
