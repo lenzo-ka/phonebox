@@ -8,6 +8,13 @@ class PortableNormalizationError(ValueError):
     """Raised when saved preprocessing cannot be reproduced portably."""
 
 
+def compile_metadata_preprocessing(metadata):
+    """Compile a present snapshot; reserve ``None`` for legacy metadata."""
+    if "letter_preprocessing" not in metadata:
+        return None
+    return compile_letter_preprocessing(metadata["letter_preprocessing"])
+
+
 _NORMAL_FORMS = {"NFC", "NFD", "NFKC", "NFKD"}
 _UNICODE_SCALAR_RE = re.compile(r"\\u([0-9A-Fa-f]{4})")
 _SHIPPED_FILTERS = {

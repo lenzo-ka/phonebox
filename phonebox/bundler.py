@@ -11,7 +11,7 @@ from cartlet import bundle as cartlet_bundle
 from cartlet import read_cart_metadata
 
 from .constants import FILE_ENCODING
-from .portable_normalization import compile_letter_preprocessing
+from .portable_normalization import compile_metadata_preprocessing
 
 
 def _ensure_cart_format(model_path: str) -> tuple[str, bool]:
@@ -51,11 +51,9 @@ def bundle_g2p(model_path: str, output_path: str) -> None:
 
     try:
         metadata = read_cart_metadata(cart_path)
-        preprocessing = metadata.get("letter_preprocessing")
-        if "letter_preprocessing" in metadata:
-            # Fail before writing an output when exact training behavior is
-            # outside the deliberately small standard-library contract.
-            compile_letter_preprocessing(preprocessing)
+        # Fail before writing when exact training behavior is outside the
+        # deliberately small standard-library contract.
+        compile_metadata_preprocessing(metadata)
 
         with tempfile.NamedTemporaryFile(suffix=".py", delete=False, mode="w") as tmp:
             tmp_path = tmp.name

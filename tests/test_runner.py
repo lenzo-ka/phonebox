@@ -73,6 +73,36 @@ class TestCartMetadata:
 class TestRunnerLetterJoining:
     """The runner must apply letter-joining to match the heavy G2P pipeline."""
 
+    @pytest.mark.parametrize(
+        "snapshot",
+        [None, {"version": 1, "source": {"norm_rules": None}}],
+    )
+    def test_runner_rejects_present_malformed_snapshot(self, tmp_path, snapshot):
+        g2p, _ = _train_with_letter_join(tmp_path, ["c h"])
+        cart_path = tmp_path / "malformed.cart"
+        g2p._dt._cart.export(
+            str(cart_path), metadata={"letter_preprocessing": snapshot}
+        )
+
+        with pytest.raises(ValueError, match="letter_preprocessing"):
+            G2PRunner(str(cart_path))
+
+    def test_runner_and_bundle_accept_legacy_absent_snapshot(self, tmp_path):
+        g2p, _ = _train_with_letter_join(tmp_path, ["c h"])
+        cart_path = tmp_path / "legacy.cart"
+        g2p._dt._cart.export(str(cart_path), metadata={"cased": False})
+
+        runner = G2PRunner(str(cart_path))
+        assert runner.portable_preprocessing is None
+        bundle_path = tmp_path / "legacy.py"
+        bundle_g2p(str(cart_path), str(bundle_path))
+        subprocess.run(
+            [sys.executable, "-S", str(bundle_path), "cat"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+
     @pytest.mark.parametrize("word", ["cat", "chat", "rich", "cool", "much", "batch"])
     def test_runner_matches_heavy(self, tmp_path, word):
         g2p, cart_path = _train_with_letter_join(tmp_path, ["c h"])
