@@ -74,6 +74,30 @@ def _artifact_bytes(paths: list[Path]) -> int:
     return sum(path.stat().st_size for path in paths)
 
 
+def _training_accounting(
+    cart: Any,
+    train_cooked: list[tuple[list[str], list[str]]],
+    multigram_metrics: dict[str, object],
+    raw_entries: int,
+) -> dict[str, Any]:
+    """Describe candidate and admitted counts from the actual trainers."""
+    cart_candidates = len(cart.em.seen)
+    cart_retained = len(cart.em.init_data)
+    return {
+        "raw_entries_supplied_each": raw_entries,
+        "G2PDecisionTree": {
+            "unique_cooked_candidates": cart_candidates,
+            "retained_entries": cart_retained,
+            "skipped_after_dedup": cart_candidates - cart_retained,
+        },
+        "MultigramG2P": {
+            "unique_cooked_candidates": len(train_cooked),
+            "aligned_entries": multigram_metrics["aligned_entries"],
+            "skipped_entries": multigram_metrics["skipped_entries"],
+        },
+    }
+
+
 def _git_revision(root: Path) -> tuple[str | None, bool | None]:
     try:
         revision = subprocess.check_output(
@@ -175,13 +199,14 @@ def run_cmudict_comparison(
         started = time.perf_counter()
         if progress is not None:
             progress(f"training multigram ({stress} stress)")
-        multigram = train_multigram(
+        multigram_result = train_multigram(
             train_cooked,
             max_letter_span,
             max_phone_span,
             em_iterations,
             preprocessor=vec,
         )
+        multigram = multigram_result.model
         multigram_seconds = multigram_prepare_seconds + time.perf_counter() - started
         cart_metrics = evaluate(
             "cart",
@@ -207,6 +232,9 @@ def run_cmudict_comparison(
                 "train_entries": len(train_raw),
                 "test_words": len(grouped),
                 "test_entries": len(test_raw),
+                "training_accounting": _training_accounting(
+                    cart, train_cooked, multigram_result.metrics, len(train_raw)
+                ),
                 "models": [
                     {
                         "model": "G2PDecisionTree",
@@ -287,8 +315,14 @@ def render_markdown(result: dict[str, Any]) -> str:
         "",
         "## Reproduce",
         "",
+        "To reproduce this exact snapshot, check out the recorded revision and install "
+        "the recorded dependencies. Running `--refresh` from newer source creates a new "
+        "snapshot rather than reproducing this one.",
+        "",
         "```console",
-        "python -m pip install -e '.[dev]'",
+        f"git checkout {result['phonebox']['revision']}",
+        "python -m pip install -e '.[dev]' "
+        f"'cartlet=={result['runtime']['dependencies']['cartlet']}'",
         "phonebox compare cmudict --refresh docs/cmudict-comparison.json",
         "phonebox compare cmudict --check docs/cmudict-comparison.json docs/CMUDICT_COMPARISON.md",
         "```",
@@ -354,6 +388,30 @@ def render_markdown(result: dict[str, Any]) -> str:
             "multigram formats, not normalized algorithm complexity.",
         ]
     )
+    if all("training_accounting" in item for item in result["conditions"]):
+        lines.extend(["", "## Training accounting", ""])
+        for condition in result["conditions"]:
+            accounting = condition["training_accounting"]
+            cart = accounting["G2PDecisionTree"]
+            multigram = accounting["MultigramG2P"]
+            lines.extend(
+                [
+                    f"### Stress {condition['stress']}",
+                    "",
+                    f"Both training pipelines started from "
+                    f"{accounting['raw_entries_supplied_each']} raw entries from the "
+                    "same word-group split.",
+                    "",
+                    f"- CART saw {cart['unique_cooked_candidates']} distinct cooked "
+                    f"candidates, retained {cart['retained_entries']}, and skipped "
+                    f"{cart['skipped_after_dedup']} after deduplication because its 1:1 "
+                    "alignment or combination cap could not admit them.",
+                    f"- Multigram saw {multigram['unique_cooked_candidates']} distinct "
+                    f"cooked candidates, aligned {multigram['aligned_entries']}, and "
+                    f"skipped {multigram['skipped_entries']} during n:m training.",
+                    "",
+                ]
+            )
     phonebox = result["phonebox"]
     runtime = result["runtime"]
     lines.extend(

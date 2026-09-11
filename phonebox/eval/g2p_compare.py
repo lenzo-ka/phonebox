@@ -11,7 +11,9 @@ import sys
 import time
 from collections import defaultdict
 from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from phonebox.constants import (
     DEFAULT_MAX_TEST_ENTRIES,
@@ -27,6 +29,17 @@ from phonebox.experiments.split import split_lexicon
 from phonebox.lexicon import parse_dict_line
 
 PolicyFn = Callable[[str, list[str]], list[str]]
+
+if TYPE_CHECKING:
+    from phonebox.core.multigram_g2p import MultigramG2P
+
+
+@dataclass(frozen=True)
+class MultigramTrainingResult:
+    """A trained multigram model and its existing trainer accounting."""
+
+    model: MultigramG2P
+    metrics: dict[str, object]
 
 
 def load_lexicon(path: Path) -> list[tuple[str, list[str]]]:
@@ -247,7 +260,6 @@ def train_baseline(
     )
     dt.load_prondict(iter(train_lines))
     dt.align()
-    dt.load_alignments()
     dt.train(prune=False)
     if exceptions is not None:
         dt.exceptions = exceptions
@@ -310,11 +322,11 @@ def train_multigram(
         parallel_align=parallel_align,
         parallel_viterbi=parallel_viterbi or parallel_align,
     )
-    mg.train_from_pairs(train_pairs)
+    metrics = mg.train_from_pairs(train_pairs)
     mg.use_dict_fallback = use_dict_fallback
     if exceptions is not None:
         mg.exceptions = exceptions
-    return mg
+    return MultigramTrainingResult(model=mg, metrics=metrics)
 
 
 def run_compare(
@@ -473,7 +485,7 @@ def run_compare(
         if not quiet:
             print("training MultigramG2P (n:m)…", flush=True)
         t0 = time.time()
-        multigram = train_multigram(
+        multigram_result = train_multigram(
             train_cooked,
             max_letter_span,
             max_phone_span,
@@ -487,6 +499,7 @@ def run_compare(
             exceptions=train_exceptions,
             preprocessor=vec,
         )
+        multigram = multigram_result.model
         if not quiet:
             print(f"  done in {time.time() - t0:.1f}s", flush=True)
 

@@ -6,8 +6,11 @@ Phonebox exposes two trainable grapheme-to-phoneme models. `G2PDecisionTree` ali
 
 ## Reproduce
 
+To reproduce this exact snapshot, check out the recorded revision and install the recorded dependencies. Running `--refresh` from newer source creates a new snapshot rather than reproducing this one.
+
 ```console
-python -m pip install -e '.[dev]'
+git checkout 78485ef21a6a92629773d07c5ee8ff925f680c99
+python -m pip install -e '.[dev]' 'cartlet==0.5.0'
 phonebox compare cmudict --refresh docs/cmudict-comparison.json
 phonebox compare cmudict --check docs/cmudict-comparison.json docs/CMUDICT_COMPARISON.md
 ```

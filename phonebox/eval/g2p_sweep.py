@@ -68,7 +68,7 @@ def run_g2p_sweep(
                     parallel_align=parallel_align,
                     parallel_viterbi=parallel_align,
                     lm_order=order,
-                )
+                ).model
 
                 def predict(word: str, _model=model, _vec=vec) -> list[str]:
                     phones = _model.pronounce_letters(

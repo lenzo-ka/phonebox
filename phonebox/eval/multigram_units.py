@@ -59,7 +59,7 @@ def analyze_multigram_units(
         em_iterations,
         parallel_align=parallel_align,
         parallel_viterbi=parallel_align,
-    )
+    ).model
     joins = vec.config.get("join", {})
     letter_joins = {tuple(value.split()) for value in joins.get("letters", [])}
     phone_joins = {tuple(value.split()) for value in joins.get("ipa", [])}

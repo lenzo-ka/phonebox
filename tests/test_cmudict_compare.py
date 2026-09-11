@@ -3,8 +3,12 @@ import json
 import pytest
 
 from phonebox.cli.main import main
-from phonebox.eval.cmudict_compare import render_markdown, validate_cmudict
-from phonebox.eval.g2p_compare import evaluate
+from phonebox.eval.cmudict_compare import (
+    _training_accounting,
+    render_markdown,
+    validate_cmudict,
+)
+from phonebox.eval.g2p_compare import evaluate, train_baseline, train_multigram
 from phonebox.experiments.split import split_lexicon_by_key
 
 
@@ -60,6 +64,43 @@ def test_evaluate_counts_prediction_failures_and_empty_outputs():
     assert empty["empty_predictions"] == 1
 
 
+def test_cart_helper_loads_aligned_vectors_once(monkeypatch):
+    from phonebox.core.g2p_model import G2PDecisionTree
+
+    calls = 0
+    original = G2PDecisionTree.load_alignments
+
+    def counted(self, infile=None):
+        nonlocal calls
+        calls += 1
+        return original(self, infile)
+
+    monkeypatch.setattr(G2PDecisionTree, "load_alignments", counted)
+    train_baseline("en_US", "cmu", ["cat\tK AE1 T"])
+    assert calls == 1
+
+
+def test_training_accounting_exposes_asymmetric_eligibility():
+    from phonebox.core.g2p_model import G2PDecisionTree
+
+    cart = G2PDecisionTree(locale="en_US", phoneset_name="cmu", verbose=False)
+    cart.vectorizer.disable_config_joins()
+    cart.load_prondict(iter(["x\tK S"]))
+    assert len(cart.em.init_data) == 0
+    multigram = train_multigram([(["x"], ["K", "S"])], 2, 2, 2)
+    accounting = _training_accounting(cart, [(["x"], ["K", "S"])], multigram.metrics, 1)
+    assert accounting["G2PDecisionTree"] == {
+        "unique_cooked_candidates": 1,
+        "retained_entries": 0,
+        "skipped_after_dedup": 1,
+    }
+    assert accounting["MultigramG2P"] == {
+        "unique_cooked_candidates": 1,
+        "aligned_entries": 1,
+        "skipped_entries": 0,
+    }
+
+
 def test_validate_cmudict_rejects_unpinned_content(tmp_path):
     path = tmp_path / "cmudict.dict"
     path.write_text("word W ER D\n")
@@ -95,6 +136,19 @@ def test_renderer_reads_metrics_from_json_snapshot():
                 "stress": "preserved",
                 "train_words": 90,
                 "test_words": 10,
+                "training_accounting": {
+                    "raw_entries_supplied_each": 91,
+                    "G2PDecisionTree": {
+                        "unique_cooked_candidates": 90,
+                        "retained_entries": 89,
+                        "skipped_after_dedup": 1,
+                    },
+                    "MultigramG2P": {
+                        "unique_cooked_candidates": 90,
+                        "aligned_entries": 90,
+                        "skipped_entries": 0,
+                    },
+                },
                 "models": [
                     {
                         "model": "G2PDecisionTree",
