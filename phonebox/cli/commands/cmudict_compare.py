@@ -21,12 +21,33 @@ def setup_cmudict_compare_command(subparsers) -> None:
     parser = subparsers.add_parser(
         "cmudict", help="Reproduce the pinned CMUdict CART/n:m benchmark"
     )
-    parser.add_argument("--lexicon", type=Path)
+    parser.add_argument(
+        "--lexicon",
+        type=Path,
+        help="Verified pinned cmudict.dict copy (default: download it)",
+    )
     action = parser.add_mutually_exclusive_group(required=True)
-    action.add_argument("--refresh", type=Path)
-    parser.add_argument("--markdown", type=Path)
-    action.add_argument("--check", nargs=2, type=Path, metavar=("JSON", "MARKDOWN"))
-    parser.add_argument("--em-iterations", type=int, default=10)
+    action.add_argument(
+        "--refresh", type=Path, help="Run the benchmark and write JSON results"
+    )
+    parser.add_argument(
+        "--markdown",
+        type=Path,
+        help="Rendered report path (default: docs/CMUDICT_COMPARISON.md)",
+    )
+    action.add_argument(
+        "--check",
+        nargs=2,
+        type=Path,
+        metavar=("JSON", "MARKDOWN"),
+        help="Check that MARKDOWN is the rendering of committed JSON",
+    )
+    parser.add_argument(
+        "--em-iterations",
+        type=int,
+        default=10,
+        help="Multigram EM iterations for a refresh (default: 10)",
+    )
     parser.set_defaults(func=handle_compare_cmudict)
 
 

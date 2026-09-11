@@ -288,6 +288,7 @@ def render_markdown(result: dict[str, Any]) -> str:
         "## Reproduce",
         "",
         "```console",
+        "python -m pip install -e '.[dev]'",
         "phonebox compare cmudict --refresh docs/cmudict-comparison.json",
         "phonebox compare cmudict --check docs/cmudict-comparison.json docs/CMUDICT_COMPARISON.md",
         "```",
@@ -295,14 +296,17 @@ def render_markdown(result: dict[str, Any]) -> str:
         f"Data: [CMUdict]({source['repository']}) commit `{source['commit']}`, "
         f"`cmudict.dict` SHA-256 `{source['sha256']}`. Its "
         f"[license]({source['license']}) permits research and commercial use. "
-        "CMUdict is Copyright "
-        "Carnegie Mellon University and its license permits research and commercial use; "
-        "the project requests acknowledgement of its origin.",
+        "CMUdict is Copyright Carnegie Mellon University, which requests "
+        "acknowledgement of its origin.",
         "",
         f"Split: seed {params['seed']}, {params['test_fraction']:.0%} held out, "
         f"capped at {params['max_test_words']} normalized word identities. All variants "
         "of a cooked spelling remain on one side. Identical pronunciations after the "
         "selected phone mapping are deduplicated. Exceptions are disabled.",
+        "The CART row uses the shared native, serial, unpruned benchmark helper. "
+        "This is an explicit evaluation setting; the primary training workflow "
+        "currently prunes by default. Exact helper behavior belongs to the recorded "
+        "Phonebox source revision.",
         "",
         "WER is error against the first deterministic gold variant; WERv accepts any "
         "gold variant. PER uses the first variant and divides edits by its phone count. "
@@ -342,6 +346,10 @@ def render_markdown(result: dict[str, Any]) -> str:
         [
             "- Variant-aware WER/PER credit alternate held-out pronunciations; compare "
             "them within the same stress condition.",
+            "- Stress-preserved and stress-removed rows are different prediction tasks; "
+            "their error rates are not direct measures of one task improving.",
+            "- Training times are one observed run on the recorded environment, not a "
+            "throughput guarantee.",
             "- Export byte totals reflect the current gzip CART and JSON-sidecar "
             "multigram formats, not normalized algorithm complexity.",
         ]

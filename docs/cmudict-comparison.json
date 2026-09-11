@@ -1,0 +1,135 @@
+{
+  "cmudict": {
+    "commit": "74790861f652b15e4ac49015a90074ad62a27690",
+    "file": "cmudict.dict",
+    "license": "https://github.com/cmusphinx/cmudict/blob/74790861f652b15e4ac49015a90074ad62a27690/LICENSE",
+    "repository": "https://github.com/cmusphinx/cmudict",
+    "sha256": "81917843c7f44ce2b094ac63873c2c7a4cf802040792c455ba3ca406891c3d22"
+  },
+  "conditions": [
+    {
+      "models": [
+        {
+          "artifact_bytes": 391037,
+          "empty_predictions": 0,
+          "model": "G2PDecisionTree",
+          "n_test": 10000,
+          "per_equiv_pct": 13.625818669612562,
+          "per_pct": 13.625818669612562,
+          "per_reference_edits": 8634,
+          "per_reference_pct": 13.771652789740646,
+          "per_variant_edits": 8293,
+          "per_variant_pct": 13.231117776572322,
+          "per_variant_reference_phones": 62678,
+          "pos_acc_pct": 81.33196559614929,
+          "prediction_errors": 0,
+          "reference_phones": 62694,
+          "train_seconds": 283.29316158406436,
+          "train_time_scope": "load, cook, align, and fit",
+          "wer_pct": 54.230000000000004,
+          "wer_relaxed_pct": 52.62
+        },
+        {
+          "artifact_bytes": 17116009,
+          "empty_predictions": 0,
+          "model": "MultigramG2P",
+          "n_test": 10000,
+          "per_equiv_pct": 20.2834159573473,
+          "per_pct": 20.2834159573473,
+          "per_reference_edits": 13011,
+          "per_reference_pct": 20.753182122691168,
+          "per_variant_edits": 12704,
+          "per_variant_pct": 20.272232594507475,
+          "per_variant_reference_phones": 62667,
+          "pos_acc_pct": 73.4776915162286,
+          "prediction_errors": 0,
+          "reference_phones": 62694,
+          "train_seconds": 227.61882537580095,
+          "train_time_scope": "cook, deduplicate, align, and fit",
+          "wer_pct": 65.61,
+          "wer_relaxed_pct": 64.32
+        }
+      ],
+      "stress": "preserved",
+      "test_entries": 10672,
+      "test_words": 10000,
+      "train_entries": 124494,
+      "train_words": 116052
+    },
+    {
+      "models": [
+        {
+          "artifact_bytes": 312958,
+          "empty_predictions": 0,
+          "model": "G2PDecisionTree",
+          "n_test": 10000,
+          "per_equiv_pct": 11.326801727000996,
+          "per_pct": 11.326801727000996,
+          "per_reference_edits": 6821,
+          "per_reference_pct": 11.50117186841351,
+          "per_variant_edits": 6441,
+          "per_variant_pct": 10.863368808082171,
+          "per_variant_reference_phones": 59291,
+          "pos_acc_pct": 82.18532049153106,
+          "prediction_errors": 0,
+          "reference_phones": 59307,
+          "train_seconds": 252.63928729202598,
+          "train_time_scope": "load, cook, align, and fit",
+          "wer_pct": 43.720000000000006,
+          "wer_relaxed_pct": 41.66
+        },
+        {
+          "artifact_bytes": 14382955,
+          "empty_predictions": 0,
+          "model": "MultigramG2P",
+          "n_test": 10000,
+          "per_equiv_pct": 24.406233376099134,
+          "per_pct": 24.406233376099134,
+          "per_reference_edits": 15599,
+          "per_reference_pct": 26.302122852277133,
+          "per_variant_edits": 15258,
+          "per_variant_pct": 25.71240794728771,
+          "per_variant_reference_phones": 59341,
+          "pos_acc_pct": 65.4645304628094,
+          "prediction_errors": 0,
+          "reference_phones": 59307,
+          "train_seconds": 214.90170083381236,
+          "train_time_scope": "cook, deduplicate, align, and fit",
+          "wer_pct": 67.57,
+          "wer_relaxed_pct": 66.41
+        }
+      ],
+      "stress": "removed",
+      "test_entries": 10672,
+      "test_words": 10000,
+      "train_entries": 124494,
+      "train_words": 116052
+    }
+  ],
+  "parameters": {
+    "em_iterations": 10,
+    "exceptions": false,
+    "max_letter_span": 2,
+    "max_phone_span": 2,
+    "max_test_words": 10000,
+    "seed": 1729,
+    "test_fraction": 0.1
+  },
+  "phonebox": {
+    "code_sha256": "2af02335711e79446ad5d47c31fdd3dc97afa33a52815d6be1553f9ea1b17e56",
+    "dirty": false,
+    "revision": "78485ef21a6a92629773d07c5ee8ff925f680c99"
+  },
+  "runtime": {
+    "dependencies": {
+      "cartlet": "0.5.0",
+      "icukit": "0.4.0"
+    },
+    "implementation": "CPython",
+    "platform": "macOS-27.0-arm64-arm-64bit",
+    "processor": "arm",
+    "python": "3.12.12"
+  },
+  "schema_version": 1,
+  "snapshot": true
+}
