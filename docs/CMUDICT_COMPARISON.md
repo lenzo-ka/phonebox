@@ -9,7 +9,7 @@ Phonebox exposes two trainable grapheme-to-phoneme models. `G2PDecisionTree` ali
 To reproduce this exact snapshot, check out the recorded revision and install the recorded dependencies. Running `--refresh` from newer source creates a new snapshot rather than reproducing this one.
 
 ```console
-git checkout 78485ef21a6a92629773d07c5ee8ff925f680c99
+git checkout 4f5842a58b01f49189617a5010352deac7a6c786
 python -m pip install -e '.[dev]' 'cartlet==0.5.0'
 phonebox compare cmudict --refresh docs/cmudict-comparison.json
 phonebox compare cmudict --check docs/cmudict-comparison.json docs/CMUDICT_COMPARISON.md
@@ -25,12 +25,12 @@ Training time includes each model's phone cooking, alignment, and fit. The CART 
 
 ## Results
 
-| Stress | Model | Train words | Test words | Train s | Size bytes | WER% | WERv% | PER% | PERv% | Errors | Empty |
+| Stress | Model | Source train words | Test words | Train s | Size bytes | WER% | WERv% | PER% | PERv% | Errors | Empty |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| preserved | G2PDecisionTree | 116052 | 10000 | 283.29 | 391037 | 54.23 | 52.62 | 13.77 | 13.23 | 0 | 0 |
-| preserved | MultigramG2P | 116052 | 10000 | 227.62 | 17116009 | 65.61 | 64.32 | 20.75 | 20.27 | 0 | 0 |
-| removed | G2PDecisionTree | 116052 | 10000 | 252.64 | 312958 | 43.72 | 41.66 | 11.50 | 10.86 | 0 | 0 |
-| removed | MultigramG2P | 116052 | 10000 | 214.90 | 14382955 | 67.57 | 66.41 | 26.30 | 25.71 | 0 | 0 |
+| preserved | G2PDecisionTree | 116052 | 10000 | 238.21 | 391025 | 54.23 | 52.62 | 13.77 | 13.23 | 0 | 0 |
+| preserved | MultigramG2P | 116052 | 10000 | 221.66 | 17116009 | 65.61 | 64.32 | 20.75 | 20.27 | 0 | 0 |
+| removed | G2PDecisionTree | 116052 | 10000 | 243.99 | 312941 | 43.72 | 41.66 | 11.50 | 10.86 | 0 | 0 |
+| removed | MultigramG2P | 116052 | 10000 | 216.73 | 14382955 | 67.57 | 66.41 | 26.30 | 25.71 | 0 | 0 |
 
 ## Interpretation
 
@@ -41,10 +41,27 @@ Training time includes each model's phone cooking, alignment, and fit. The CART 
 - Training times are one observed run on the recorded environment, not a throughput guarantee.
 - Export byte totals reflect the current gzip CART and JSON-sidecar multigram formats, not normalized algorithm complexity.
 
+## Training accounting
+
+### Stress preserved
+
+Both training pipelines started from 124494 raw entries from the same word-group split.
+
+- CART saw 124492 distinct cooked candidates, retained 122027, and skipped 2465 after deduplication because its 1:1 alignment or combination cap could not admit them.
+- Multigram saw 124492 distinct cooked candidates, aligned 124442, and skipped 50 during n:m training.
+
+### Stress removed
+
+Both training pipelines started from 124494 raw entries from the same word-group split.
+
+- CART saw 124210 distinct cooked candidates, retained 123239, and skipped 971 after deduplication because its 1:1 alignment or combination cap could not admit them.
+- Multigram saw 124210 distinct cooked candidates, aligned 124169, and skipped 41 during n:m training.
+
+
 ## Snapshot provenance
 
-- Phonebox revision: `78485ef21a6a92629773d07c5ee8ff925f680c99` (clean)
-- Workload code SHA-256: `2af02335711e79446ad5d47c31fdd3dc97afa33a52815d6be1553f9ea1b17e56`
+- Phonebox revision: `4f5842a58b01f49189617a5010352deac7a6c786` (clean)
+- Workload code SHA-256: `75e849cf0f96544421a2d300c155012859840340b2ea5fa91ad6202a9440e07e`
 - Python: CPython 3.12.12
 - Platform: macOS-27.0-arm64-arm-64bit
 - Dependencies: {'cartlet': '0.5.0', 'icukit': '0.4.0'}

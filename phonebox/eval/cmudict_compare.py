@@ -356,7 +356,7 @@ def render_markdown(result: dict[str, Any]) -> str:
         "",
         "## Results",
         "",
-        "| Stress | Model | Train words | Test words | Train s | Size bytes | WER% | WERv% | PER% | PERv% | Errors | Empty |",
+        "| Stress | Model | Source train words | Test words | Train s | Size bytes | WER% | WERv% | PER% | PERv% | Errors | Empty |",
         "|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
     ]
     for condition in result["conditions"]:
