@@ -1,3 +1,5 @@
+from types import SimpleNamespace
+
 import pytest
 
 from phonebox.cli.main import main
@@ -29,7 +31,11 @@ def test_sweep_accepts_explicit_lexicon_mapping(monkeypatch, tmp_path):
         return Vec(), [], [("a", ["x"])], {}
 
     monkeypatch.setattr(g2p_sweep, "prepare_sweep_data", prepare)
-    monkeypatch.setattr(g2p_sweep, "train_multigram", lambda *args, **kwargs: Model())
+    monkeypatch.setattr(
+        g2p_sweep,
+        "train_multigram",
+        lambda *args, **kwargs: SimpleNamespace(model=Model()),
+    )
     monkeypatch.setattr(
         g2p_sweep,
         "evaluate",
@@ -228,7 +234,9 @@ def test_unit_analysis_returns_structured_config_membership(monkeypatch, tmp_pat
         multigram_units, "cook_pair", lambda vec, word, phones: (word, phones)
     )
     monkeypatch.setattr(
-        multigram_units, "train_multigram", lambda *args, **kwargs: Model()
+        multigram_units,
+        "train_multigram",
+        lambda *args, **kwargs: SimpleNamespace(model=Model()),
     )
     result = multigram_units.analyze_multigram_units("xx", tmp_path / "custom.lex")
     assert result.max_letter_span == 3

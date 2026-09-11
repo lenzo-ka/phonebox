@@ -175,7 +175,7 @@ def _run_error_analysis(
         em_iterations,
         parallel_align=parallel_align,
         parallel_viterbi=parallel_align,
-    )
+    ).model
 
     def mg_predict(word: str) -> list[str]:
         letters = vec.cook_letters(word, g2p=True)
