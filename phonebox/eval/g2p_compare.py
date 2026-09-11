@@ -11,7 +11,9 @@ import sys
 import time
 from collections import defaultdict
 from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from phonebox.constants import (
     DEFAULT_MAX_TEST_ENTRIES,
@@ -27,6 +29,17 @@ from phonebox.experiments.split import split_lexicon
 from phonebox.lexicon import parse_dict_line
 
 PolicyFn = Callable[[str, list[str]], list[str]]
+
+if TYPE_CHECKING:
+    from phonebox.core.multigram_g2p import MultigramG2P
+
+
+@dataclass(frozen=True)
+class MultigramTrainingResult:
+    """A trained multigram model and its existing trainer accounting."""
+
+    model: MultigramG2P
+    metrics: dict[str, object]
 
 
 def load_lexicon(path: Path) -> list[tuple[str, list[str]]]:
@@ -157,16 +170,23 @@ def evaluate(
     quiet: bool = True,
 ) -> dict[str, float]:
     word_ok = word_ok_relaxed = 0
+    prediction_errors = empty_predictions = 0
     phone_ok = 0
     phone_den = 0
+    reference_phone_den = 0
     edit_sum = edit_sum_equiv = 0
+    variant_edit_sum = 0
+    variant_phone_den = 0
     for word, expected in test_set:
         try:
             pred = predict(word)
         except Exception as exc:
+            prediction_errors += 1
             if not quiet:
                 print(f"  [{name}] {word!r}: {exc}", file=sys.stderr)
             pred = []
+        if not pred:
+            empty_predictions += 1
         gold = gold_variants.get(word) if gold_variants else None
         if pred == expected:
             word_ok += 1
@@ -177,12 +197,19 @@ def evaluate(
             word_ok_relaxed += 1
         n = max(len(expected), len(pred))
         phone_den += n
+        reference_phone_den += len(expected)
         for i in range(min(len(expected), len(pred))):
             a, b = expected[i], pred[i]
             if _phone_eq(a, b, phone_equiv):
                 phone_ok += 1
         word_edits = edit_distance(expected, pred, phone_equiv=None)
         edit_sum += word_edits
+        variants = gold or {tuple(expected)}
+        best_edits, best_reference = min(
+            (edit_distance(list(candidate), pred), candidate) for candidate in variants
+        )
+        variant_edit_sum += best_edits
+        variant_phone_den += len(best_reference)
         if phone_equiv is not None:
             edit_sum_equiv += edit_distance(expected, pred, phone_equiv=phone_equiv)
         else:
@@ -192,9 +219,21 @@ def evaluate(
         "wer_pct": 100.0 * (1.0 - word_ok / n_test),
         "wer_relaxed_pct": 100.0 * (1.0 - word_ok_relaxed / n_test),
         "per_pct": 100.0 * edit_sum / phone_den if phone_den else 0.0,
+        "per_reference_pct": (
+            100.0 * edit_sum / reference_phone_den if reference_phone_den else 0.0
+        ),
+        "per_reference_edits": edit_sum,
+        "reference_phones": reference_phone_den,
+        "per_variant_pct": (
+            100.0 * variant_edit_sum / variant_phone_den if variant_phone_den else 0.0
+        ),
+        "per_variant_edits": variant_edit_sum,
+        "per_variant_reference_phones": variant_phone_den,
         "per_equiv_pct": 100.0 * edit_sum_equiv / phone_den if phone_den else 0.0,
         "pos_acc_pct": 100.0 * phone_ok / phone_den if phone_den else 0.0,
         "n_test": n_test,
+        "prediction_errors": prediction_errors,
+        "empty_predictions": empty_predictions,
     }
 
 
@@ -205,13 +244,14 @@ def train_baseline(
     *,
     use_dict_fallback: bool = False,
     exceptions: dict[str, list[str]] | None = None,
+    remove_stress: bool = False,
 ):
     from phonebox.core.g2p_model import G2PDecisionTree
 
     dt = G2PDecisionTree(
         locale=locale,
         phoneset_name=phoneset,
-        remove_stress=False,
+        remove_stress=remove_stress,
         verbose=False,
         trainer="native",
         parallel_align=False,
@@ -220,7 +260,6 @@ def train_baseline(
     )
     dt.load_prondict(iter(train_lines))
     dt.align()
-    dt.load_alignments()
     dt.train(prune=False)
     if exceptions is not None:
         dt.exceptions = exceptions
@@ -283,11 +322,11 @@ def train_multigram(
         parallel_align=parallel_align,
         parallel_viterbi=parallel_viterbi or parallel_align,
     )
-    mg.train_from_pairs(train_pairs)
+    metrics = mg.train_from_pairs(train_pairs)
     mg.use_dict_fallback = use_dict_fallback
     if exceptions is not None:
         mg.exceptions = exceptions
-    return mg
+    return MultigramTrainingResult(model=mg, metrics=metrics)
 
 
 def run_compare(
@@ -446,7 +485,7 @@ def run_compare(
         if not quiet:
             print("training MultigramG2P (n:m)…", flush=True)
         t0 = time.time()
-        multigram = train_multigram(
+        multigram_result = train_multigram(
             train_cooked,
             max_letter_span,
             max_phone_span,
@@ -460,6 +499,7 @@ def run_compare(
             exceptions=train_exceptions,
             preprocessor=vec,
         )
+        multigram = multigram_result.model
         if not quiet:
             print(f"  done in {time.time() - t0:.1f}s", flush=True)
 
@@ -487,7 +527,7 @@ def run_compare(
         "n_entries": len(pairs),
         "n_test": len(test_eval),
         "n_multi_pron": n_multi,
-        "baseline_model": str(baseline_model) if baseline_model else None,
+        "baseline_model": baseline_model.name if baseline_model else None,
         "use_exceptions": use_exceptions,
         "phone_equiv": equiv is not None,
         "results": [

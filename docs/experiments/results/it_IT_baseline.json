@@ -6,7 +6,7 @@
   "n_entries": 21561,
   "n_test": 2000,
   "n_multi_pron": 631,
-  "baseline_model": "/Volumes/hacks/dev/duolingo/scratch-speech-lab/projects/phonetic-decoding/build/g2p/it-it/it-it-ipa.g2p.gz",
+  "baseline_model": "it-it-ipa.g2p.gz",
   "use_exceptions": false,
   "phone_equiv": true,
   "results": [

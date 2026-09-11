@@ -27,7 +27,7 @@ Per-run metrics: `results/<locale>_<policy>.json`
 ## Reproduce
 
 ```bash
-export PHONEDECODING_LEXICON_DIR=…/processed
-export PHONEDECODING_G2P_DIR=…/build/g2p
+export PHONEBOX_LEXICON_DIR=lexicons
+export PHONEBOX_MODEL_DIR=models
 phonebox compare experiments --parallel-align
 ```

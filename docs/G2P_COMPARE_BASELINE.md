@@ -42,7 +42,7 @@ n:m uses ``max_letter_span=3`` for fr_FR and de_DE (via locale config); others u
 
 - Lexicon: `es_ipa.tsv` (45584 entries, 2000 test)
 - Multi-pron words: 4
-- 1:1 model: `/Volumes/hacks/dev/duolingo/scratch-speech-lab/projects/phonetic-decoding/build/g2p/es-mx/es-mx-ipa.g2p.gz`
+- 1:1 model: `es-mx-ipa.g2p.gz`
 
 | Model | train_s | WER% | WERr% | PER% | pos% |
 |---|---|---|---|---|---|
@@ -53,7 +53,7 @@ n:m uses ``max_letter_span=3`` for fr_FR and de_DE (via locale config); others u
 
 - Lexicon: `fr_ipa.tsv` (428675 entries, 2000 test)
 - Multi-pron words: 183396
-- 1:1 model: `/Volumes/hacks/dev/duolingo/scratch-speech-lab/projects/phonetic-decoding/build/g2p/fr-fr/fr-fr-ipa.g2p.gz`
+- 1:1 model: `fr-fr-ipa.g2p.gz`
 
 | Model | train_s | WER% | WERr% | PER% | pos% |
 |---|---|---|---|---|---|
@@ -64,7 +64,7 @@ n:m uses ``max_letter_span=3`` for fr_FR and de_DE (via locale config); others u
 
 - Lexicon: `de_ipa.tsv` (314077 entries, 2000 test)
 - Multi-pron words: 547
-- 1:1 model: `/Volumes/hacks/dev/duolingo/scratch-speech-lab/projects/phonetic-decoding/build/g2p/de-de/de-de-ipa.g2p.gz`
+- 1:1 model: `de-de-ipa.g2p.gz`
 
 | Model | train_s | WER% | WERr% | PER% | pos% |
 |---|---|---|---|---|---|
@@ -75,7 +75,7 @@ n:m uses ``max_letter_span=3`` for fr_FR and de_DE (via locale config); others u
 
 - Lexicon: `en_ipa.tsv` (135111 entries, 2000 test)
 - Multi-pron words: 8254
-- 1:1 model: `/Volumes/hacks/dev/duolingo/scratch-speech-lab/projects/phonetic-decoding/build/g2p/en-us/en-us-ipa.g2p.gz`
+- 1:1 model: `en-us-ipa.g2p.gz`
 
 | Model | train_s | WER% | WERr% | PER% | pos% |
 |---|---|---|---|---|---|
@@ -86,7 +86,7 @@ n:m uses ``max_letter_span=3`` for fr_FR and de_DE (via locale config); others u
 
 - Lexicon: `pt_ipa.tsv` (66144 entries, 2000 test)
 - Multi-pron words: 147
-- 1:1 model: `/Volumes/hacks/dev/duolingo/scratch-speech-lab/projects/phonetic-decoding/build/g2p/pt-br/pt-br-ipa.g2p.gz`
+- 1:1 model: `pt-br-ipa.g2p.gz`
 
 | Model | train_s | WER% | WERr% | PER% | pos% |
 |---|---|---|---|---|---|
@@ -97,7 +97,7 @@ n:m uses ``max_letter_span=3`` for fr_FR and de_DE (via locale config); others u
 
 - Lexicon: `it_ipa.tsv` (21561 entries, 2000 test)
 - Multi-pron words: 631
-- 1:1 model: `/Volumes/hacks/dev/duolingo/scratch-speech-lab/projects/phonetic-decoding/build/g2p/it-it/it-it-ipa.g2p.gz`
+- 1:1 model: `it-it-ipa.g2p.gz`
 
 | Model | train_s | WER% | WERr% | PER% | PERe% | pos% |
 |---|---|---|---|---|---|---|

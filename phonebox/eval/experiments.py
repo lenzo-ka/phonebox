@@ -175,7 +175,7 @@ def _run_error_analysis(
         em_iterations,
         parallel_align=parallel_align,
         parallel_viterbi=parallel_align,
-    )
+    ).model
 
     def mg_predict(word: str) -> list[str]:
         letters = vec.cook_letters(word, g2p=True)
@@ -347,8 +347,8 @@ def run_experiments(
         "## Reproduce",
         "",
         "```bash",
-        "export PHONEDECODING_LEXICON_DIR=…/processed",
-        "export PHONEDECODING_G2P_DIR=…/build/g2p",
+        "export PHONEBOX_LEXICON_DIR=lexicons",
+        "export PHONEBOX_MODEL_DIR=models",
         "phonebox compare experiments --parallel-align",
         "```",
         "",

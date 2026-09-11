@@ -1,5 +1,8 @@
 # G2P evaluation (1:1 vs MultigramG2P)
 
+For the reproducible public CMUdict snapshot, including stress-controlled CART
+and multigram results, see [`CMUDICT_COMPARISON.md`](CMUDICT_COMPARISON.md).
+
 Compare **G2PDecisionTree** (1:1, cart tree) and **MultigramG2P** (n:m, joint EM
 + unit n-gram Viterbi) on held-out IPA lexicon slices. Use the **`phonebox compare`**
 CLI or the structured APIs in `phonebox.eval`.
@@ -7,8 +10,8 @@ CLI or the structured APIs in `phonebox.eval`.
 ## Environment
 
 ```bash
-export PHONEDECODING_LEXICON_DIR=/path/to/lexicons/processed
-export PHONEDECODING_G2P_DIR=/path/to/build/g2p   # join-on compare only
+export PHONEBOX_LEXICON_DIR=lexicons
+export PHONEBOX_MODEL_DIR=models   # join-on compare only
 ```
 
 Lexicons: `es_ipa.tsv`, `fr_ipa.tsv`, `de_ipa.tsv`, `en_ipa.tsv`, `pt_ipa.tsv`,
