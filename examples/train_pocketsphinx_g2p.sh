@@ -10,14 +10,18 @@
 #   2. Align letters to phonemes (EM algorithm)
 #   3. Vectorize alignments (context windows)
 #   4. Train decision tree
+# Requires installed phonebox and network access for an initial CMUdict fetch.
+# Usage: bash examples/train_pocketsphinx_g2p.sh [DATA_DIR] [MODELS_DIR]
+# Retain DATA_DIR/cmudict/LICENSE; a full CMUdict run can take substantial time.
 #
 
-set -e
+set -euo pipefail
 
 # Configuration
-DATA_DIR="data"
-MODELS_DIR="models"
+DATA_DIR="${1:-data}"
+MODELS_DIR="${2:-models}"
 LOCALE="en_US"
+WIDTH=7
 
 # Output files
 DICT_FILE="${DATA_DIR}/cmudict/cmudict.dict"
@@ -47,6 +51,7 @@ echo ""
 echo "Step 2: Aligning letters to phonemes..."
 phonebox align "${DICT_FILE}" \
     --locale "${LOCALE}" \
+    --phoneset cmu --width "${WIDTH}" \
     --remove-stress \
     -o "${ALIGNMENTS_FILE}"
 echo ""
@@ -55,6 +60,7 @@ echo ""
 echo "Step 3: Vectorizing alignments..."
 phonebox vectorize "${ALIGNMENTS_FILE}" \
     --locale "${LOCALE}" \
+    --phoneset cmu --width "${WIDTH}" \
     --remove-stress \
     -o "${VECTORS_FILE}"
 echo ""
@@ -63,6 +69,7 @@ echo ""
 echo "Step 4: Training decision tree..."
 phonebox model train "${LOCALE}" \
     --vectors "${VECTORS_FILE}" \
+    --phoneset cmu --width "${WIDTH}" \
     --remove-stress \
     --trainer native \
     -o "${MODEL_FILE}"
@@ -75,6 +82,6 @@ echo "Files created:"
 ls -lh "${MODEL_FILE}"
 echo ""
 
-# Test the model
+# Inspect output; these examples are not an accuracy or correctness evaluation.
 echo "Testing model..."
 phonebox pronounce hello world phonebox -m "${MODEL_FILE}"

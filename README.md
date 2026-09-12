@@ -1,263 +1,183 @@
-# Phonebox: Grapheme-to-Phoneme Conversion
+# Phonebox
 
-Fast, lightweight grapheme-to-phoneme (G2P) conversion using decision trees and
-EM alignment. The package also includes **MultigramG2P** (n:m joint Viterbi) in
-the library; 1:1 CLI commands use the decision tree path.
+Train grapheme-to-phoneme (G2P) models, generate pronunciations, and review
+pronunciation lexicons through a shared Python API and command-line interface.
+Phonebox provides compact CART decision trees and n:m multigram models, with
+saved locale preprocessing for repeatable inference.
 
-Decision-tree G2P is fast, compact, and interpretable; it trades some accuracy
-for those properties, and neural G2P methods will generally score better.
-CMUdict / PocketSphinx workflows are the main English use case; measured phone
-error rates and IPA locale benchmarks are in
-[`docs/G2P_EVAL.md`](docs/G2P_EVAL.md).
-The reproducible held-out CMUdict comparison of CART and multigram models is in
-[`docs/CMUDICT_COMPARISON.md`](docs/CMUDICT_COMPARISON.md).
+- **Train and predict:** learn from your lexicon, preserve or remove stress,
+  and generate single or n-best pronunciations.
+- **Review dictionaries:** score pronunciation variants, inspect low-support
+  entries, and reorder variants by model likelihood with TSV or JSON output.
+- **Process orthography:** resolve locale names and use versioned ICU/CLDR
+  exemplar data and spelling policies. Orthographic inventories are separate
+  from the phone inventory you choose for training.
+- **Deploy compact trees:** export a standalone Python predictor that uses only
+  the standard library. The full training package has dependencies; multigram
+  models use the full package.
+- **Measure results:** compare CART and multigram models on held-out CMUdict
+  with recorded data, settings, admission counts, and model sizes.
 
-Phonebox is an alpha `0.x` library. Each `0.X.0` release may make breaking
-changes to Python APIs, CLI commands, model tooling, and repository workflows;
-treat it like a new major version when upgrading. Patch releases within one
-`0.X` line are intended to remain compatible. Pin the minor release when a
-stable integration surface is required.
+Phonebox is **alpha**. Each `0.X.0` release may break APIs, commands, or model
+workflows; patch releases within a minor line are intended to remain compatible.
+See the [0.2.0 changes](https://github.com/lenzo-ka/phonebox/blob/main/CHANGELOG.md)
+and [upgrade guide](https://github.com/lenzo-ka/phonebox/blob/main/docs/RELEASING.md).
 
-See the [0.2.0 changelog](CHANGELOG.md) and
-[upgrade and release guidance](docs/RELEASING.md) for changes and release checks.
+## Install
 
-## Features
-
-- **Measured accuracy**: reported phone error rates on CMUdict (see docs/BENCHMARKS.md); neural G2P methods can be more accurate
-- **Compact Models**: < 1MB model size for typical 1:1 trees
-- **MultigramG2P**: n:m joint EM + Viterbi decode (`MultigramG2P` in Python API)
-- **Zero Dependencies**: Bundled Python executable works standalone
-- **CMUdict Support**: English pronunciation with PocketSphinx compatibility
-
-## Installation
+Requires Python 3.11 or newer:
 
 ```bash
 pip install phonebox
 ```
 
-The full package requires a compatible ICU backend wheel. The pinned development
-backend [icukit-pyicu 78.3.0](https://pypi.org/pypi/icukit-pyicu/78.3.0/json)
-publishes macOS ARM64 and Linux x86_64/aarch64 wheels; it provides no Windows
-or Intel macOS wheel and no source distribution. Check dependency wheel support
-for your Python/platform before installing. Generated standalone tree bundles
-use only the standard library and are a separate deployment path.
+The full package uses cartlet and ICU. Installation requires compatible backend
+wheels for your Python and platform; see
+[installation scope](https://github.com/lenzo-ka/phonebox/blob/main/docs/RELEASING.md#installation-scope).
+Generated standalone tree bundles use only the Python standard library.
 
-For the optional scikit-learn trainer, install `phonebox[sklearn]`; YAML presets
-selecting it need `phonebox[config,sklearn]`.
-
-Or from source:
+Optional extras:
 
 ```bash
-git clone https://github.com/lenzo-ka/phonebox.git
-cd phonebox
-pip install -e .
+pip install 'phonebox[config]'          # YAML training configuration
+pip install 'phonebox[sklearn]'         # Optional scikit-learn trainer
 ```
 
-## Quick Start
+## Train an English model and bundle it
 
-### One Command
+This recipe downloads CMUdict, trains a decision tree, and writes a standalone
+predictor. Training takes time; this is not a download of a pretrained model.
+The PocketSphinx preset removes stress; the `tts` preset preserves it.
 
 ```bash
-# Build G2P from CMUdict, bundle as Python executable
 phonebox recipe cmudict pocketsphinx -o g2p.py
-
-# Use it
 python g2p.py "Hello, world!"
 ```
 
-### TTS Preset (keeps stress)
-
-```bash
-phonebox recipe cmudict tts -o g2p.py
-```
-
-## Using Bundled G2P
-
-### Command Line
-
-```bash
-python g2p.py "Hello, world!"
-# hello   HH AH L OW
-# world   W ER L D
-
-# Raw mode (no text normalization)
-python g2p.py -r "Hello,"
-```
-
-### Python Library
+Use the generated predictor from Python:
 
 ```python
 from g2p import G2PPredictor
 
-g2p = G2PPredictor.from_embedded()
-phones = g2p.pronounce("hello")  # ['HH', 'AH', 'L', 'OW']
-
-# Process text (tokenizes automatically)
-for word, phones in g2p.pronounce_text("Hello, world!"):
-    print(f"{word}: {' '.join(phones)}")
+predictor = G2PPredictor.from_embedded()
+for word, phones in predictor.pronounce_text("Hello, world!"):
+    print(word, " ".join(phones))
 ```
 
-## CLI Commands
+See [data preparation](https://github.com/lenzo-ka/phonebox/blob/main/docs/DATA.md)
+for CMUdict licensing and French liaison annotation requirements, and
+[bundling](https://github.com/lenzo-ka/phonebox/blob/main/docs/BUNDLING.md)
+for deployment details.
 
-```
-Quick Start:
-  recipe       Build complete G2P from dictionary (one command)
+## Train from your own lexicon
 
-Using Models:
-  pronounce    Get pronunciations for words
-  normalize    Preview model-independent text tokenization
-  bundle       Bundle a decision-tree model as a standalone executable
-
-Building Models:
-  train        Train a 1:1 decision-tree model with safe defaults
-  train-multigram  Train/export an n:m MultigramG2P model
-  model        Prepared-input training and model benchmarking
-  dict         Dictionary operations (fetch, process, export-vectors)
-
-Low-Level:
-  align        Align letters to phonemes (EM algorithm)
-  vectorize    Convert alignments to feature vectors
-
-Quality:
-  check          Validate lexicon against phoneset
-  suggest-joins  Discover join candidates (multigram EM)
-  compare        1:1 vs n:m eval (locale or all IPA locales)
-```
-
-### G2P evaluation (IPA locales)
+Dictionary lines contain a spelling followed by whitespace-separated phones.
+Choose the phone inventory to match your data. For CMU/ARPAbet input:
 
 ```bash
-phonebox compare all                    # docs/G2P_COMPARE.md
-phonebox compare locale --lexicon … --locale it_IT
-phonebox train-multigram --locale it_IT --lexicon it_ipa.tsv -o model.g2p.gz
-```
-
-Use `phonebox compare all`, `phonebox compare sweep`, and
-`phonebox compare units` for evaluation workflows. The same structured
-operations are importable from `phonebox.eval`.
-See [`docs/G2P_EVAL.md`](docs/G2P_EVAL.md).
-
-### Examples
-
-```bash
-# Preview model-independent text tokenization
-phonebox normalize "Hello, world!"
-
-# Pronounce with existing model
+phonebox train --locale en --phoneset cmu \
+  --lexicon words.dict -o model.g2p.gz
 phonebox pronounce hello world -m model.g2p.gz
-
-# Benchmark model
-phonebox model benchmark model.g2p.gz
-
-# Fetch dictionary manually
-phonebox dict fetch cmudict
 ```
 
-## Python API
+The equivalent Python workflow uses the same training defaults:
 
 ```python
-from phonebox import G2P, MultigramG2P, train_g2p
+from phonebox import G2P, train_g2p
 
-# Train/export a 1:1 model. Defaults: IPA, native serial training, pruning with
-# a 5% validation split, stored leaf distributions, and preserved stress.
-training = train_g2p("dictionary.tsv", locale="en", output="model.g2p.gz")
-# Use phoneset="cmu", remove_stress=True when CMU stress digits should be removed.
-
-# 1:1 decision tree (CLI: phonebox pronounce)
-g2p = G2P(model="model.g2p.gz")
-phones = g2p.pronounce("hello")
-print(phones)  # ['HH', 'AH', 'L', 'OW']
-items = g2p.pronounce_text("Hello, world!")
-raw_items = g2p.pronounce_text("Hello, world!", raw=True)
-
-# n:m multigram: the vectorizer is saved with the model and reused by pronounce()
-from phonebox.core.vectorizer import Vectorizer
-vec = Vectorizer(locale="en_US", phoneset_name="cmu")
-mg = MultigramG2P(max_letter_span=2, max_phone_span=2, preprocessor=vec)
-mg.train_from_dict("lexicon.tsv")
-# phonebox train-multigram … ; phonebox pronounce -m model.g2p.gz (sidecar auto-detect)
-
-# N-best alternatives
-for pron, score in g2p.pronounce_nbest("read", n=3):
-    print(f"{pron} ({score:.3f})")
+training = train_g2p(
+    "words.dict", locale="en", phoneset="cmu", output="model.g2p.gz"
+)
+predictor = G2P(model="model.g2p.gz")
+print(predictor.pronounce("hello"))
 ```
 
-## Step-by-Step Training
+Primary training preserves stress, uses the native serial CART trainer, and
+prunes with a 5% validation split. Pass `--remove-stress` or
+`remove_stress=True` when desired. The default phone inventory is IPA; select
+`cmu` explicitly for CMU stress syntax. Locale names accept bare language codes
+and case-insensitive hyphen or underscore forms such as `en`, `en-US`, and
+`en_US`. See [locale resolution and ICU data](https://github.com/lenzo-ka/phonebox/blob/main/docs/EXEMPLARS.md).
 
-The primary CLI applies the same defaults as `train_g2p` and `G2P.train`:
+For n:m alignment and decoding:
 
 ```bash
-phonebox train --locale en --lexicon dictionary.tsv -o model.g2p.gz
+phonebox train-multigram --locale en --phoneset cmu \
+  --lexicon words.dict -o multigram.g2p.gz
+phonebox pronounce hello -m multigram.g2p.gz
 ```
 
-JSON and TOML training configs use the standard installation. Install
-`phonebox[config]` to use YAML with `phonebox train --config training.yaml`.
+Keep the exported multigram sidecars together. See
+[library and CLI workflows](https://github.com/lenzo-ka/phonebox/blob/main/docs/WORKFLOWS.md)
+for structured training results and the corresponding `train_multigram` API.
 
-For prepared-input or debugging workflows:
+## Review and reorder pronunciations
+
+Review an existing lexicon against a trained CART model:
 
 ```bash
-# 1. Fetch dictionary
-phonebox dict fetch cmudict
+# Numeric TSV, lowest support first
+phonebox dict review words.dict -m model.g2p.gz -o review.tsv
 
-# 2. Align letters to phonemes
-phonebox align data/cmudict/cmudict.dict -o alignments.txt --remove-stress
+# Each spelling's variants most likely first, with CMUdict-style numbering
+phonebox dict review words.dict -m model.g2p.gz --format dict -o ranked.dict
 
-# 3. Vectorize alignments
-phonebox vectorize alignments.txt -o vectors.txt
-
-# 4. Train from vectors
-phonebox model train en_US --vectors vectors.txt -o model.g2p.gz
-
-# 5. Bundle
-phonebox bundle model.g2p.gz -o g2p.py
+# Repeat bare spellings instead of numbering variants
+phonebox dict review words.dict -m model.g2p.gz --format dict \
+  --no-number-senses -o ranked-bare.dict
 ```
 
-## Standalone Deployment
+Scores measure compatibility with the selected model, not pronunciation
+correctness. A model trained on the reviewed words can memorize them; the
+[review guide](https://github.com/lenzo-ka/phonebox/blob/main/docs/LEXICON_REVIEW.md)
+explains model choice, unsupported sequences, TSV sorting, JSON provenance,
+and the shared review APIs. General dictionary phone mapping and deduplication
+are documented in [dictionary processing](https://github.com/lenzo-ka/phonebox/blob/main/docs/DICTIONARY_PROCESSING.md).
 
-Bundled files have zero dependencies beyond the Python standard library:
+## Accuracy and model choice
+
+CART uses spelling-context features and decision trees; multigram learns joint
+n:m spelling/phone units and decodes sequences. Their accuracy and export sizes
+depend on the lexicon, preprocessing, and training settings. The
+[reproducible CMUdict comparison](https://github.com/lenzo-ka/phonebox/blob/main/docs/CMUDICT_COMPARISON.md)
+reports both models with and without stress, held-out error rates, and exact
+snapshot provenance. It is a measurement of the recorded revision, not a claim
+that every future release has the same results.
+
+## Documentation and help
+
+Start with the [documentation guide](https://github.com/lenzo-ka/phonebox/blob/main/docs/README.md)
+for tutorials, API/CLI workflows, evaluation, and historical experiments.
 
 ```bash
-phonebox bundle model.g2p.gz -o g2p.py
-python g2p.py "test"
+phonebox --help
+phonebox train --help
+phonebox dict review --help
 ```
 
-Locale arguments accept bare language tags and case-insensitive hyphenated or
-underscored forms. See [Locale exemplar inventories](docs/EXEMPLARS.md) for the
-exact naming and resolution contract, generated ICU/CLDR data pipeline, and
-orthography-only scope.
+The CLI includes training, prediction, bundling, dictionary processing,
+validation, evaluation, and prepared alignment/vector workflows. Command help
+is the authoritative option list.
 
-## Algorithm
+## Development
 
-1. **EM Alignment**: Expectation-Maximization aligns letters to phonemes
-2. **Feature Extraction**: 7-gram letter windows create feature vectors
-3. **Decision Tree**: ID3-style tree trained on aligned data
-4. **Prediction**: Tree traversal based on letter context
+```bash
+git clone https://github.com/lenzo-ka/phonebox.git
+cd phonebox
+pip install -e '.[dev]'
+```
 
-Based on research from CMU:
-- [CMU G2P Research](http://www.cs.cmu.edu/afs/cs.cmu.edu/user/lenzo/html/areas/t2p/)
-- [ICSLP 1998 Paper](https://www.isca-speech.org/archive/icslp_1998/i98_0561.html)
+See the [release checks](https://github.com/lenzo-ka/phonebox/blob/main/docs/RELEASING.md#release-preparation)
+for validation. Contributions should include tests for behavior changes and
+keep Python APIs, CLI help, and documentation consistent.
 
-## License
+## Credits and license
 
-Phonebox source code is available under the [BSD 2-Clause License](LICENSE).
-The generated ICU/CLDR locale artifact is available under the [Unicode License
-v3](LICENSE-UNICODE). See [Third-party notices](THIRD_PARTY_NOTICES.md) for its
-source, modifications, and versioned provenance.
+Phonebox is by [Kevin Lenzo](https://github.com/lenzo-ka), building on
+[CMU G2P research](https://www.cs.cmu.edu/afs/cs.cmu.edu/user/lenzo/html/areas/t2p/).
 
-## Author
-
-Kevin Lenzo ([@lenzo-ka](https://github.com/lenzo-ka))
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Add tests for new functionality
-4. Submit a pull request
-
-See [Library and CLI workflows](docs/WORKFLOWS.md) for public entry points,
-structured results, and primary versus prepared-input training.
-
-See [lexicon review and variant ordering](docs/LEXICON_REVIEW.md) for the shared
-`review_lexicon` / `review_lexicon_file` APIs and `phonebox dict review` numeric
-TSV/JSON output and unfiltered dictionary reordering.
+Source code uses the [BSD 2-Clause License](https://github.com/lenzo-ka/phonebox/blob/main/LICENSE).
+Generated ICU/CLDR locale data uses the
+[Unicode License v3](https://github.com/lenzo-ka/phonebox/blob/main/LICENSE-UNICODE).
+[Third-party notices](https://github.com/lenzo-ka/phonebox/blob/main/THIRD_PARTY_NOTICES.md)
+record the source, modifications, and pinned data versions.

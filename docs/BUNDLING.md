@@ -3,6 +3,10 @@
 Create a self-contained Python G2P executable with a decision-tree model embedded
 using `phonebox bundle`. Multigram models are not supported by this bundler.
 
+Training requires an installed Phonebox runtime; see
+[installation scope](RELEASING.md#installation-scope). The exported program
+needs only Python and the standard library.
+
 ## Quick Start
 
 ```bash

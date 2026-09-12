@@ -7,6 +7,19 @@ patch releases within a minor line are intended to remain compatible.
 
 Changes since `v0.1.0`:
 
+### Release highlights
+
+- Shared Python and CLI workflows for CART/multigram training, dictionary
+  processing, and pronunciation review with numeric TSV/JSON results.
+- Saved locale preprocessing, pinned ICU/CLDR orthographic inventories, and
+  standard-library-only CART deployment bundles.
+- Reproducible held-out CMUdict comparisons and explicit model-support scores.
+
+**Upgrading:** this alpha minor release changes APIs, commands, and model
+workflows. Primary training now defaults to IPA, preserved stress, native CART,
+and pruning; select `cmu` explicitly for CMUdict. Retrain older models and see
+[the migration guide](docs/RELEASING.md#upgrading-from-010).
+
 ### Training and inference
 
 - Make ranked pronunciation sense numbering optional in lexicon review output:

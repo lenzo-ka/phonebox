@@ -2,12 +2,20 @@
 
 ## Training
 
+Confidence and n-best use dictionary fallback by default. A known exception
+returns its selected pronunciation with score 1.0; Python examples disable
+fallback to inspect tree emissions. Scores are model compatibility, not
+calibrated correctness. See [ordered scoring](PERFORMANCE_AND_SCORING.md).
+
 ```bash
 # Training (distributions stored by default, enabling n-best)
-phonebox train --locale en_US --lexicon dict.txt -o model.g2p.gz
+phonebox train --locale en_US --phoneset cmu --lexicon dict.txt -o model.g2p.gz
 ```
 
 ## CLI Usage
+
+The output comments below are illustrative; phones and probabilities depend
+on your trained model and saved stress policy.
 
 ```bash
 # Standard 1-best
@@ -33,7 +41,7 @@ phonebox pronounce read -m model.g2p.gz --nbest 3
 ```python
 from phonebox import G2P
 
-g2p = G2P(model='model.g2p.gz')
+g2p = G2P(model='model.g2p.gz', use_dict_fallback=False)
 ```
 
 ### Standard Pronunciation
@@ -71,6 +79,7 @@ nbest = g2p.pronounce_nbest('read', n=5)
 g2p = G2P.train(
     'dict.txt',
     locale='en_US',
+    phoneset='cmu',
     store_distributions=True,  # Enable n-best
     output='model.g2p.gz'
 )
@@ -83,7 +92,7 @@ g2p = G2P.train(
 ```python
 phones, confs = g2p.pronounce_with_confidence(word)
 
-if min(confs) < 0.7:
+if not confs or min(confs) < 0.7:
     print(f"WARNING:  Low confidence on '{word}'")
 ```
 
@@ -91,7 +100,7 @@ if min(confs) < 0.7:
 
 ```python
 phones, confs = g2p.pronounce_with_confidence(word)
-min_conf = min(confs)
+min_conf = min(confs) if confs else 0.0
 
 if min_conf >= 0.8:
     quality = "HIGH"
@@ -110,8 +119,8 @@ for word in words:
     results.append({
         'word': word,
         'phones': phones,
-        'min_conf': min(confs),
-        'avg_conf': sum(confs) / len(confs)
+        'min_conf': min(confs) if confs else 0.0,
+        'avg_conf': sum(confs) / len(confs) if confs else 0.0
     })
 ```
 
@@ -135,7 +144,7 @@ for phones, score in g2p.pronounce_nbest(word, n=5):
 | `store_distributions` | Confidence | N-Best | Notes |
 |-----------------------|------------|--------|-------|
 | `true` (default)      | per-phoneme probabilities | up to many alternatives | full feature support |
-| `false`               | always 1.0 | always 1 result | smaller / faster, no scoring |
+| `false`               | always 1.0 | at most 1 result | deterministic emissions; candidate scoring still available |
 
 ## Thresholds and Interpretation
 
@@ -156,36 +165,36 @@ for phones, score in g2p.pronounce_nbest(word, n=5):
 | 5-10 | ASR, TTS with alternatives |
 | > 10 | Diminishing returns |
 
-## Performance
+## Measuring performance
 
-### Model Size
-
-| Config | Size |
-|--------|------|
-| No distributions | 100% (baseline) |
-| With distributions | 105-110% |
-
-### Speed (per word)
-
-| Operation | Time |
-|-----------|------|
-| 1-best | 0.12 ms |
-| with_confidence | 0.14 ms |
-| nbest (n=5) | 0.18 ms |
+See [the reproducible CMUdict comparison](CMUDICT_COMPARISON.md) for measured
+training accuracy, timing, and complete export sizes at its recorded source and
+dependency versions. That report does not benchmark confidence or n-best latency.
+Measure those operations on your own saved model and representative word list;
+record the model configuration, fallback setting, alternative count, dependency
+versions and machine. Compare exported artifact sizes and repeat timing runs
+under the same conditions rather than assuming a fixed overhead.
 
 ## Error Handling
 
-### Model Doesn't Support N-Best
+All-one confidences do not prove that distributions are absent: deterministic
+leaves and dictionary fallback can produce them too. Empty phone/confidence
+lists are valid for silent emissions and must be handled before `min` or division.
+
+### Observe confidence for one word
 
 ```python
-# Check if model has distributions
 from phonebox import G2P
-g2p = G2P(model='model.g2p.gz')
+
+g2p = G2P(model="model.g2p.gz", use_dict_fallback=False)
 phones, confs = g2p.pronounce_with_confidence("test")
-if any(c < 1.0 for c in confs):
-    print("[x] N-best supported")
+if not phones:
+    print("This word produced no audible phones")
+elif any(c < 1.0 for c in confs):
+    print("This word used a nondeterministic emission")
 else:
-    print("[ ] Model may lack distributions")
+    print("This word's selected emissions have unit confidence")
+# This observation cannot establish whether other leaves retain distributions.
 ```
 
 ### Empty Results
@@ -235,15 +244,16 @@ def asr_lattice(word, min_score=0.05):
 ## Documentation
 
 - **User Guide:** [docs/NBEST_USAGE.md](NBEST_USAGE.md)
-- **Examples:** [examples/nbest_example.py](../examples/nbest_example.py)
+- **Examples:** [N-best tutorial](../examples/nbest_example.py)
+- **Workflow guide:** [WORKFLOWS.md](WORKFLOWS.md)
 
 ## Common Issues
 
 **Q: All confidence scores are 1.0**
-A: Model trained with `store_distributions: false` or data has no ambiguity
+A: Dictionary fallback, deterministic leaves, or omitted distributions can produce all-one scores. One word cannot diagnose the whole model.
 
 **Q: N-best only returns 1 result**
-A: Same as above - retrain with `store_distributions: true` (the default)
+A: Dictionary fallback and deterministic leaves can produce a single result even when distributions are enabled.
 
 **Q: Model size too large**
 A: Increase `min_dist_entropy` threshold in your config
@@ -266,6 +276,6 @@ A: Model uncertain due to limited training data for that pattern
 ---
 
 **Quick Links:**
-- Train: `phonebox train --locale en_US --lexicon dict.txt -o model.g2p.gz`
+- Train: `phonebox train --locale en_US --phoneset cmu --lexicon dict.txt -o model.g2p.gz`
 - Confidence: `g2p.pronounce_with_confidence(word)`
 - N-best: `g2p.pronounce_nbest(word, n=5)`

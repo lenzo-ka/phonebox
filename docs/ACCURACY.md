@@ -2,6 +2,10 @@
 
 Phonebox reports two very different things, and it matters which one you mean.
 
+For a reproducible public-data snapshot with explicit splitting and variant
+reference policies, see [CMUdict comparison](CMUDICT_COMPARISON.md). The
+figures below are historical and are not measurements of each new release.
+
 ## Pure G2P (generalization)
 
 **What it measures:** the decision-tree model alone, on words it did *not* see
@@ -86,7 +90,8 @@ The splitter refuses to grow branches that lack support:
 - `min_confidence` — skip a split that doesn't sharpen the leaf distribution
   enough to justify the extra node
 
-Tune these in your YAML config or pass them to `DecisionTree(...)`. They run
+YAML configs require `phonebox[config]`; TOML/JSON require no config extra.
+Tune these in your config or pass them to `DecisionTree(...)`. They run
 during training and shape what gets built.
 
 ### Post-pruning
@@ -98,10 +103,10 @@ overfitting because the validation rows weren't used to choose splits.
 
 ```bash
 # CLI default: prune with a 5% validation hold-out
-phonebox train --locale en_US --lexicon dict.txt -o model.g2p.gz
+phonebox train --locale en_US --phoneset cmu --lexicon dict.txt -o model.g2p.gz
 
 # Custom split, plus a 5% held-out test slice for honest measurement
-phonebox train --locale en_US --lexicon dict.txt -o model.g2p.gz \
+phonebox train --locale en_US --phoneset cmu --lexicon dict.txt -o model.g2p.gz \
   --validation-split 0.05 --test-split 0.05
 
 # Recipe: prune end-to-end
@@ -112,7 +117,7 @@ phonebox recipe cmudict pocketsphinx -o g2p.py --prune
 # Python API
 from phonebox import G2P
 g2p = G2P.train(
-    "dict.txt", locale="en_US",
+    "dict.txt", locale="en_US", phoneset="cmu",
     prune=True, validation_split=0.05, test_split=0.05,
 )
 ```
