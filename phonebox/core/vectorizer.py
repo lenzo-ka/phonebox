@@ -110,8 +110,8 @@ class Vectorizer:
 
         if self.phoneset_name is None:
             self.phoneset_name = DEFAULT_PHONESET
-        if not self.width % 2:
-            raise ValueError(f"width must be odd, not {self.width}")
+        if self.width <= 0 or not self.width % 2:
+            raise ValueError(f"width must be positive and odd, not {self.width}")
         self._pad = int((self.width - 1) / 2)
         self.padding = [self.aether] * self._pad
 
@@ -691,10 +691,11 @@ class Vectorizer:
     def vectorize_file(self, infile, outfile=None, header: bool = False) -> list[str]:
         """Get or write all the vectors from alignments"""
         out: list[str] = []
-        if outfile:  # header
-            print(*self.default_cols, file=outfile)
-        elif header:
-            out.append(" ".join(str(c) for c in self.default_cols))
+        if header:
+            if outfile:
+                print(*self.default_cols, file=outfile)
+            else:
+                out.append(" ".join(self.default_cols))
 
         for line in infile:
             for vector in self.next_alignment_vector(line):
@@ -720,7 +721,7 @@ class Vectorizer:
                 for line in f
                 if line.strip()
                 and not line.startswith("#")
-                and not line.startswith("0 1")
+                and line.split() != self.default_cols
             )
 
     def parse_vectors_to_data(

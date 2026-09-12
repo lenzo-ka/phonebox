@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 from ...constants import DEFAULT_PHONESET, FILE_ENCODING
-from ...utils.io import paths_refer_to_same_file
+from ._common import add_width_arg, expected_input_errors, require_distinct_output
 
 
 def _nonempty_path(value: str) -> str:
@@ -59,6 +59,7 @@ Examples:
     train_parser.add_argument(
         "-o", "--output", required=True, type=_nonempty_path, help="Output model file"
     )
+    add_width_arg(train_parser)
     train_parser.add_argument("--remove-stress", action="store_true")
     train_parser.add_argument("--cased", action="store_true")
     train_parser.add_argument("--max-iterations", type=int)
@@ -120,6 +121,7 @@ Examples:
     benchmark_parser.set_defaults(func=handle_model_benchmark)
 
 
+@expected_input_errors
 def handle_model_train(args):
     """Handle 'phonebox model train' command."""
     from ...core.g2p_model import G2PDecisionTree
@@ -128,17 +130,15 @@ def handle_model_train(args):
     if not prepared_path.is_file():
         print(f"Error: prepared input not found: {prepared_path}", file=sys.stderr)
         return 2
-    if paths_refer_to_same_file(prepared_path, args.output):
-        print(
-            "Error: prepared input and output must be different files", file=sys.stderr
-        )
-        return 2
+    if (rc := require_distinct_output(prepared_path, args.output)) is not None:
+        return rc
 
     print(f"Training model for {args.locale}", file=sys.stderr)
 
     # Create decision tree
     dt = G2PDecisionTree(
         locale=args.locale,
+        width=args.width,
         phoneset_name=args.phoneset,
         remove_stress=args.remove_stress,
         cased=args.cased,
@@ -162,6 +162,7 @@ def handle_model_train(args):
 
         vectorizer = Vectorizer(
             locale=args.locale,
+            width=args.width,
             phoneset_name=args.phoneset,
             remove_stress=args.remove_stress,
             cased=args.cased,
@@ -207,12 +208,15 @@ def handle_model_train(args):
     return 0
 
 
+@expected_input_errors
 def handle_model_benchmark(args):
     """Handle 'phonebox model benchmark' command."""
     import time
 
     from ...converter import G2P
 
+    if args.iterations <= 0:
+        raise ValueError("iterations must be greater than zero")
     print(f"Benchmarking: {args.model}")
     print(f"Iterations: {args.iterations}")
     print()

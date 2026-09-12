@@ -16,6 +16,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from ...constants import DEFAULT_TRAIN_PRUNE, DEFAULT_TRAIN_VALIDATION_SPLIT
+from ._common import expected_input_errors
 
 
 def setup_recipe_commands(subparsers):
@@ -97,6 +98,7 @@ Examples:
     parser.set_defaults(func=handle_recipe)
 
 
+@expected_input_errors
 def handle_recipe(args):
     """Handle recipe command."""
     return _build_g2p(args)

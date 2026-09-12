@@ -379,6 +379,16 @@ class G2PDecisionTree:
             y: Target values (list)
             counts: Occurrence counts (list)
         """
+        if not (len(X) == len(y) == len(counts)):
+            raise ValueError(
+                "Prepared features, targets, and counts must have equal lengths"
+            )
+        if not X:
+            raise ValueError("No prepared training vectors loaded")
+        if any(len(row) != self.vectorizer.width for row in X):
+            raise ValueError(
+                f"Prepared vector width must match context width {self.vectorizer.width}"
+            )
         self._sync_feature_names()
         self._cart.load_data(X, y, counts)
 

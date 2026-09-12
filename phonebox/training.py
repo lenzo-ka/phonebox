@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from inspect import Parameter, signature
 from pathlib import Path
 from typing import Any
 
@@ -87,6 +88,10 @@ def train_g2p(
     Pass an explicit ``alignments_out`` to write a checkpoint without exporting
     a model. When both are omitted, no files are written.
     """
+    if "model" in model_options:
+        raise ValueError(
+            "model is an inference loading option, not a primary training option"
+        )
     dictionary_path = Path(dictionary)
     if not dictionary_path.is_file():
         raise FileNotFoundError(
@@ -134,6 +139,25 @@ def train_g2p_from_config(
 ) -> TrainingResult:
     """Train through the primary workflow from a configuration mapping or file."""
     supplied = load_config(str(config)) if isinstance(config, (str, Path)) else config
+    if "model" in supplied:
+        raise ValueError(
+            "model is an inference loading option, not a primary training option"
+        )
+    if "phoneset_name" in supplied:
+        raise ValueError(
+            "Unsupported training config option phoneset_name; use phoneset"
+        )
+    accepted = {
+        name
+        for function in (train_g2p, G2PDecisionTree)
+        for name, parameter in signature(function).parameters.items()
+        if parameter.kind not in {Parameter.VAR_KEYWORD, Parameter.VAR_POSITIONAL}
+    }
+    unknown = set(supplied) - accepted
+    if unknown:
+        raise ValueError(
+            "Unknown training config options: " + ", ".join(sorted(map(str, unknown)))
+        )
     options = merge_configs(DEFAULT_CONFIG, supplied)
     dictionary = options.pop("dictionary", None)
     if not dictionary:
