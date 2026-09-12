@@ -24,8 +24,10 @@ The [changelog](../CHANGELOG.md) records the changes since `v0.1.0`.
   opt into scikit-learn, or `phonebox[config,sklearn]` for YAML presets selecting
   it. The old `icu` extra is removed: icukit already supplies the `icu` namespace;
   installing PyICU alongside it is not a supported alternative.
-- Keep every multigram export sidecar with its primary artifact. New models
-  embed their preprocessing; current train/save/load round trips retain it.
+- Keep the multigram `<stem>.units.json` and `<stem>.lm.json` files together.
+  Export/load uses a model stem such as `model.g2p.gz`; that stem need not exist
+  as a separate file. New models embed their preprocessing; current
+  train/save/load round trips retain it.
   Retrain and re-export old artifacts when adopting the new line; compatibility
   with snapshotless 0.1.0 artifacts is not a release requirement.
 - Standalone bundling supports decision trees. The full package uses cartlet
@@ -39,6 +41,8 @@ The [changelog](../CHANGELOG.md) records the changes since `v0.1.0`.
 - Replace repository script invocations with installed CLI commands and package
   APIs. Run `phonebox --help` and command-specific `--help` for the current
   surface; use `phonebox.cli.main.main(argv)` for an in-process CLI status.
+  See [library and CLI workflows](WORKFLOWS.md) for `train_multigram`,
+  `discover_joins`, and structured lexicon validation entry points.
   Comparison paths use `PHONEBOX_LEXICON_DIR` and `PHONEBOX_MODEL_DIR`.
 - Use `Dictionary.process` / `phonebox dict process` for mapped dictionaries.
   Mapping precedes optional stress removal, then final deduplication emits bare
