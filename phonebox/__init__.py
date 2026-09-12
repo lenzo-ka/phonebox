@@ -19,6 +19,7 @@ from .core.em_align import EMAlign
 from .core.multigram_g2p import MultigramG2P
 from .core.vectorizer import Vectorizer
 from .dictionary import Dictionary
+from .join_discovery import JoinCandidate, JoinDiscoveryResult, discover_joins
 from .locales import (
     LocaleResolution,
     canonical_locale,
@@ -26,6 +27,7 @@ from .locales import (
     resolve_locale,
     supplement_defaults,
 )
+from .multigram_training import MultigramTrainingResult, train_multigram
 from .training import TrainingResult, train_g2p, train_g2p_from_config
 
 __all__ = [
@@ -37,6 +39,11 @@ __all__ = [
     "EMAlign",
     "MultigramG2P",
     "Vectorizer",
+    "JoinCandidate",
+    "JoinDiscoveryResult",
+    "discover_joins",
+    "MultigramTrainingResult",
+    "train_multigram",
     "TrainingResult",
     "train_g2p",
     "train_g2p_from_config",

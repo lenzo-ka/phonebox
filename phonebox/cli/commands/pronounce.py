@@ -7,6 +7,7 @@ import sys
 from math import prod
 from pathlib import Path
 
+from ...core.nbest import validate_nbest_count
 from ...normalize import normalize_nfc
 from ...utils.io import is_dict_comment
 
@@ -76,12 +77,18 @@ def setup_pronounce_command(subparsers):
 
 def handle_pronounce(args):
     """Handle 'phonebox pronounce' command with user-friendly input."""
+    if args.nbest is not None:
+        try:
+            validate_nbest_count(args.nbest)
+        except ValueError as error:
+            print(f"Error: {error}", file=sys.stderr)
+            return 2
     if args.confidence_detailed and not args.with_confidence:
         print(
             "Error: --confidence-detailed requires --with-confidence", file=sys.stderr
         )
         return 2
-    if args.nbest and args.with_confidence:
+    if args.nbest is not None and args.with_confidence:
         print(
             "Error: --nbest cannot be combined with --with-confidence", file=sys.stderr
         )
@@ -94,7 +101,7 @@ def handle_pronounce(args):
     multigram = _multigram_sidecar(model_path).is_file()
 
     if multigram:
-        if args.nbest or args.with_confidence:
+        if args.nbest is not None or args.with_confidence:
             print(
                 "Error: n-best and confidence are not supported for MultigramG2P models",
                 file=sys.stderr,
@@ -162,7 +169,7 @@ def handle_pronounce(args):
 
         try:
             # N-best mode
-            if args.nbest:
+            if args.nbest is not None:
                 if tree_g2p is None:
                     raise RuntimeError("unreachable: n-best checked for multigram")
                 nbest = tree_g2p.pronounce_nbest(word, n=args.nbest)

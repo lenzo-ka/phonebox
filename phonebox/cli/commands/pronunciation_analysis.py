@@ -21,6 +21,8 @@ from ...pronunciation_analysis import (
     score_entries,
     triage_entries,
 )
+from ...utils.io import paths_refer_to_same_file
+from ._common import expected_input_errors
 
 _METHODS = ("geometric", "product", "arithmetic", "min", "harmonic")
 
@@ -49,7 +51,14 @@ def setup_score_prons_command(subparsers) -> None:
     _score_arguments(parser)
 
 
+@expected_input_errors
 def handle_score_prons(args: argparse.Namespace) -> int:
+    if args.output:
+        inputs = [args.model]
+        if args.input != "-":
+            inputs.append(args.input)
+        if any(paths_refer_to_same_file(source, args.output) for source in inputs):
+            raise ValueError("score output must differ from the input and model")
     print(f"Loading model {args.model}...", file=sys.stderr)
     g2p = G2P(model=args.model, use_dict_fallback=False)
     if not g2p.has_distributions:
@@ -117,6 +126,7 @@ def _print_prons(prons, marked=()) -> None:
     print()
 
 
+@expected_input_errors
 def handle_find_suspicious(args: argparse.Namespace) -> int:
     if args.zeros:
         print("=== Entries with 0-score pronunciations ===\n")
@@ -150,6 +160,12 @@ def handle_find_suspicious(args: argparse.Namespace) -> int:
 
 
 def _handle_triage(args: argparse.Namespace) -> None:
+    if args.output:
+        for category in CATEGORIES:
+            if paths_refer_to_same_file(
+                args.input, Path(args.output) / f"{category.lower()}.tsv"
+            ):
+                raise ValueError("triage output must differ from the input")
     print(f"Triaging entries with max score < {args.threshold}...", file=sys.stderr)
     results = triage_entries(_load(args.input), args.threshold)
     total = sum(len(values) for values in results.values())

@@ -43,7 +43,7 @@ from ..constants import (
 )
 from ..utils.io import is_dict_comment
 from .em_align import EMAlign
-from .nbest import generate_nbest
+from .nbest import generate_nbest, validate_nbest_count
 from .vectorizer import Vectorizer, make_join_re
 
 logger = get_logger(__name__)
@@ -629,6 +629,7 @@ class G2PDecisionTree:
         Returns:
             List of (phonemes, score) tuples
         """
+        validate_nbest_count(n)
         exception = self._lookup_exception(word)
         if exception is not None:
             return [(exception, 1.0)]

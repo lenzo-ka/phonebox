@@ -509,6 +509,6 @@ def test_bundle_refuses_nonportable_icu_without_writing_output(tmp_path):
         capture_output=True,
         text=True,
     )
-    assert result.returncode == 1
+    assert result.returncode == 2
     assert "Latin" in result.stderr
     assert not bundle_path.exists()

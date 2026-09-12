@@ -4,10 +4,9 @@
 from __future__ import annotations
 
 import argparse
-import logging
 import sys
-import time
-from pathlib import Path
+
+from ._common import expected_input_errors
 
 
 def setup_train_multigram_command(subparsers) -> None:
@@ -39,6 +38,11 @@ def setup_train_multigram_command(subparsers) -> None:
         help="Model stem (e.g. model.g2p.gz → model.g2p.gz.units.json)",
     )
     parser.add_argument("--phoneset", default="ipa")
+    parser.add_argument(
+        "--remove-stress",
+        action="store_true",
+        help="Opt into phoneset-specific stress removal (default: preserve stress).",
+    )
     parser.add_argument("--max-letter-span", type=int, default=None)
     parser.add_argument("--max-phone-span", type=int, default=None)
     parser.add_argument("--em-iterations", type=int, default=15)
@@ -61,27 +65,11 @@ def setup_train_multigram_command(subparsers) -> None:
     parser.set_defaults(func=handle_train_multigram)
 
 
+@expected_input_errors
 def handle_train_multigram(args) -> int:
-    from ...core.multigram_g2p import MultigramG2P
-    from ...core.vectorizer import Vectorizer
-    from ...eval.g2p_compare import cook_pair, load_lexicon
+    from ...multigram_training import train_multigram
 
-    logging.basicConfig(
-        stream=sys.stdout,
-        level=logging.DEBUG if args.verbose else logging.INFO,
-        format="%(asctime)s %(name)s %(levelname)s %(message)s",
-    )
-    log = logging.getLogger("phonebox.train_multigram")
-
-    lex = Path(args.lexicon)
-    if not lex.is_file():
-        print(f"Error: lexicon not found: {lex}", file=sys.stderr)
-        return 2
-
-    out = Path(args.output)
-    out.parent.mkdir(parents=True, exist_ok=True)
-
-    spelling_rewrites: dict[str, str] = {}
+    rewrites = {}
     for item in args.spelling_rewrite:
         if "=" not in item:
             print(
@@ -90,65 +78,22 @@ def handle_train_multigram(args) -> int:
             )
             return 2
         source, target = item.split("=", 1)
-        if len(source) != 1:
-            print("Error: spelling rewrite FROM must be one character", file=sys.stderr)
-            return 2
-        spelling_rewrites[source] = target
-    try:
-        vec = Vectorizer(
-            locale=args.locale,
-            phoneset_name=args.phoneset,
-            remove_stress=False,
-            spelling_rewrites=spelling_rewrites,
-        )
-    except ValueError as error:
-        print(f"Error: {error}", file=sys.stderr)
-        return 2
-    if args.no_config_joins:
-        vec.disable_config_joins()
-    mg_cfg = vec.multigram_config()
-    max_l = (
-        args.max_letter_span
-        if args.max_letter_span is not None
-        else mg_cfg.get("max_letter_span", 2)
-    )
-    max_p = (
-        args.max_phone_span
-        if args.max_phone_span is not None
-        else mg_cfg.get("max_phone_span", 2)
-    )
-
-    pairs: list[tuple[list[str], list[str]]] = []
-    for word, phones in load_lexicon(lex):
-        cooked = cook_pair(vec, word, phones)
-        if cooked:
-            pairs.append(cooked)
-
-    if not pairs:
-        print("Error: no trainable pairs after cooking", file=sys.stderr)
-        return 1
-
-    t0 = time.time()
-    log.info(
-        "training MultigramG2P locale=%s pairs=%d span=%d/%d em=%d",
-        args.locale,
-        len(pairs),
-        max_l,
-        max_p,
-        args.em_iterations,
-    )
-    mg = MultigramG2P(
-        max_letter_span=max_l,
-        max_phone_span=max_p,
-        em_max_iterations=args.em_iterations,
+        rewrites[source] = target
+    result = train_multigram(
+        args.lexicon,
+        locale=args.locale,
+        phoneset=args.phoneset,
+        output=args.output,
+        max_letter_span=args.max_letter_span,
+        max_phone_span=args.max_phone_span,
+        em_iterations=args.em_iterations,
         lm_order=args.lm_order,
         decode_beam=args.decode_beam,
-        verbose=args.verbose,
         parallel_align=args.parallel_align,
-        parallel_viterbi=args.parallel_align,
+        no_config_joins=args.no_config_joins,
+        spelling_rewrites=rewrites,
+        remove_stress=args.remove_stress,
+        verbose=args.verbose,
     )
-    mg.train_from_pairs(pairs)
-    mg.set_preprocessor(vec)
-    mg.export(out)
-    log.info("exported %s (+ .units.json, .lm.json) in %.1fs", out, time.time() - t0)
+    print(f"Exported {result.units_path} and {result.lm_path}", file=sys.stderr)
     return 0

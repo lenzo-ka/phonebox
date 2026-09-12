@@ -359,7 +359,7 @@ def test_bundle_rejects_multigram_sidecar_before_loading(tmp_path, capsys):
     model.with_suffix(".gz.units.json").write_text("{}", encoding="utf-8")
     output = tmp_path / "g2p.py"
 
-    assert handle_bundle(SimpleNamespace(model=str(model), output=str(output))) == 1
+    assert handle_bundle(SimpleNamespace(model=str(model), output=str(output))) == 2
     assert "MultigramG2P" in capsys.readouterr().err
     assert not output.exists()
 

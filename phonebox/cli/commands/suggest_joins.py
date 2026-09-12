@@ -21,23 +21,18 @@ sides is high). Each entry carries the unit, its summed probability
 mass, and the modal counterpart (most likely matching subsequence on
 the other side, with confidence).
 
-Sampling: large lexicons can be sub-sampled to keep wall-clock
-manageable. Joint-multigram EM converges to the same high-mass joins
-on samples of ~10-20k entries as on the full lexicon (the patterns are
-high-frequency; rare entries don't move the modal distribution).
+Sampling reduces runtime for large lexicons, at the cost of coverage.
+Rare spelling and phone patterns may be absent from a sample, so its
+suggested joins can differ from those found using the full lexicon.
 """
 
 from __future__ import annotations
 
 import argparse
-import json
-import logging
-import random
 import sys
-from collections import defaultdict
 from pathlib import Path
 
-from ...constants import DICT_ENCODING, FILE_ENCODING
+from ._common import expected_input_errors
 
 
 def setup_suggest_joins_command(subparsers):
@@ -128,159 +123,33 @@ def setup_suggest_joins_command(subparsers):
 
 
 def _load_pairs(path: Path) -> list[tuple[list[str], list[str]]]:
-    """Read a pronunciation lexicon with the shared dictionary parser."""
-    from ...lexicon import parse_dict_line
+    from ...join_discovery import load_join_pairs
 
-    pairs: list[tuple[list[str], list[str]]] = []
-    with path.open(encoding=DICT_ENCODING) as f:
-        for line in f:
-            parsed = parse_dict_line(line)
-            if parsed is None:
-                continue
-            word, phones = parsed
-            if not word or not phones:
-                continue
-            pairs.append((list(word), phones))
-    return pairs
+    return load_join_pairs(path)
 
 
+@expected_input_errors
 def handle_suggest_joins(args) -> int:
-    # Late imports so `phonebox --help` is snappy.
-    from ...core.multigram_align import MultigramAligner
+    from ...join_discovery import discover_joins
 
-    logging.basicConfig(
-        stream=sys.stderr,
-        level=logging.DEBUG if args.verbose else logging.INFO,
-        format="%(asctime)s %(levelname)s %(message)s",
-    )
-    log = logging.getLogger("phonebox.suggest_joins")
-
-    lex_path = Path(args.lexicon)
-    if not lex_path.is_file():
-        print(f"Error: lexicon not found: {lex_path}", file=sys.stderr)
-        return 2
-
-    pairs = _load_pairs(lex_path)
-    log.info("loaded %d entries from %s", len(pairs), lex_path)
-
-    if args.sample and len(pairs) > args.sample:
-        rng = random.Random(args.sample_seed)
-        pairs = rng.sample(pairs, args.sample)
-        log.info("sub-sampled to %d entries (seed=%d)", len(pairs), args.sample_seed)
-
-    max_letter_span = args.max_letter_span
-    max_phone_span = args.max_phone_span
-    if args.locale:
-        from ...core.vectorizer import Vectorizer
-
-        mg_cfg = Vectorizer(locale=args.locale, phoneset_name="ipa").multigram_config()
-        if max_letter_span is None:
-            max_letter_span = mg_cfg.get("max_letter_span", 3)
-        if max_phone_span is None:
-            max_phone_span = mg_cfg.get("max_phone_span", 2)
-    if max_letter_span is None:
-        max_letter_span = 3
-    if max_phone_span is None:
-        max_phone_span = 2
-
-    aligner = MultigramAligner(
-        max_letter_span=max_letter_span,
-        max_phone_span=max_phone_span,
+    result = discover_joins(
+        args.lexicon,
+        locale=args.locale,
+        output=args.output,
+        max_letter_span=args.max_letter_span,
+        max_phone_span=args.max_phone_span,
         min_phone_span=args.min_phone_span,
+        min_prob=args.min_prob,
+        top=args.top,
+        sample=args.sample,
+        sample_seed=args.sample_seed,
         max_iterations=args.max_iterations,
         convergence_threshold=args.convergence_threshold,
+        parallel_align=args.parallel_align,
         verbose=args.verbose,
-        parallel=args.parallel_align,
     )
-    log.info(
-        "running EM (max_letter=%d, max_phone=%d, min_phone=%d, max_iter=%d)",
-        max_letter_span,
-        max_phone_span,
-        args.min_phone_span,
-        args.max_iterations,
-    )
-    aligner.fit(pairs)
-    log.info(
-        "EM finished after %d iterations; %d units survived above 0",
-        len(aligner.loglik_history),
-        sum(1 for p in aligner.q.values() if p > 0),
-    )
-
-    # ---- aggregate joins ----
-    # The "join" concept (per phonebox config.json schema) is asymmetric:
-    # a *letter join* is a letter-sequence that compresses to fewer
-    # phones, e.g. ``(c, h) → (ʃ,)`` — 2 letters → 1 phone. A *phone
-    # join* is the converse: ``(x,) → (k, s)`` — 1 letter → 2 phones.
-    #
-    # Symmetric multigram units (e.g. ``(c, o) → (k, o)``) have high
-    # mass under the joint-EM (they're just the natural CV syllabic
-    # chunks of the language), but they're NOT join candidates because
-    # 1:1 unit alignment is what phonebox's EMAlign already does. So
-    # we filter both aggregates to the asymmetric cases.
-    letter_side: dict[tuple, dict[tuple, float]] = defaultdict(dict)
-    phone_side: dict[tuple, dict[tuple, float]] = defaultdict(dict)
-    for (L, P), prob in aligner.q.items():
-        # Letter joins: letter-tuple longer than phone-tuple
-        if len(L) > len(P):
-            letter_side[L][P] = prob
-        # Phone joins: phone-tuple longer than letter-tuple
-        if len(P) > len(L):
-            phone_side[P][L] = prob
-
-    def _aggregate(side: dict) -> list[dict]:
-        items = []
-        for k, sub in side.items():
-            total = sum(sub.values())
-            if total < args.min_prob:
-                continue
-            modal_other, modal_mass = max(sub.items(), key=lambda x: x[1])
-            confidence = modal_mass / total if total > 0 else 0.0
-            items.append(
-                {
-                    "tokens": list(k),
-                    "total_mass": total,
-                    "modal_match": list(modal_other),
-                    "modal_confidence": confidence,
-                    "alternatives": [
-                        {"tokens": list(other), "mass": mass}
-                        for other, mass in sorted(sub.items(), key=lambda x: -x[1])[1:5]
-                    ],
-                }
-            )
-        items.sort(key=lambda x: -x["total_mass"])
-        return items[: args.top]
-
-    letter_joins = _aggregate(letter_side)
-    phone_joins = _aggregate(phone_side)
-
-    output = {
-        "lexicon": str(lex_path),
-        "n_entries": len(pairs),
-        "settings": {
-            "max_letter_span": args.max_letter_span,
-            "max_phone_span": args.max_phone_span,
-            "min_phone_span": args.min_phone_span,
-            "min_prob": args.min_prob,
-            "max_iterations": args.max_iterations,
-            "iterations_run": len(aligner.loglik_history),
-            "sample": args.sample if args.sample else None,
-            "sample_seed": args.sample_seed if args.sample else None,
-        },
-        "loglik_history": aligner.loglik_history,
-        "letter_joins": letter_joins,
-        "phone_joins": phone_joins,
-    }
-
-    out_path = Path(args.output)
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    out_path.write_text(
-        json.dumps(output, indent=2, ensure_ascii=False) + "\n",
-        encoding=FILE_ENCODING,
-    )
-    log.info(
-        "wrote %d letter joins and %d phone joins to %s",
-        len(letter_joins),
-        len(phone_joins),
-        out_path,
+    print(
+        f"Wrote {len(result.letter_joins)} letter joins and {len(result.phone_joins)} phone joins to {result.output_path}",
+        file=sys.stderr,
     )
     return 0
