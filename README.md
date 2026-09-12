@@ -257,3 +257,7 @@ Kevin Lenzo ([@lenzo-ka](https://github.com/lenzo-ka))
 
 See [Library and CLI workflows](docs/WORKFLOWS.md) for public entry points,
 structured results, and primary versus prepared-input training.
+
+See [lexicon review and variant ordering](docs/LEXICON_REVIEW.md) for the shared
+`review_lexicon` / `review_lexicon_file` APIs and `phonebox dict review` numeric
+TSV/JSON output and unfiltered dictionary reordering.

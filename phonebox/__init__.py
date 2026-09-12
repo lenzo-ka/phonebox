@@ -28,6 +28,12 @@ from .locales import (
     supplement_defaults,
 )
 from .multigram_training import MultigramTrainingResult, train_multigram
+from .pronunciation_analysis import (
+    LexiconReviewRecord,
+    LexiconReviewResult,
+    review_lexicon,
+    review_lexicon_file,
+)
 from .pronunciation_scoring import PronunciationScore
 from .training import TrainingResult, train_g2p, train_g2p_from_config
 
@@ -35,6 +41,10 @@ __all__ = [
     # High-level API
     "G2P",
     "PronunciationScore",
+    "LexiconReviewRecord",
+    "LexiconReviewResult",
+    "review_lexicon",
+    "review_lexicon_file",
     "Dictionary",
     # Core API
     "DecisionTree",

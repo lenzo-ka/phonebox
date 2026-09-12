@@ -211,3 +211,7 @@ vocabulary-coverage result rather than a broad accuracy claim.
 The accuracy API and `phonebox compare accuracy` use the native trainer by
 default. Opt in with `--trainer sklearn` / `trainer="sklearn"` after installing
 `phonebox[sklearn]`. YAML presets that select it require `phonebox[config,sklearn]`.
+
+See [lexicon review and variant ordering](LEXICON_REVIEW.md) for the shared
+`review_lexicon` / `review_lexicon_file` APIs and `phonebox dict review` numeric
+TSV/JSON output and unfiltered dictionary reordering.

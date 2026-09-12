@@ -17,6 +17,7 @@ commands parse paths/options and present those results. Use `phonebox <command>
 | Compare models | `phonebox.eval.g2p_compare.run_compare`, `g2p_compare_all.run_compare_all` | `phonebox compare locale`, `compare all` |
 | Sweep/inspect units | `phonebox.eval.g2p_sweep.run_g2p_sweep`, `phonebox.eval.multigram_units.analyze_multigram_units` | `phonebox compare sweep`, `compare units` |
 | Dictionary accuracy | `phonebox.eval.accuracy.evaluate_accuracy` | `phonebox compare accuracy` |
+| Review/reorder lexicon variants | `phonebox.pronunciation_analysis.review_lexicon`, `review_lexicon_file` | `phonebox dict review` |
 | Score/triage candidates | `phonebox.pronunciation_analysis.score_entries`, `triage_entries` | `phonebox score-prons`, `find-suspicious` |
 | Read orthographic exemplars | `phonebox.exemplars.get_exemplars` | Python API |
 | Generate pinned exemplar data | `phonebox.dev.exemplars.generate_exemplars` | `phonebox exemplars generate` (development extra) |
@@ -80,3 +81,7 @@ saved letter rules and joins; `Vectorizer` is the lower-level cooking API.
 Orthographic exemplar membership is separate from explicit locale spelling-rule
 policy. Standalone bundling supports trees with supported portable preprocessing;
 n:m inference uses the full library.
+
+[Lexicon review](LEXICON_REVIEW.md) accepts dictionary lines directly, preserves
+all source origins after effective-phone deduplication, and assigns full-population
+ranks before filtering. JSONL candidate scoring is a separate input adapter.
