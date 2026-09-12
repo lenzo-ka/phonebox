@@ -9,7 +9,7 @@ Phonebox exposes two trainable grapheme-to-phoneme models. `G2PDecisionTree` ali
 To reproduce this exact snapshot, check out the recorded revision and install the recorded dependencies. Running `--refresh` from newer source creates a new snapshot rather than reproducing this one.
 
 ```console
-git checkout 4f5842a58b01f49189617a5010352deac7a6c786
+git checkout ded26bf3632ae53876fdfe7e6f50f288b092ec85
 python -m pip install -e '.[dev]' 'cartlet==0.5.0'
 phonebox compare cmudict --refresh docs/cmudict-comparison.json
 phonebox compare cmudict --check docs/cmudict-comparison.json docs/CMUDICT_COMPARISON.md
@@ -27,10 +27,10 @@ Training time includes each model's phone cooking, alignment, and fit. The CART 
 
 | Stress | Model | Source train words | Test words | Train s | Size bytes | WER% | WERv% | PER% | PERv% | Errors | Empty |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| preserved | G2PDecisionTree | 116052 | 10000 | 238.21 | 391025 | 54.23 | 52.62 | 13.77 | 13.23 | 0 | 0 |
-| preserved | MultigramG2P | 116052 | 10000 | 221.66 | 17116009 | 65.61 | 64.32 | 20.75 | 20.27 | 0 | 0 |
-| removed | G2PDecisionTree | 116052 | 10000 | 243.99 | 312941 | 43.72 | 41.66 | 11.50 | 10.86 | 0 | 0 |
-| removed | MultigramG2P | 116052 | 10000 | 216.73 | 14382955 | 67.57 | 66.41 | 26.30 | 25.71 | 0 | 0 |
+| preserved | G2PDecisionTree | 116052 | 10000 | 275.81 | 391024 | 54.23 | 52.62 | 13.77 | 13.23 | 0 | 0 |
+| preserved | MultigramG2P | 116052 | 10000 | 244.70 | 17116009 | 65.61 | 64.32 | 20.75 | 20.27 | 0 | 0 |
+| removed | G2PDecisionTree | 116052 | 10000 | 295.21 | 312941 | 43.72 | 41.66 | 11.50 | 10.86 | 0 | 0 |
+| removed | MultigramG2P | 116052 | 10000 | 225.04 | 14382955 | 67.57 | 66.41 | 26.30 | 25.71 | 0 | 0 |
 
 ## Interpretation
 
@@ -60,8 +60,8 @@ Both training pipelines started from 124494 raw entries from the same word-group
 
 ## Snapshot provenance
 
-- Phonebox revision: `4f5842a58b01f49189617a5010352deac7a6c786` (clean)
-- Workload code SHA-256: `75e849cf0f96544421a2d300c155012859840340b2ea5fa91ad6202a9440e07e`
+- Phonebox revision: `ded26bf3632ae53876fdfe7e6f50f288b092ec85` (clean)
+- Workload code SHA-256: `df8c52ccfb2a17c4f12da8b4d3d0a07be90417a45861ddb6b77dbb996c9827b4`
 - Python: CPython 3.12.12
 - Platform: macOS-27.0-arm64-arm-64bit
 - Dependencies: {'cartlet': '0.5.0', 'icukit': '0.4.0'}

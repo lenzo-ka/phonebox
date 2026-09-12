@@ -10,7 +10,7 @@
     {
       "models": [
         {
-          "artifact_bytes": 391025,
+          "artifact_bytes": 391024,
           "empty_predictions": 0,
           "model": "G2PDecisionTree",
           "n_test": 10000,
@@ -24,7 +24,7 @@
           "pos_acc_pct": 81.33196559614929,
           "prediction_errors": 0,
           "reference_phones": 62694,
-          "train_seconds": 238.21017545904033,
+          "train_seconds": 275.8080698749982,
           "train_time_scope": "load, cook, align, and fit",
           "wer_pct": 54.230000000000004,
           "wer_relaxed_pct": 52.62
@@ -44,7 +44,7 @@
           "pos_acc_pct": 73.4776915162286,
           "prediction_errors": 0,
           "reference_phones": 62694,
-          "train_seconds": 221.65840045781806,
+          "train_seconds": 244.70174524979666,
           "train_time_scope": "cook, deduplicate, align, and fit",
           "wer_pct": 65.61,
           "wer_relaxed_pct": 64.32
@@ -86,7 +86,7 @@
           "pos_acc_pct": 82.18532049153106,
           "prediction_errors": 0,
           "reference_phones": 59307,
-          "train_seconds": 243.99245812487788,
+          "train_seconds": 295.21032387483865,
           "train_time_scope": "load, cook, align, and fit",
           "wer_pct": 43.720000000000006,
           "wer_relaxed_pct": 41.66
@@ -106,7 +106,7 @@
           "pos_acc_pct": 65.4645304628094,
           "prediction_errors": 0,
           "reference_phones": 59307,
-          "train_seconds": 216.7330846679397,
+          "train_seconds": 225.03992104087956,
           "train_time_scope": "cook, deduplicate, align, and fit",
           "wer_pct": 67.57,
           "wer_relaxed_pct": 66.41
@@ -142,9 +142,9 @@
     "test_fraction": 0.1
   },
   "phonebox": {
-    "code_sha256": "75e849cf0f96544421a2d300c155012859840340b2ea5fa91ad6202a9440e07e",
+    "code_sha256": "df8c52ccfb2a17c4f12da8b4d3d0a07be90417a45861ddb6b77dbb996c9827b4",
     "dirty": false,
-    "revision": "4f5842a58b01f49189617a5010352deac7a6c786"
+    "revision": "ded26bf3632ae53876fdfe7e6f50f288b092ec85"
   },
   "runtime": {
     "dependencies": {
