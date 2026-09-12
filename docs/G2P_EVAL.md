@@ -83,7 +83,7 @@ instead of a fixed-path preset:
 
 ```bash
 phonebox train --locale en_US --phoneset cmu --lexicon DICTIONARY \
-  --output MODEL.g2p.gz --trainer sklearn --width 3 --remove-stress
+  --output MODEL.g2p.gz --trainer native --width 3 --remove-stress
 ```
 
 Stress removal is optional. Without `--remove-stress`, training preserves stress
@@ -207,3 +207,7 @@ vocabulary-coverage result rather than a broad accuracy claim.
 - **`phonebox suggest-joins`** — EM join discovery (`MultigramAligner` only;
   pass **`--locale`** to pick `multigram` spans from locale config).
 - **`phonebox check`** — lexicon vs phoneset validation (NFC, xenophones).
+
+The accuracy API and `phonebox compare accuracy` use the native trainer by
+default. Opt in with `--trainer sklearn` / `trainer="sklearn"` after installing
+`phonebox[sklearn]`. YAML presets that select it require `phonebox[config,sklearn]`.

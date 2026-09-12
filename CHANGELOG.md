@@ -50,6 +50,13 @@ Changes since `v0.1.0`:
 
 ### Evaluation and tooling
 
+- Use the native trainer by default in dictionary accuracy evaluation and base
+  examples. Expose the optional sklearn backend through `phonebox[sklearn]` and
+  CLI selection with clear missing-dependency errors. Remove the obsolete `icu`
+  extra that installed PyICU alongside the mandatory icukit backend.
+- Reuse the shared dictionary parser in accuracy loading, excluding numeric
+  alternates while keeping inline comments out of phones.
+
 - Replace operational repository scripts with reusable package APIs and thin
   CLI commands for evaluation, experiments, sweeps, units, pronunciation scoring,
   suspicious-entry analysis, and development exemplar generation.
@@ -67,7 +74,7 @@ See [upgrade guidance](docs/RELEASING.md#upgrading-from-010) before migrating.
 
 ## 0.1.0
 
-Initial tagged alpha baseline (`v0.1.0`): decision-tree G2P, EM alignment,
+Initial public release (`v0.1.0`, classified Beta): decision-tree G2P, EM alignment,
 multigram models, dictionary/model tooling, and standalone tree inference.
 This tag used the MIT license. The later code-license change and
 Unicode-licensed data addition are recorded under 0.2.0 above.

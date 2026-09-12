@@ -1,6 +1,8 @@
 # Include package data
 include README.md
 include CHANGELOG.md
+include QUICKSTART.md
+include config.example.yaml
 recursive-include docs *.md *.json
 include LICENSE
 include requirements.txt
@@ -10,7 +12,7 @@ include requirements-dev.txt
 recursive-include phonebox/config *.json *.xlit
 
 # Include examples
-recursive-include examples *.py
+recursive-include examples *.py *.sh
 
 # Include tests
 recursive-include tests *.py

@@ -64,7 +64,7 @@ echo "Step 4: Training decision tree..."
 phonebox model train "${LOCALE}" \
     --vectors "${VECTORS_FILE}" \
     --remove-stress \
-    --trainer sklearn \
+    --trainer native \
     -o "${MODEL_FILE}"
 echo ""
 

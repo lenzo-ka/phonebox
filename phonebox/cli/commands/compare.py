@@ -14,6 +14,7 @@ from phonebox.constants import (
     DEFAULT_MULTIGRAM_PHONESET,
     DEFAULT_SPLIT_SEED,
     DEFAULT_TEST_FRACTION,
+    DEFAULT_TRAINER,
 )
 from phonebox.eval.g2p_compare import print_results_table, run_compare
 from phonebox.eval.g2p_compare_all import (
@@ -168,6 +169,12 @@ def setup_compare_commands(subparsers) -> None:
     accuracy.add_argument("--seed", type=int, default=42)
     accuracy.add_argument("--width", type=int, default=None)
     accuracy.add_argument("--parallel-align", action="store_true")
+    accuracy.add_argument(
+        "--trainer",
+        choices=["native", "sklearn"],
+        default=DEFAULT_TRAINER,
+        help="Tree backend (default: native); sklearn requires phonebox[sklearn]",
+    )
     accuracy.set_defaults(func=handle_compare_accuracy)
 
     experiments = sp.add_parser("experiments", help="Run normalization experiments")
@@ -472,8 +479,15 @@ def handle_compare_accuracy(args) -> int:
             seed=args.seed,
             width=args.width,
             parallel_align=args.parallel_align,
+            trainer=args.trainer,
         )
-    except (FileNotFoundError, ValueError) as exc:
+    except ImportError as exc:
+        print(
+            f"{exc}. Optional sklearn backend: pip install phonebox[sklearn]",
+            file=sys.stderr,
+        )
+        return 2
+    except (OSError, ValueError) as exc:
         print(exc, file=sys.stderr)
         return 2
     print(f"Train: {result.training_entries:,}, Test: {result.test_entries:,}")

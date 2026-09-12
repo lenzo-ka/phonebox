@@ -28,8 +28,10 @@ keywords = ["g2p", "grapheme-to-phoneme", "pronunciation", "phonetics", "speech"
 requires-python = ">=3.11"
 dependencies = [
     "cartlet>=0.5.0",
-    # icukit ships prebuilt PyICU wheels for macOS arm64 / Linux / Windows
-    # so installing phonebox does NOT require a system-level ICU build.
+    # icukit supplies the icu module through its binary backend. The pinned
+    # 78.3.0 backend has macOS arm64 and Linux x86_64/aarch64 wheels, but no
+    # Windows/Intel macOS wheels or sdist; full installation needs a wheel
+    # compatible with the chosen platform and Python version.
     # The full runtime uses ICU to execute locale transliteration rules during
     # training and to replay saved raw-rule snapshots. Standalone bundles use
     # the separate portable preprocessing path.
@@ -40,11 +42,8 @@ dependencies = [
 config = [
     "PyYAML>=6.0",
 ]
-icu = [
-    # Legacy escape hatch for environments that prefer linking against a
-    # system ICU. Same surface API (`import icu`) — but on modern macOS
-    # the Xcode toolchain breaks the build, so we default to icukit above.
-    "PyICU>=2.11",
+sklearn = [
+    "cartlet[sklearn]>=0.5.0",
 ]
 dev = [
     "pytest>=7.0",

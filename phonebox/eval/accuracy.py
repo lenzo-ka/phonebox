@@ -6,8 +6,9 @@ import random
 from collections.abc import Iterable
 from dataclasses import dataclass
 
-from phonebox.constants import DICT_ENCODING
+from phonebox.constants import DEFAULT_TRAINER, DICT_ENCODING
 from phonebox.core.g2p_model import G2PDecisionTree
+from phonebox.lexicon import parse_dict_line
 
 
 @dataclass(frozen=True)
@@ -36,12 +37,9 @@ def load_pronunciation_entries(path) -> list[tuple[str, list[str]]]:
     entries = []
     with open(path, encoding=DICT_ENCODING) as infile:
         for raw in infile:
-            line = raw.strip()
-            if not line or line.startswith("#"):
-                continue
-            parts = line.split(None, 1)
-            if len(parts) == 2 and "(" not in parts[0]:
-                entries.append((parts[0], parts[1].split()))
+            parsed = parse_dict_line(raw)
+            if parsed is not None and raw.split()[0] == parsed[0]:
+                entries.append(parsed)
     return entries
 
 
@@ -54,9 +52,12 @@ def evaluate_accuracy(
     seed: int = 42,
     width: int | None = None,
     parallel_align: bool = False,
-    trainer: str = "sklearn",
+    trainer: str = DEFAULT_TRAINER,
 ) -> AccuracyResult:
-    """Train a decision tree on a deterministic split and report exact accuracy."""
+    """Train natively by default on a deterministic split and report accuracy.
+
+    The optional sklearn trainer requires ``phonebox[sklearn]``.
+    """
     pairs = list(entries)
     random.Random(seed).shuffle(pairs)
     split = int(len(pairs) * train_fraction)

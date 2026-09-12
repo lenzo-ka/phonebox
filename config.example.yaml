@@ -1,3 +1,5 @@
+# YAML requires: pip install "phonebox[config]"
+# For trainer: sklearn, install "phonebox[config,sklearn]" instead.
 # Phonebox Configuration Example
 # Install phonebox[config] for YAML support.
 # Use with: phonebox train --config config.example.yaml

@@ -56,7 +56,10 @@ def test_wheel_and_sdist_versions_resources_and_notices(tmp_path):
 
     _build(root, tmp_path, "--sdist")
     sdist = next(tmp_path.glob("*.tar.gz"))
-    release_docs = [root / "CHANGELOG.md"]
+    release_docs = [
+        root / name for name in ("CHANGELOG.md", "QUICKSTART.md", "config.example.yaml")
+    ]
+    release_docs.extend((root / "examples").glob("*.sh"))
     release_docs.extend(
         path for path in (root / "docs").rglob("*") if path.suffix in {".md", ".json"}
     )
@@ -74,6 +77,12 @@ def test_wheel_and_sdist_versions_resources_and_notices(tmp_path):
         member = archive.extractfile(prefix + "PKG-INFO")
         assert member is not None
         metadata = Parser().parsestr(member.read().decode("utf-8"))
+        assert "sklearn" in metadata.get_all("Provides-Extra", [])
+        assert "icu" not in metadata.get_all("Provides-Extra", [])
+        assert any(
+            requirement.startswith("cartlet[sklearn]>=0.5.0")
+            for requirement in metadata.get_all("Requires-Dist", [])
+        )
         assert metadata["Version"] == version
         assert metadata["License-Expression"] == "BSD-2-Clause AND Unicode-3.0"
         archive.extractall(extracted, filter="data")
@@ -87,6 +96,12 @@ def test_wheel_and_sdist_versions_resources_and_notices(tmp_path):
             name for name in archive.namelist() if name.endswith(".dist-info/METADATA")
         )
         metadata = Parser().parsestr(archive.read(metadata_name).decode("utf-8"))
+        assert "sklearn" in metadata.get_all("Provides-Extra", [])
+        assert "icu" not in metadata.get_all("Provides-Extra", [])
+        assert any(
+            requirement.startswith("cartlet[sklearn]>=0.5.0")
+            for requirement in metadata.get_all("Requires-Dist", [])
+        )
         assert metadata["Version"] == version
         assert metadata["License-Expression"] == "BSD-2-Clause AND Unicode-3.0"
         dist_info = metadata_name.removesuffix("METADATA")

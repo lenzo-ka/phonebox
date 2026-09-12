@@ -20,6 +20,10 @@ The [changelog](../CHANGELOG.md) records the changes since `v0.1.0`.
   pruning enabled, a 5% validation split, and no held-out test split. Pass
   `phoneset="cmu"` / `--phoneset cmu` for CMU stress/join syntax. Stress removal
   is optional; request it with `remove_stress=True` / `--remove-stress`.
+- Base workflows use the native CART trainer. Install `phonebox[sklearn]` to
+  opt into scikit-learn, or `phonebox[config,sklearn]` for YAML presets selecting
+  it. The old `icu` extra is removed: icukit already supplies the `icu` namespace;
+  installing PyICU alongside it is not a supported alternative.
 - Keep every multigram export sidecar with its primary artifact. New models
   embed their preprocessing; current train/save/load round trips retain it.
   Retrain and re-export old artifacts when adopting the new line; compatibility
@@ -46,6 +50,16 @@ revision and dependency versions. Its CART benchmark helper is unpruned, unlike
 primary training's default. Updating documentation or releasing 0.2.0 does not
 make those historical metrics a measurement of the release commit. Rerunning
 on newer code creates a new snapshot.
+
+## Installation scope
+
+The full runtime needs compatible cartlet and ICU dependencies. The pinned
+[icukit-pyicu 78.3.0 files](https://pypi.org/pypi/icukit-pyicu/78.3.0/json)
+cover macOS ARM64 and Linux x86_64/aarch64, with no Windows/Intel macOS wheels
+or source distribution. Full installation support follows dependency wheel
+availability for the selected Python/platform. Standard-library-only bundles
+remain a separate inference deployment path, not evidence of full-package
+installation support on every platform.
 
 ## Release preparation
 

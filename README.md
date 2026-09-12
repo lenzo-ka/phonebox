@@ -35,6 +35,16 @@ See the [0.2.0 changelog](CHANGELOG.md) and
 pip install phonebox
 ```
 
+The full package requires a compatible ICU backend wheel. The pinned development
+backend [icukit-pyicu 78.3.0](https://pypi.org/pypi/icukit-pyicu/78.3.0/json)
+publishes macOS ARM64 and Linux x86_64/aarch64 wheels; it provides no Windows
+or Intel macOS wheel and no source distribution. Check dependency wheel support
+for your Python/platform before installing. Generated standalone tree bundles
+use only the standard library and are a separate deployment path.
+
+For the optional scikit-learn trainer, install `phonebox[sklearn]`; YAML presets
+selecting it need `phonebox[config,sklearn]`.
+
 Or from source:
 
 ```bash
