@@ -350,3 +350,16 @@ def test_malformed_yaml_is_a_clean_cli_error(tmp_path, capsys):
     error = capsys.readouterr().err
     assert "Invalid YAML config" in error
     assert "Traceback" not in error
+
+
+def test_dictionary_hash_survives_export_load_and_reexport(lexicon, tmp_path):
+    output = tmp_path / "hash.g2p.gz"
+    result = train_g2p(lexicon, locale="en", phoneset="cmu", output=output)
+    expected = result.model.dict_hash
+    assert expected is not None
+
+    loaded = G2P(model=output)._dt
+    assert loaded.dict_hash == expected
+    reexported = tmp_path / "hash-reexported.g2p.gz"
+    loaded.export(str(reexported))
+    assert G2P(model=reexported)._dt.dict_hash == expected

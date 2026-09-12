@@ -84,7 +84,7 @@ phonebox vectorize alignments.txt \
 # 4. Train from vectors
 phonebox model train en_US \
   --vectors vectors.txt \
-  --trainer sklearn \
+  --trainer native \
   -o model.g2p.gz
 
 # 5. Bundle

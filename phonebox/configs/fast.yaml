@@ -1,6 +1,7 @@
 # Fast Training Configuration
 # Optimized for quick iteration and experimentation
 
+# YAML and sklearn require: pip install "phonebox[config,sklearn]"
 locale: en_US
 phoneset: cmu
 
@@ -9,8 +10,8 @@ remove_stress: true
 remove_accents: true
 cased: false
 
-# Training (fastest options)
-trainer: sklearn        # 2.1x faster
+# Training (optional backend)
+trainer: sklearn        # Optional backend; requires phonebox[sklearn]
 parallel_align: false   # Simple, reliable
 
 # EM Alignment (minimal iterations)

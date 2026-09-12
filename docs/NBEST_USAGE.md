@@ -407,7 +407,5 @@ Set `min_dist_entropy: 0.2` in your config YAML.
 
 ## See Also
 
-- [NBEST_IMPLEMENTATION_PLAN.md](NBEST_IMPLEMENTATION_PLAN.md) - Implementation details
-- [NBEST_CHECKLIST.md](NBEST_CHECKLIST.md) - Features and validation
 - [ACCURACY.md](ACCURACY.md) - Model accuracy metrics
 - [README.md](../README.md) - Main documentation

@@ -7,7 +7,7 @@ decision trees, EM alignment, and optional joint multigram (n:m) models.
 
 from __future__ import annotations
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 __package_name__ = "phonebox"
 
 # High-level API (recommended for most users)

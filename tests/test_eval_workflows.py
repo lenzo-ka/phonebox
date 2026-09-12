@@ -293,9 +293,7 @@ def test_accuracy_returns_counts_and_percentages(monkeypatch):
 
 def test_accuracy_runs_real_training_with_phoneset_cooking():
     entries = [(f"a{chr(98 + index)}", ["AH0", chr(66 + index)]) for index in range(20)]
-    result = accuracy.evaluate_accuracy(
-        entries, train_fraction=0.9, width=3, trainer="native"
-    )
+    result = accuracy.evaluate_accuracy(entries, train_fraction=0.9, width=3)
     assert (result.training_entries, result.test_entries) == (18, 2)
     assert result.total_phones == 4
 
@@ -434,3 +432,36 @@ def test_experiments_resolve_bare_locale_without_changing_paths(monkeypatch, tmp
     assert seen[0]["lexicon"] == lexicon
     assert seen[0]["baseline_model"] == model
     assert manifest[0]["locale"] == "it_IT"
+
+
+def test_accuracy_reader_uses_shared_dictionary_comment_and_variant_rules(tmp_path):
+    lexicon = tmp_path / "comments.dict"
+    lexicon.write_text(
+        ";;; dictionary header\n# another comment\n"
+        "word\tW\tER1 D # inline note\nword(7) W ER2 D\n"
+        "name(part) N EY1 M\n",
+        encoding="utf-8",
+    )
+    assert accuracy.load_pronunciation_entries(lexicon) == [
+        ("word", ["W", "ER1", "D"]),
+        ("name(part)", ["N", "EY1", "M"]),
+    ]
+
+
+def test_accuracy_cli_forwards_optional_trainer_and_reports_missing_extra(
+    monkeypatch, tmp_path, capsys
+):
+    lexicon = tmp_path / "tiny.dict"
+    lexicon.write_text("cat K AE1 T\nbat B AE1 T\n", encoding="utf-8")
+    seen = []
+
+    def missing(entries, **options):
+        seen.append(options["trainer"])
+        raise ImportError("scikit-learn is required")
+
+    monkeypatch.setattr(accuracy, "evaluate_accuracy", missing)
+    assert main(["compare", "accuracy", str(lexicon), "--trainer", "sklearn"]) == 2
+    assert seen == ["sklearn"]
+    error = capsys.readouterr().err
+    assert "phonebox[sklearn]" in error
+    assert "Traceback" not in error

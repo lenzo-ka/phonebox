@@ -1,6 +1,6 @@
 # Top multigram units per locale
 
-Train split matches compare_g2p (seed=42, max_test=2000). Letter/phone spans from locale ``config.json`` multigram section. EM iterations=15. Config joins **on**.
+Historical snapshot using the comparison workflow's split (seed=42, max_test=2000). Letter/phone spans from locale ``config.json`` multigram section. EM iterations=15. Config joins **on**. Current unit analysis is available through `phonebox compare units`.
 
 Only units where letter or phone side has length >= 2 are shown.
 

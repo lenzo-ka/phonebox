@@ -12,10 +12,11 @@ def main():
     print("-" * 40)
 
     # Note: You'll need to have a trained model file
-    # You can build one using: python build.py en_US
+    # Build with: phonebox train --locale en_US --phoneset cmu \
+    #   --lexicon dictionary.txt -o model.g2p.gz
     try:
         # Load a model
-        g2p = DecisionTree(model="build/en_US/g2p.json.gz")
+        g2p = DecisionTree(model="model.g2p.gz")
 
         # Test some words
         test_words = ["hello", "world", "python", "grapheme", "phoneme"]
@@ -25,7 +26,7 @@ def main():
             print(f"{word:15} -> {' '.join(pronunciation)}")
 
     except FileNotFoundError:
-        print("No pre-trained model found. Run 'python build.py en_US' first.")
+        print("No pre-trained model found. The next example trains a small model.")
 
     print()
 

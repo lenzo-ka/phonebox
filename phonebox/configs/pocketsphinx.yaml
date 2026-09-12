@@ -1,6 +1,7 @@
 # PocketSphinx / CMUdict Style Configuration
 # Optimized for English CMU Arpabet phoneset
 
+# YAML and sklearn require: pip install "phonebox[config,sklearn]"
 locale: en_US
 phoneset: cmu
 
@@ -10,8 +11,8 @@ remove_accents: true        # Normalize café → cafe
 filter_non_letters: true    # Keep only letters, hyphens, apostrophes
 cased: false                # Lowercase all words
 
-# Training (optimized for speed)
-trainer: sklearn        # 2.1x faster than native
+# Training (optional backend)
+trainer: sklearn        # Optional backend; requires phonebox[sklearn]
 parallel_align: false   # Disable for macOS compatibility
 
 # EM Alignment
