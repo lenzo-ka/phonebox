@@ -691,10 +691,11 @@ class Vectorizer:
     def vectorize_file(self, infile, outfile=None, header: bool = False) -> list[str]:
         """Get or write all the vectors from alignments"""
         out: list[str] = []
-        if outfile:  # header
-            print(*self.default_cols, file=outfile)
-        elif header:
-            out.append(" ".join(str(c) for c in self.default_cols))
+        if header:
+            if outfile:
+                print(*self.default_cols, file=outfile)
+            else:
+                out.append(" ".join(self.default_cols))
 
         for line in infile:
             for vector in self.next_alignment_vector(line):
@@ -720,7 +721,7 @@ class Vectorizer:
                 for line in f
                 if line.strip()
                 and not line.startswith("#")
-                and not line.startswith("0 1")
+                and line.split() != self.default_cols
             )
 
     def parse_vectors_to_data(

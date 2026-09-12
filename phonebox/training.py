@@ -88,6 +88,10 @@ def train_g2p(
     Pass an explicit ``alignments_out`` to write a checkpoint without exporting
     a model. When both are omitted, no files are written.
     """
+    if "model" in model_options:
+        raise ValueError(
+            "model is an inference loading option, not a primary training option"
+        )
     dictionary_path = Path(dictionary)
     if not dictionary_path.is_file():
         raise FileNotFoundError(
@@ -135,6 +139,10 @@ def train_g2p_from_config(
 ) -> TrainingResult:
     """Train through the primary workflow from a configuration mapping or file."""
     supplied = load_config(str(config)) if isinstance(config, (str, Path)) else config
+    if "model" in supplied:
+        raise ValueError(
+            "model is an inference loading option, not a primary training option"
+        )
     if "phoneset_name" in supplied:
         raise ValueError(
             "Unsupported training config option phoneset_name; use phoneset"

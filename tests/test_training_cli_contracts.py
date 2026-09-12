@@ -2,6 +2,7 @@
 
 import importlib.util
 import json
+from io import StringIO
 
 import pytest
 
@@ -9,6 +10,59 @@ from phonebox import G2P, Vectorizer, train_g2p, train_g2p_from_config
 from phonebox.cli.main import main
 from phonebox.core.em_align import EMAlign
 from phonebox.core.g2p_model import G2PDecisionTree
+
+
+@pytest.mark.parametrize("position", ["first", "last"])
+@pytest.mark.parametrize("header", [False, True])
+def test_vector_headers_match_stream_and_list_and_are_not_training_rows(
+    position, header, alignments, tmp_path
+):
+    vec = Vectorizer(width=3, target_position=position)
+    lines = alignments.read_text().splitlines()
+    expected = vec.vectorize_file(lines, header=header)
+    stream = StringIO()
+    vec.vectorize_file(lines, stream, header=header)
+    assert stream.getvalue().splitlines() == expected
+    assert (expected[0].split() == vec.default_cols) == header
+    path = tmp_path / "vectors.txt"
+    path.write_text(stream.getvalue())
+    data = vec.load_vectors_file(str(path))
+    assert " ".join(vec.default_cols) not in data
+    assert sum(data.values()) == len(expected) - int(header)
+    # A genuine numeric-feature row must not be discarded as a header prefix.
+    row = "P 0 1 9" if position == "first" else "0 1 9 P"
+    path.write_text(row + "\n")
+    assert vec.load_vectors_file(str(path)) == {row: 1}
+
+
+def test_primary_training_rejects_inference_seed(dictionary, tmp_path, capsys):
+    seed = tmp_path / "seed.g2p.gz"
+    train_g2p(
+        dictionary, locale="en", phoneset="cmu", width=3, prune=False, output=seed
+    )
+    loaded = G2PDecisionTree(model=str(seed))
+    assert loaded.vectorizer.width == 3
+    output = tmp_path / "existing.g2p.gz"
+    output.write_bytes(b"preserve\n")
+    options = {
+        "locale": "it",
+        "phoneset": "ipa",
+        "width": 7,
+        "model": str(seed),
+        "prune": False,
+        "output": output,
+    }
+    with pytest.raises(ValueError, match="model.*inference"):
+        train_g2p(dictionary, **options)
+    config = dict(dictionary=str(dictionary), **options)
+    with pytest.raises(ValueError, match="model.*inference"):
+        train_g2p_from_config(config)
+    config["output"] = str(output)
+    path = tmp_path / "config.json"
+    path.write_text(json.dumps(config))
+    assert main(["train", "--config", str(path)]) == 2
+    assert "inference" in capsys.readouterr().err
+    assert output.read_bytes() == b"preserve\n"
 
 
 @pytest.mark.parametrize("width", [-3, 0, 2])
@@ -61,6 +115,8 @@ def test_width_three_vectorization_and_prepared_training_roundtrip(
         == 0
     )
     assert all(len(line.split()) == 4 for line in vectors.read_text().splitlines())
+    vec = Vectorizer(width=3, target_position="first" if target_first else "last")
+    assert vectors.read_text().splitlines()[0].split() != vec.default_cols
     model = tmp_path / "width3.g2p.gz"
     assert (
         main(
