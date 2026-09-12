@@ -47,7 +47,8 @@ pip install 'phonebox[sklearn]'         # Optional scikit-learn trainer
 
 This recipe downloads CMUdict, trains a decision tree, and writes a standalone
 predictor. Training takes time; this is not a download of a pretrained model.
-The PocketSphinx preset removes stress; the `tts` preset preserves it.
+The PocketSphinx preset removes stress. The `tts` preset retains primary stress;
+add `--keep-secondary` to retain secondary stress too.
 
 ```bash
 phonebox recipe cmudict pocketsphinx -o g2p.py

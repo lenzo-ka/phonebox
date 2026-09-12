@@ -23,6 +23,7 @@ def main():
         trained = processed.train_g2p_model(
             locale="en_US",
             phoneset="cmu",
+            remove_stress=True,
             prune=False,
             output=model,
         )
