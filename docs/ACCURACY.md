@@ -102,7 +102,7 @@ phonebox train --locale en_US --lexicon dict.txt -o model.g2p.gz
 
 # Custom split, plus a 5% held-out test slice for honest measurement
 phonebox train --locale en_US --lexicon dict.txt -o model.g2p.gz \
-  --validation-split 0.05
+  --validation-split 0.05 --test-split 0.05
 
 # Recipe: prune end-to-end
 phonebox recipe cmudict pocketsphinx -o g2p.py --prune

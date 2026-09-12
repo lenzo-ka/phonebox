@@ -29,7 +29,7 @@ def main():
     print("-" * 60)
 
     for phones in pronunciations:
-        score = g2p._dt.score_pronunciation(word, phones)
+        score = g2p.score_pronunciation(word, phones)
         phones_str = " ".join(phones)
         print(f"  {phones_str:20s} → score: {score:.6f}")
     print()
@@ -45,14 +45,14 @@ def main():
     print(f"  Model predicts: {predicted_str}")
 
     # Score the prediction
-    score = g2p._dt.score_pronunciation(word, predicted)
+    score = g2p.score_pronunciation(word, predicted)
     print(f"  Self-score:     {score:.6f}")
     print()
 
     # Score an alternative pronunciation
     alternative = ["HH", "EH", "L", "OW"]
     alt_str = " ".join(alternative)
-    alt_score = g2p._dt.score_pronunciation(word, alternative)
+    alt_score = g2p.score_pronunciation(word, alternative)
     print(f"  Alternative:    {alt_str}")
     print(f"  Alt score:      {alt_score:.6f}")
     print()
@@ -69,7 +69,7 @@ def main():
     ]
 
     for word, phones in test_cases:
-        score = g2p._dt.score_pronunciation(word, phones)
+        score = g2p.score_pronunciation(word, phones)
         phones_str = " ".join(phones)
         print(f"  {word:12s} → {phones_str:30s} = {score:.6f}")
 

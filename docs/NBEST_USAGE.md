@@ -101,8 +101,9 @@ a YAML config passed via `--config`, or as a constructor argument to
 ### `min_dist_entropy` (config key)
 
 Minimum entropy threshold for storing distributions (default: 0.1 bits). Set
-this in your YAML/TOML/JSON config (passed via `--config` to `phonebox model
-build`) or as a constructor argument to `DecisionTree`:
+this in your TOML/JSON config (passed via `--config` to `phonebox train`)
+or as a constructor argument to `DecisionTree`. YAML configs additionally
+require `phonebox[config]`:
 
 **Lower values:**
 - Store more distributions

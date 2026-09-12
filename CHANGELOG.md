@@ -24,6 +24,14 @@ Changes since `v0.1.0`:
   Bundling remains a decision-tree feature.
 - Preserve Spanish Unicode equivalence and acute weak-vowel hiatus cues; fold
   Italian accented a/i/u in the stressless spelling policy.
+- Share context width across alignment, vectorization, and prepared training;
+  reject invalid dimensions and empty admitted training data with clear errors.
+  Validate training config keys and protect input files from output aliases.
+- Add `train_multigram` / `MultigramTrainingResult` and `discover_joins` /
+  `JoinDiscoveryResult` as reusable, quiet workflow APIs with optional exports;
+  their CLI commands delegate to the same operations.
+- Validate n-best counts consistently in the library and CLI, including zero
+  and negative counts; keep multigram inference's unsupported modes explicit.
 
 ### Licensing
 
@@ -31,8 +39,12 @@ Changes since `v0.1.0`:
   commit `f807a46`. Packaged ICU/CLDR exemplar data additionally carries
   Unicode-3.0 with its complete notice.
 
+- Correct CMUdict manifest licensing metadata to reference its upstream license.
+
 ### Locale and dictionary APIs
 
+- Expose structured lexicon/inventory validation through `phonebox.validation`;
+  retain all raw NFC-equivalent phone forms and validate CLI phoneset inputs.
 - Add case-insensitive, hyphen/underscore locale canonicalization and shared
   resource resolution while preserving language, region, and script identities.
   Orthographic equivalence can share spelling policy, never trained models or
@@ -50,6 +62,8 @@ Changes since `v0.1.0`:
 
 ### Evaluation and tooling
 
+- Add a current library/API/CLI workflow guide and correct removed-command,
+  prepared-vector loading, held-out test, scoring, and context-demo examples.
 - Use the native trainer by default in dictionary accuracy evaluation and base
   examples. Expose the optional sklearn backend through `phonebox[sklearn]` and
   CLI selection with clear missing-dependency errors. Remove the obsolete `icu`

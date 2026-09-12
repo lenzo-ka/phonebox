@@ -161,9 +161,9 @@ def demo_quality_control(g2p):
 
 
 def demo_contextual_pronunciation(g2p):
-    """Demonstrate context-aware pronunciation selection."""
+    """Display spelling-based alternatives for application-level selection."""
     print("\n" + "=" * 60)
-    print("DEMO 4: Context-Aware Pronunciation")
+    print("DEMO 4: Alternatives for Application-Level Selection")
     print("=" * 60)
 
     sentences = [
@@ -173,7 +173,7 @@ def demo_contextual_pronunciation(g2p):
         "I don't like it either",  # Second pronunciation
     ]
 
-    print("\nSelecting pronunciations based on context:\n")
+    print("\nDisplaying alternatives; sentence context is not passed to the model:\n")
 
     for sentence in sentences:
         print(f'\nSentence: "{sentence}"')

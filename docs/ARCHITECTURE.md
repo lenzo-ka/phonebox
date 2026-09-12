@@ -31,7 +31,7 @@ phonebox/
 │       ├── check.py            # phonebox check
 │       ├── dict.py             # phonebox dict (fetch, process, export-vectors...)
 │       ├── exemplars.py        # phonebox exemplars generate
-│       ├── model.py            # phonebox model (build, train, benchmark...)
+│       ├── model.py            # phonebox model (train, benchmark)
 │       ├── normalize.py        # phonebox normalize
 │       ├── pronounce.py        # phonebox pronounce (1:1 and n:m)
 │       ├── pronunciation_analysis.py # score-prons and find-suspicious
