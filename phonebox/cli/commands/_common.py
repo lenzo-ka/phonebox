@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import logging
 import sys
 from collections.abc import Callable
 from functools import wraps
@@ -14,6 +15,12 @@ from ...utils.io import paths_refer_to_same_file
 
 # Conventional exit code for a bad-input / usage error (missing file, etc.).
 EXIT_BAD_INPUT = 2
+
+
+def configure_progress_logging(verbose: bool) -> None:
+    """Enable INFO progress messages for a verbose CLI invocation."""
+    if verbose:
+        logging.basicConfig(level=logging.INFO, format="%(message)s")
 
 
 def require_file(path: str | Path, label: str = "file") -> int | None:

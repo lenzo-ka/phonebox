@@ -131,6 +131,9 @@ def _load_pairs(path: Path) -> list[tuple[list[str], list[str]]]:
 @expected_input_errors
 def handle_suggest_joins(args) -> int:
     from ...join_discovery import discover_joins
+    from ._common import configure_progress_logging
+
+    configure_progress_logging(args.verbose)
 
     result = discover_joins(
         args.lexicon,

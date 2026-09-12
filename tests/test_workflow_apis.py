@@ -398,3 +398,33 @@ def test_aligner_admission_respects_minimum_phone_span():
         MultigramAligner().fit([((), ("A",))])
     aligner = MultigramAligner(max_phone_span=0, max_iterations=1).fit([(("a",), ())])
     assert aligner.q
+
+
+@pytest.mark.parametrize("command", ["train-multigram", "suggest-joins"])
+def test_verbose_cli_emits_progress_in_fresh_process(dictionary, tmp_path, command):
+    output = tmp_path / command
+    args = [
+        sys.executable,
+        "-m",
+        "phonebox.cli.main",
+        command,
+        "--lexicon",
+        str(dictionary),
+        "--locale",
+        "en",
+        "-o",
+        str(output),
+    ]
+    quiet = subprocess.run(args, capture_output=True, text=True)
+    verbose = subprocess.run([*args, "--verbose"], capture_output=True, text=True)
+    assert quiet.returncode == verbose.returncode == 0
+    assert "MultigramAligner:" not in quiet.stderr
+    assert "MultigramAligner:" in verbose.stderr
+    assert "iter 1: LL=" in verbose.stderr
+
+
+def test_default_workflow_apis_remain_quiet(dictionary, capsys):
+    train_multigram(dictionary, locale="en", em_iterations=1)
+    discover_joins(dictionary, locale="en", max_iterations=1)
+    captured = capsys.readouterr()
+    assert not captured.out and not captured.err

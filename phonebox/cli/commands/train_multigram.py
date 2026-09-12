@@ -68,6 +68,9 @@ def setup_train_multigram_command(subparsers) -> None:
 @expected_input_errors
 def handle_train_multigram(args) -> int:
     from ...multigram_training import train_multigram
+    from ._common import configure_progress_logging
+
+    configure_progress_logging(args.verbose)
 
     rewrites = {}
     for item in args.spelling_rewrite:
