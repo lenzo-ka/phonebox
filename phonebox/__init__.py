@@ -28,11 +28,13 @@ from .locales import (
     supplement_defaults,
 )
 from .multigram_training import MultigramTrainingResult, train_multigram
+from .pronunciation_scoring import PronunciationScore
 from .training import TrainingResult, train_g2p, train_g2p_from_config
 
 __all__ = [
     # High-level API
     "G2P",
+    "PronunciationScore",
     "Dictionary",
     # Core API
     "DecisionTree",

@@ -11,7 +11,8 @@ from collections.abc import Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, Literal, Protocol
 
-ScoreMethod = Literal["geometric", "product", "arithmetic", "min", "harmonic"]
+from .pronunciation_scoring import ScoreMethod
+
 Category = Literal["REVIEW", "FOREIGN", "ABBREV", "FUNCTION", "OK"]
 CATEGORIES: tuple[Category, ...] = ("REVIEW", "FOREIGN", "ABBREV", "FUNCTION", "OK")
 

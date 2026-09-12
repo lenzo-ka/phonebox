@@ -21,10 +21,11 @@ from ...pronunciation_analysis import (
     score_entries,
     triage_entries,
 )
+from ...pronunciation_scoring import SCORE_METHODS
 from ...utils.io import paths_refer_to_same_file
 from ._common import expected_input_errors
 
-_METHODS = ("geometric", "product", "arithmetic", "min", "harmonic")
+_METHODS = SCORE_METHODS
 
 
 def _jsonl(stream: TextIO) -> Iterator[dict[str, Any]]:
@@ -59,6 +60,14 @@ def handle_score_prons(args: argparse.Namespace) -> int:
             inputs.append(args.input)
         if any(paths_refer_to_same_file(source, args.output) for source in inputs):
             raise ValueError("score output must differ from the input and model")
+    model = Path(args.model)
+    if (
+        model.name.endswith((".units.json", ".lm.json"))
+        or model.with_suffix(model.suffix + ".units.json").is_file()
+    ):
+        raise ValueError(
+            "pronunciation scoring supports CART models only; MultigramG2P scoring is unsupported"
+        )
     print(f"Loading model {args.model}...", file=sys.stderr)
     g2p = G2P(model=args.model, use_dict_fallback=False)
     if not g2p.has_distributions:
@@ -78,11 +87,7 @@ def handle_score_prons(args: argparse.Namespace) -> int:
         count = 0
         method: ScoreMethod = args.method
         for entry in score_entries(g2p, _jsonl(infile), method):
-            entry["prons"] = {
-                pron: f"{score:.10f}".rstrip("0").rstrip(".")
-                for pron, score in entry["prons"].items()
-            }
-            print(json.dumps(entry, ensure_ascii=False), file=outfile)
+            print(json.dumps(entry, ensure_ascii=False, allow_nan=False), file=outfile)
             count += 1
             if count % 10000 == 0:
                 print(f"Processed {count:,} entries...", file=sys.stderr)
