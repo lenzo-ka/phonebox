@@ -254,3 +254,6 @@ Kevin Lenzo ([@lenzo-ka](https://github.com/lenzo-ka))
 2. Create a feature branch
 3. Add tests for new functionality
 4. Submit a pull request
+
+See [Library and CLI workflows](docs/WORKFLOWS.md) for public entry points,
+structured results, and primary versus prepared-input training.

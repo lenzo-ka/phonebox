@@ -30,8 +30,12 @@ from .utils.logging_config import get_logger
 logger = get_logger(__name__)
 
 
-# Repository URLs
-CMUDICT_REPO = "https://raw.githubusercontent.com/cmusphinx/cmudict/master"
+# Download and upstream-notice links share the same public source revision.
+CMUDICT_PROJECT = "cmusphinx/cmudict"
+CMUDICT_REVISION = "master"
+CMUDICT_REPOSITORY = f"https://github.com/{CMUDICT_PROJECT}"
+CMUDICT_REPO = f"https://raw.githubusercontent.com/{CMUDICT_PROJECT}/{CMUDICT_REVISION}"
+CMUDICT_LICENSE_URL = f"{CMUDICT_REPOSITORY}/blob/{CMUDICT_REVISION}/LICENSE"
 
 
 def strip_stress(phoneme: str) -> str:
@@ -359,14 +363,17 @@ class Dictionary:
 
         cmudict_dir = data_dir / "cmudict"
         if cmudict_dir.exists() and (cmudict_dir / "cmudict.dict").exists():
-            manifest["sources"].append(
-                {
-                    "license": "Public Domain",
-                    "name": "CMUdict",
-                    "path": "cmudict/",
-                    "repository": "https://github.com/cmusphinx/cmudict",
-                }
-            )
+            source: dict[str, Any] = {
+                "license": "CMUdict license",
+                "license_url": CMUDICT_LICENSE_URL,
+                "name": "CMUdict",
+                "path": "cmudict/",
+                "repository": CMUDICT_REPOSITORY,
+            }
+            if (cmudict_dir / "LICENSE").is_file():
+                source["license"] = "CMUdict license (see LICENSE)"
+                source["license_file"] = "cmudict/LICENSE"
+            manifest["sources"].append(source)
             manifest["dictionaries"].append(
                 {
                     "file": "cmudict/cmudict.dict",
@@ -415,7 +422,10 @@ class Dictionary:
         verbose: bool = False,
     ) -> Dictionary:
         """
-        Fetch CMUdict from public repository.
+        Fetch CMUdict and its required copyright/license notice.
+
+        Downloads follow the upstream master branch. A failed dictionary or
+        LICENSE download raises RuntimeError; optional support files may fail.
 
         Args:
             source: Source name (must be 'cmudict')
@@ -445,9 +455,9 @@ class Dictionary:
                 url = f"{CMUDICT_REPO}/{filename}"
                 output_path = cmudict_dir / filename
                 ok = cls._download_file(url, output_path)
-                if not ok and filename == "cmudict.dict":
+                if not ok and filename in {"LICENSE", "cmudict.dict"}:
                     raise RuntimeError(
-                        f"Failed to download required dictionary file from {url}"
+                        f"Failed to download required CMUdict file from {url}"
                     )
 
             path = cmudict_dir / "cmudict.dict"

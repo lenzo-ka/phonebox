@@ -1,6 +1,7 @@
 # G2P Data Directory
 
-This directory contains the CMU Pronouncing Dictionary for training English G2P models.
+Downloaded CMUdict files live in `data/` by default. The repository does not
+ship this training dictionary.
 
 ## Quick Start
 
@@ -30,10 +31,19 @@ data/
 
 ### CMUdict
 - **Repository**: https://github.com/cmusphinx/cmudict
-- **License**: Public Domain
+- **License**: [CMUdict license](https://github.com/cmusphinx/cmudict/blob/master/LICENSE). Carnegie Mellon
+  retains copyright; redistribution must retain or reproduce the notice,
+  conditions, and disclaimer as specified in that license.
 - **Format**: Arpabet phonemes with stress markers (0, 1, 2)
 - **Language**: English (US)
 - **Size**: ~135K entries
+
+Fetch follows the upstream `master` branch; it does not claim a fixed snapshot.
+A successful fetch requires both the dictionary and its `LICENSE` notice. Keep
+that downloaded notice with redistributed dictionary data. A manifest created
+for manually supplied dictionary files links the upstream license but only
+advertises `license_file` / “see LICENSE” when the local notice file exists;
+it cannot establish the provenance of manually supplied files.
 
 ## Processing Dictionaries
 
@@ -92,7 +102,9 @@ The `manifest.json` file tracks all downloaded dictionaries:
   ],
   "sources": [
     {
-      "license": "Public Domain",
+      "license": "CMUdict license (see LICENSE)",
+      "license_file": "cmudict/LICENSE",
+      "license_url": "https://github.com/cmusphinx/cmudict/blob/master/LICENSE",
       "name": "CMUdict",
       "path": "cmudict/",
       "repository": "https://github.com/cmusphinx/cmudict"
