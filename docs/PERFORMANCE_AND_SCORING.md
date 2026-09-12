@@ -36,9 +36,15 @@ Scoring measures compatibility with the trained CART model. It sums the mass
 of complete ordered emission sequences matching a candidate pronunciation.
 Each cooked letter position emits one leaf label; epsilon emits no phone and
 joined labels can emit several. Equivalent paths are summed, and positions
-cannot be reused or skipped without a learned silent label. Model exceptions
+cannot be reused or skipped without a silent emission. Model exceptions
 are excluded. Saved spelling rules, joins and optional stress policy determine
 the representation; candidate scoring does not change that policy.
+
+Scoring, confidence and n-best prediction share ordinary prediction's saved
+letter-vocabulary policy: a letter absent from that vocabulary emits epsilon,
+not an arbitrary CART fallback phone. If the artifact contains no vocabulary,
+the tree's own prediction applies. This silent-letter policy does not imply
+that an unfamiliar spelling is a correct pronunciation.
 
 ```python
 from phonebox import G2P

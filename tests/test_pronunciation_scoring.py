@@ -177,3 +177,29 @@ def test_batch_orders_underflowed_products_by_log_probability():
     assert list(
         score_pronunciations(DetailedScorer(), "word", ["B", "A"], "product")
     ) == ["A", "B"]
+
+
+@pytest.mark.parametrize("suffix", [".g2p.gz", ".jsonl", ".cart"])
+def test_unknown_letter_policy_agrees_across_saved_prediction_surfaces(
+    tmp_path, suffix
+):
+    dictionary = tmp_path / "tiny.dict"
+    dictionary.write_text("a A\nb B\n")
+    trained = train_g2p(
+        dictionary,
+        locale="en",
+        phoneset="cmu",
+        width=1,
+        prune=False,
+        use_dict_fallback=False,
+    ).model
+    output = tmp_path / ("model" + suffix)
+    trained.export(str(output))
+    loaded = G2P(model=output, use_dict_fallback=False)._dt
+    for model in (trained, loaded):
+        assert model.pronounce("z") == []
+        assert model.pronounce_with_confidence("z") == ([], [])
+        assert model.pronounce_nbest("z") == [([], 1.0)]
+        assert not model.score_pronunciation_details("z", ["B"]).supported
+        assert model.score_pronunciation_details("z", []).probability == 1
+        assert model.score_pronunciation_details("az", ["A"]).probability == 1

@@ -493,22 +493,24 @@ class G2PDecisionTree:
         Returns:
             List of raw phonemes (may include joined phonemes and epsilon)
         """
-        # Get valid letter vocabulary from model header (if available)
-        letter_vocab = self._get_letter_vocabulary()
+        return cast(list[str], self._predict_positions(word, return_dist=False))
 
-        predictions = []
+    def _predict_positions(
+        self, word: str, *, return_dist: bool
+    ) -> list[str | dict[str, float]]:
+        """Apply one saved vocabulary policy to labels and distributions."""
+        letter_vocab = self._get_letter_vocabulary()
+        predictions: list[str | dict[str, float]] = []
         for vec in self.vectorizer.vectorize_word(word):
-            # Check if center letter is in vocabulary
             if letter_vocab and not self._is_valid_vector(vec, letter_vocab):
-                # OOV letter → epsilon (don't call tree)
                 predictions.append(self.vectorizer.epsilon)
             else:
-                # Known letter → use tree. cartlet's predict() is generic
-                # (returns Any) but in classification mode it produces the
-                # phone-label string; cast to keep the public list[str]
-                # signature accurate.
-                pred = cast(str, self._cart.predict(vec))
-                predictions.append(pred)
+                predictions.append(
+                    cast(
+                        "str | dict[str, float]",
+                        self._cart.predict(vec, return_dist=return_dist),
+                    )
+                )
         return predictions
 
     def _get_letter_vocabulary(self) -> set | None:
@@ -570,15 +572,7 @@ class G2PDecisionTree:
         Returns:
             List of distributions (one per letter)
         """
-        dists: list[str | dict[str, float]] = []
-        for vec in self.vectorizer.vectorize_word(word):
-            # cartlet.predict(return_dist=True) returns dict[str, float]
-            # for classification leaves; cast since the signature is generic.
-            dist = cast(
-                "str | dict[str, float]", self._cart.predict(vec, return_dist=True)
-            )
-            dists.append(dist)
-        return dists
+        return self._predict_positions(word, return_dist=True)
 
     def pronounce_with_confidence(self, word: str) -> tuple[list[str], list[float]]:
         """
