@@ -22,6 +22,9 @@ preprocessing retain the legacy lowercase-and-join behavior.
 When both the snapshot and older outer metadata contain the same preprocessing
 fields, the snapshot is authoritative, matching full-library model loading.
 Saved scalar liaison padding is also applied before the snapshot operations.
+This preserves input preprocessing; it does not add liaison annotations to the
+output. Training targets must supply them; see
+[French liaison annotations](DATA.md#french-liaison-annotations).
 
 The portable rule language intentionally supports the transformations used by
 the shipped locale G2P rules: Unicode normalization, exact character
