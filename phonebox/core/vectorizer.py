@@ -110,8 +110,8 @@ class Vectorizer:
 
         if self.phoneset_name is None:
             self.phoneset_name = DEFAULT_PHONESET
-        if not self.width % 2:
-            raise ValueError(f"width must be odd, not {self.width}")
+        if self.width <= 0 or not self.width % 2:
+            raise ValueError(f"width must be positive and odd, not {self.width}")
         self._pad = int((self.width - 1) / 2)
         self.padding = [self.aether] * self._pad
 

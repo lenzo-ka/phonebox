@@ -11,6 +11,29 @@ from phonebox.core.em_align import EMAlign
 from phonebox.core.g2p_model import G2PDecisionTree
 
 
+@pytest.mark.parametrize("width", [-3, 0, 2])
+def test_vectorizer_requires_positive_odd_width(width):
+    with pytest.raises(ValueError, match="positive.*odd"):
+        Vectorizer(width=width)
+
+
+@pytest.mark.parametrize("command", ["align", "vectorize", "train"])
+def test_negative_width_rejected_before_replacing_output(
+    command, dictionary, alignments, tmp_path, capsys
+):
+    output = tmp_path / "existing.g2p.gz"
+    output.write_bytes(b"preserve existing output\n")
+    if command == "align":
+        args = ["align", str(dictionary)]
+    elif command == "vectorize":
+        args = ["vectorize", str(alignments)]
+    else:
+        args = ["model", "train", "en", "--alignments", str(alignments)]
+    assert main([*args, "--width", "-3", "-o", str(output)]) == 2
+    assert output.read_bytes() == b"preserve existing output\n"
+    assert "positive" in capsys.readouterr().err
+
+
 @pytest.fixture
 def dictionary(tmp_path):
     path = tmp_path / "tiny.dict"
