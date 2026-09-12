@@ -10,7 +10,12 @@ from __future__ import annotations
 import sys
 
 from ...constants import FILE_ENCODING
-from ._common import add_vectorizer_args, require_file
+from ._common import (
+    add_vectorizer_args,
+    expected_input_errors,
+    require_distinct_output,
+    require_file,
+)
 
 
 def setup_vectorize_command(subparsers):
@@ -28,17 +33,21 @@ def setup_vectorize_command(subparsers):
     vectorize_parser.set_defaults(func=handle_vectorize)
 
 
+@expected_input_errors
 def handle_vectorize(args):
     """Phase 2: Alignments → Vectors."""
     from ...core.vectorizer import Vectorizer
 
     if (rc := require_file(args.alignments, "alignments")) is not None:
         return rc
+    if (rc := require_distinct_output(args.alignments, args.output)) is not None:
+        return rc
 
     print(f"Vectorizing {args.alignments}...", file=sys.stderr)
 
     vectorizer = Vectorizer(
         locale=args.locale,
+        width=args.width,
         phoneset_name=args.phoneset,
         remove_stress=args.remove_stress,
         cased=args.cased,

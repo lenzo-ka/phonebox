@@ -9,7 +9,12 @@ import sys
 from pathlib import Path
 
 from ...constants import FILE_ENCODING
-from ._common import add_vectorizer_args, require_file
+from ._common import (
+    add_vectorizer_args,
+    expected_input_errors,
+    require_distinct_output,
+    require_file,
+)
 
 
 def setup_dict_commands(subparsers):
@@ -129,6 +134,7 @@ def handle_dict_process(args):
     return 0
 
 
+@expected_input_errors
 def handle_dict_export_vectors(args):
     """Handle 'phonebox dict export-vectors' command."""
     from ...constants import DICT_ENCODING
@@ -136,17 +142,20 @@ def handle_dict_export_vectors(args):
     from ...core.vectorizer import Vectorizer
     from ...utils.io import is_dict_comment, open_output
 
+    if (rc := require_file(args.dictionary, "dictionary")) is not None:
+        return rc
+    if (rc := require_distinct_output(args.dictionary, args.output)) is not None:
+        return rc
+
     vectorizer = Vectorizer(
         locale=args.locale,
+        width=args.width,
         phoneset_name=args.phoneset,
         remove_stress=args.remove_stress,
         cased=args.cased,
         verbose=True,
         target_position="first" if args.target_first else "last",
     )
-
-    if (rc := require_file(args.dictionary, "dictionary")) is not None:
-        return rc
 
     em = EMAlign(vectorizer, verbose=True, parallel=False)
 

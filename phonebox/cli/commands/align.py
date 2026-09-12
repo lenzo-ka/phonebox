@@ -5,7 +5,12 @@ from __future__ import annotations
 
 import sys
 
-from ._common import add_vectorizer_args, require_file
+from ._common import (
+    add_vectorizer_args,
+    expected_input_errors,
+    require_distinct_output,
+    require_file,
+)
 
 
 def setup_align_commands(subparsers):
@@ -25,6 +30,7 @@ def setup_align_commands(subparsers):
     align_parser.set_defaults(func=handle_align)
 
 
+@expected_input_errors
 def handle_align(args):
     """Handle 'phonebox align' command."""
     from ...constants import DICT_ENCODING
@@ -34,12 +40,15 @@ def handle_align(args):
 
     if (rc := require_file(args.dict, "dictionary")) is not None:
         return rc
+    if (rc := require_distinct_output(args.dict, args.output)) is not None:
+        return rc
 
     print(f"Aligning dictionary: {args.dict}", file=sys.stderr)
 
     # Create vectorizer with same settings that will be used for vectorization
     vectorizer = Vectorizer(
         locale=args.locale,
+        width=args.width,
         phoneset_name=args.phoneset,
         remove_stress=args.remove_stress,
         verbose=True,

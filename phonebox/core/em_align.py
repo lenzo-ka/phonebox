@@ -375,6 +375,8 @@ class EMAlign:
         """Find the best alignment given the model"""
         start = time()
         entry_count = len(self.em_data)
+        if not entry_count:
+            raise ValueError("No admissible dictionary entries to align")
 
         # Choose alignment strategy
         use_parallel = self.parallel and entry_count > PARALLEL_ENTRY_THRESHOLD
@@ -489,6 +491,8 @@ class EMAlign:
         start = time()
         if init:
             self.initialize()
+        if not self.em_data:
+            raise ValueError("No admissible dictionary entries to align")
 
         if self.verbose:
             logger.info("iter\tchanged\tpercent\telapsed")
