@@ -1,5 +1,7 @@
 # Include package data
 include README.md
+include CHANGELOG.md
+recursive-include docs *.md *.json
 include LICENSE
 include requirements.txt
 include requirements-dev.txt

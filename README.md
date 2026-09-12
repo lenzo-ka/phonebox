@@ -18,6 +18,9 @@ treat it like a new major version when upgrading. Patch releases within one
 `0.X` line are intended to remain compatible. Pin the minor release when a
 stable integration surface is required.
 
+See the [0.2.0 changelog](CHANGELOG.md) and
+[upgrade and release guidance](docs/RELEASING.md) for changes and release checks.
+
 ## Features
 
 - **Measured accuracy**: reported phone error rates on CMUdict (see docs/BENCHMARKS.md); neural G2P methods can be more accurate

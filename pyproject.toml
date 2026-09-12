@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "phonebox"
-version = "0.1.0"
+version = "0.2.0"
 description = "Fast, lightweight grapheme-to-phoneme conversion using decision trees"
 readme = "README.md"
 authors = [
@@ -53,6 +53,7 @@ dev = [
     "mypy>=1.0",
     "pre-commit>=3.0",
     "build>=1.0",
+    "twine>=5.0",
     "setuptools>=77.0",
     "wheel",
     "PyYAML>=6.0",
