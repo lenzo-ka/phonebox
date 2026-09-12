@@ -9,6 +9,10 @@ Changes since `v0.1.0`:
 
 ### Training and inference
 
+- Make ranked pronunciation sense numbering optional in lexicon review output:
+  `--no-number-senses` and `number_senses=False` emit bare spellings across all
+  formats, preserving ranks and source origins. Numbering remains enabled by default.
+
 - Score complete ordered CART pronunciation sequences, summing silent/joined
   emission paths with stable log probabilities and saved preprocessing. Share
   structured score details and numeric candidate JSON; geometric/product replace
