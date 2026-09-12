@@ -1,64 +1,34 @@
-# Performance Optimizations and Pronunciation Scoring
+# Training performance and pronunciation scoring
 
-This document covers recent improvements to training performance and new tools for dictionary quality validation.
+Training and scoring use the same saved model configuration. See
+[Library and CLI workflows](WORKFLOWS.md) for public entry points and the
+primary versus prepared-input training contract.
 
-## Performance Improvements
+## Training choices
 
-### Parallel Alignment
-
-Alignment is serial by default to avoid duplicating large lexicons across
-worker processes. Enable multiprocessing explicitly when memory permits:
-
-```bash
-# Safe serial default
-phonebox train --locale en_US --lexicon dict.txt -o model.g2p.gz
-
-# Opt in to parallel alignment
-phonebox train --locale en_US --lexicon dict.txt -o model.g2p.gz --parallel-align
-```
-
-**Performance:**
-- Alignment phase: 82s → 43s (48% faster)
-- Overall training: 5.6min → 5.1min (10% faster)
-- Parallel mode uses worker processes
-- Robust Ctrl-C handling with proper cleanup
-
-### Detailed Stage Timing
-
-Training now shows detailed timing for each phase:
-
-```
-Loading dictionary...
-  OK loaded in 1.4 sec
-Aligning letters and phonemes...
-  OK aligned in 42.6 sec
-Training decision tree...
-building tree from 469663 unique observations
-tree built: 163521 nodes (242.8 sec, 673.5 nodes/sec)
-  OK trained in 242.9 sec
-Building exceptions dictionary...
-Found 26856 exceptions (5.9 sec)
-============================================================
-Success! Model trained in 338.3 seconds (5.6 min)
-============================================================
-```
-
-Progress updates appear every 30 seconds during tree building for long-running builds.
-
-## Distributions Enabled by Default
-
-Models now include probability distributions by default, enabling:
-- N-best pronunciation generation
-- Per-phoneme confidence scores
-- Pronunciation likelihood scoring
+Primary dictionary training uses the native trainer, serial alignment,
+probability distributions, and pruning by default. Stress removal is optional.
+For a CMU-tagged dictionary:
 
 ```bash
-# Distributions are enabled by default
-phonebox train --locale en_US --lexicon dict.txt -o model.g2p.gz
+phonebox train --locale en --phoneset cmu --lexicon dict.txt -o model.g2p.gz
+
+# Explicit alternatives when appropriate for the data and available memory
+phonebox train --locale en --phoneset cmu --lexicon dict.txt -o model.g2p.gz \
+  --parallel-align --remove-stress
 ```
 
-**Model size impact:** +27% (425KB → 540KB)
-**Runtime impact:** None (distributions are sorted for fast 1-best lookup)
+Parallel alignment uses worker processes and can increase memory consumption.
+Its runtime benefit depends on the corpus, configuration, and machine; this
+guide makes no fixed speedup or model-size claim. Stored leaf distributions
+support candidate scoring, n-best prediction, and per-phone confidence. A
+model's scores reflect the distributions it actually retained.
+
+The [recorded CMUdict comparison](https://github.com/lenzo-ka/phonebox/blob/cf1433439738ae6f0499b24b106db85b4ed44c7b/docs/CMUDICT_COMPARISON.md)
+provides historical measurements with source revision, dependencies, corpus
+hash, split, model-specific filtering, and reproduction instructions. Those
+measurements describe that snapshot; they do not establish current training
+timings or pronunciation-score calibration.
 
 ## Ordered pronunciation scoring
 
@@ -122,149 +92,55 @@ round-trip numerical comparisons need tolerance. Metadata absent from an old
 artifact is not invented. Multigram candidate likelihood is unsupported; its
 EM unit distribution alone is not the full saved unit-language-model likelihood.
 
-## Dictionary Validation Tools
+## Score candidate JSONL
 
-### score_dictionary.py
-
-Validate pronunciation dictionaries by scoring every entry against a trained model.
-
-#### Basic Usage
-
-```bash
-# Find worst pronunciations (potential errors)
-python examples/score_dictionary.py --bottom 50
-
-# Score entire dictionary
-python examples/score_dictionary.py -o scored.tsv
-
-# Show highest confidence pronunciations
-python examples/score_dictionary.py --top 100
-```
-
-#### Output Format (TSV)
-
-```
-word    pronunciation    score    model_prediction    match    orig_rank
-CAT     K AE T          0.000    K AE T              =        1
-READ    R EH D         -0.050    R EH D              =        1
-READ(2) R IY D         -5.756    R EH D              !        2
-```
-
-**Columns:**
-- `word`: Dictionary entry with instance number
-- `pronunciation`: Phonemes from dictionary
-- `score`: Average log probability (higher = better)
-- `model_prediction`: What model would predict
-- `match`: `=` if matches, `!` if differs
-- `orig_rank`: Original variant number in dictionary
-
-### Reordering Pronunciations
-
-Reorder pronunciation variants within each word by model confidence:
-
-```bash
-# Reorder variants by score
-python examples/score_dictionary.py --reorder -o reordered.tsv
-
-# Show only words where ranking changed
-python examples/score_dictionary.py --rank-changes-only -o changes.tsv
-```
-
-**Reordered output adds `new_rank` column:**
-
-```
-word    pronunciation    score    model_pred    match    orig_rank    new_rank
-abs     AE B Z          0.000    AE B Z        =        2            1
-abs(2)  EY B IY EH S   -9.000    AE B Z        !        1            2
-```
-
-This shows `abs` was originally variant #2 but became #1 after reordering (better score).
-
-**Use cases:**
-1. **Quality control**: Find pronunciation errors in dictionaries
-2. **Variant ordering**: Rank pronunciations by likelihood
-3. **Dictionary cleanup**: Identify and fix irregular entries
-4. **Model validation**: See what the model considers unusual
-
-### Examples from CMUdict
-
-**Words with rank changes (5,631 entries):**
-```
-abs:     (2) → (1)  Score improved from rank 2 to 1
-asap:    (2) → (1)  Better pronunciation moved up
-anfal:   (2) → (1)  Original #1 was very poor
-```
-
-**Worst scored entries (< -10):**
-- Acronyms spelled out: FYI, BBC, CNN
-- Unusual abbreviations: AOL(2), AWB(2)
-- Likely errors: Wrong phoneme sequences
-
-### Integration with Unix Tools
-
-The TSV format integrates with standard tools:
-
-```bash
-# Extract just word + pronunciation
-cut -f1-2 reordered.tsv > dict.txt
-
-# Sort by score
-sort -t$'\t' -k3,3n scored.tsv | head -100
-
-# Find specific words
-grep "^READ" reordered.tsv
-
-# Count perfect scores
-awk -F'\t' '$3 > -0.01 {count++} END {print count}' scored.tsv
-```
-
-## Performance Summary
-
-| Phase         | Before  | After   | Speedup |
-|--------------|---------|---------|---------|
-| Alignment    | 82s     | 43s     | 1.9x    |
-| Tree build   | 243s    | 243s    | 1.0x    |
-| Total        | 5.6min  | 5.1min  | 1.1x    |
-
-**Model size:**
-- Without distributions: 425KB
-- With distributions: 540KB (+27%)
-
-**Dictionary quality:**
-- 50.6% perfect pronunciations (score > -0.01)
-- 83.1% good pronunciations (score > -1.0)
-- 0.2% very poor (score < -10.0, likely errors)
-
-## Saving and Loading Alignments
-
-Alignment is the slowest part of training. Save alignments for fast iteration:
+The existing batch API scores candidate pronunciations without deciding whether
+they are errors:
 
 ```python
-from phonebox.core.g2p_model import G2PDecisionTree
+from phonebox import G2P
+from phonebox.pronunciation_analysis import score_entries
 
-# First time: align and save
-dt = G2PDecisionTree(locale="en_US", phoneset_name="cmu")
-with open("dict.txt") as f:
-    dt.load_prondict(f)
-dt.align()
-dt.save_alignments("alignments.txt")  # Save for reuse
-
-# Later: load alignments and iterate quickly
-dt = G2PDecisionTree(width=1, store_distributions=True)  # Try different params
-with open("alignments.txt") as f:
-    dt.load_alignments(f)  # ~1 second vs ~40 seconds
-dt.train()
+model = G2P(model="model.g2p.gz", use_dict_fallback=False)
+entries = [{"word": "read", "prons": ["R IY1 D", "R EH1 D"]}]
+scored = list(score_entries(model, entries))
 ```
 
-Pre-computed alignments are included in `data/cmudict/alignments.txt`.
+Each result retains the entry's other fields and stores numeric values in its
+`prons` mapping. Variants are ordered by sequence log probability, with input
+order retained for ties. This prevents underflowed product probabilities from
+creating false ranking ties.
 
-## Future Optimizations
+For the installed command, put one such input object on each line:
 
-Potential areas for further speedup:
+```bash
+phonebox score-prons candidates.jsonl -m model.g2p.gz -o scored.jsonl
+phonebox score-prons candidates.jsonl -m model.g2p.gz --method product
+```
 
-1. **Parallel tree building** - Split by target phoneme (4-8x speedup possible)
-2. **Numpy vectorization** - Replace Python lists in hot paths (40-50% faster)
-3. **Cythonize entropy calculations** - Compile hot loops (30% faster)
-4. **Cache entropy computations** - Avoid redundant calculations (needs smart caching)
+JSON scores are numbers, not formatted strings. Use the detailed scoring API
+when finite log probability and support status are needed to distinguish
+underflow from an unsupported sequence. Generic lexicon, validation, and
+training operations are described in [WORKFLOWS](WORKFLOWS.md).
 
-The parallel alignment was the "easy win" that gave good speedup with minimal complexity.
+## Reuse prepared alignments
+
+Primary training can write an alignment checkpoint through `alignments_out`:
+
+```python
+from phonebox import DecisionTree, train_g2p
+
+train_g2p("dict.txt", locale="en", phoneset="cmu",
+          alignments_out="alignments.txt")
+
+prepared = DecisionTree(locale="en", phoneset_name="cmu", width=7)
+with open("alignments.txt", encoding="utf-8") as source:
+    prepared.load_alignments(source)
+prepared.train()
+```
+
+Prepared alignments are user-generated files, not bundled training data.
+Keep their spelling normalization, joins, phoneset, and stress policy consistent
+with the consuming model. Prepared training has its own explicit configuration
+and does not reconstruct all primary-workflow settings from the file. Reusing
+alignments avoids rerunning that stage; no fixed runtime saving is promised.
