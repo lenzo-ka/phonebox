@@ -36,6 +36,13 @@ class PronunciationScore:
         }
 
 
+def validate_score_method(method: str) -> ScoreMethod:
+    """Reject unsupported aggregation before preprocessing or model inference."""
+    if method not in SCORE_METHODS:
+        raise ValueError("method must be 'geometric' or 'product'")
+    return cast(ScoreMethod, method)
+
+
 def score_sequence(
     distributions: Sequence[str | dict[str, float]],
     phones: Sequence[str],
@@ -43,9 +50,7 @@ def score_sequence(
     method: str = "geometric",
 ) -> PronunciationScore:
     """Sum complete matching paths, consuming one label per ordered position."""
-    if method not in SCORE_METHODS:
-        raise ValueError("method must be 'geometric' or 'product'")
-    selected = cast(ScoreMethod, method)
+    selected = validate_score_method(method)
     target = tuple(phones)
     positions = len(distributions)
     masses = {0: 0.0} if positions else {}

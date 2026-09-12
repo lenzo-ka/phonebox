@@ -9,6 +9,11 @@ Changes since `v0.1.0`:
 
 ### Training and inference
 
+- Score complete ordered CART pronunciation sequences, summing silent/joined
+  emission paths with stable log probabilities and saved preprocessing. Share
+  structured score details and numeric candidate JSON; geometric/product replace
+  unordered phone aggregation. Restore native CART embedded model metadata.
+
 - Unify dictionary training behind `train_g2p`, `train_g2p_from_config`,
   `G2P.train`, and `phonebox train`, with structured training results and shared
   CLI/config defaults. The primary workflow preserves stress, uses IPA-tagged

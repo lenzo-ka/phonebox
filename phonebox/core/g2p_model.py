@@ -41,7 +41,11 @@ from ..constants import (
     FILE_ENCODING,
     LENGTH_PENALTY_WEIGHT,
 )
-from ..pronunciation_scoring import PronunciationScore, score_sequence
+from ..pronunciation_scoring import (
+    PronunciationScore,
+    score_sequence,
+    validate_score_method,
+)
 from ..utils.io import is_dict_comment
 from .em_align import EMAlign
 from .nbest import generate_nbest, validate_nbest_count
@@ -658,6 +662,7 @@ class G2PDecisionTree:
         raw sequence mass. Scores measure model compatibility, not correctness.
         Exceptions are deliberately excluded from this calculation.
         """
+        validate_score_method(method)
         target = self.vectorizer.uncook(self.vectorizer.cook_phones(phones))
         return score_sequence(
             self._predict_distributions(word),

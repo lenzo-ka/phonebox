@@ -119,3 +119,61 @@ def test_cli_numeric_json_and_mg_capability_error(tmp_path, capsys):
     (tmp_path / "mg.units.json").write_text("{}")
     assert main(["score-prons", str(candidates), "-m", str(stem)]) == 2
     assert "MultigramG2P scoring is unsupported" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("suffix", [".g2p.gz", ".cart"])
+def test_saved_letter_rules_rewrites_and_phone_expansion(tmp_path, monkeypatch, suffix):
+    from phonebox import DecisionTree
+
+    dictionary = tmp_path / "italian.dict"
+    dictionary.write_text("caffè k a f f ɛ\n", encoding="utf-8")
+    dt = DecisionTree(
+        locale="it",
+        phoneset_name="ipa",
+        width=1,
+        parallel_align=False,
+        use_dict_fallback=False,
+    )
+    dt.vectorizer.spelling_rewrites = {"c": "g"}
+    dt.train_from_dict(str(dictionary))
+    before = dt.score_pronunciation_details("caffè", ["k", "a", "f", "f", "ɛ"])
+    assert before.supported
+    output = tmp_path / ("model" + suffix)
+    dt.export(str(output))
+    monkeypatch.setattr(
+        Vectorizer, "_load_transliterators", lambda self, locale_dir: None
+    )
+    loaded = G2P(model=output, use_dict_fallback=False)
+    assert loaded._dt.vectorizer.cook_letters("caffè", g2p=True) == [
+        "g",
+        "a",
+        "f",
+        "f",
+        "ɛ",
+    ]
+    after = loaded.score_pronunciation_details("caffè", ["k", "a", "f", "f", "ɛ"])
+    assert after.probability == pytest.approx(before.probability, rel=1e-6)
+
+
+def test_unknown_method_fails_before_untrained_inference():
+    from phonebox import DecisionTree
+
+    with pytest.raises(ValueError, match="method"):
+        DecisionTree(locale="en").score_pronunciation_details("cat", ["K"], "min")
+
+
+def test_batch_orders_underflowed_products_by_log_probability():
+    from phonebox.pronunciation_analysis import score_pronunciations
+
+    class DetailedScorer:
+        def score_pronunciation_details(self, word, phones, method="geometric"):
+            return score_sequence(
+                [{"A": 0.001 if phones[0] == "A" else 0.0001}] * 200,
+                ["A"] * 200,
+                lambda label: [label],
+                method,
+            )
+
+    assert list(
+        score_pronunciations(DetailedScorer(), "word", ["B", "A"], "product")
+    ) == ["A", "B"]

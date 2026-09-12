@@ -60,73 +60,67 @@ phonebox train --locale en_US --lexicon dict.txt -o model.g2p.gz
 **Model size impact:** +27% (425KB → 540KB)
 **Runtime impact:** None (distributions are sorted for fast 1-best lookup)
 
-## Pronunciation Likelihood Scoring
+## Ordered pronunciation scoring
 
-Score how likely a pronunciation is according to the model's learned letter-to-phone distributions.
-
-### API Usage
+Scoring measures compatibility with the trained CART model. It sums the mass
+of complete ordered emission sequences matching a candidate pronunciation.
+Each cooked letter position emits one leaf label; epsilon emits no phone and
+joined labels can emit several. Equivalent paths are summed, and positions
+cannot be reused or skipped without a learned silent label. Model exceptions
+are excluded. Saved spelling rules, joins and optional stress policy determine
+the representation; candidate scoring does not change that policy.
 
 ```python
 from phonebox import G2P
 
-g2p = G2P("model.g2p.gz")
-
-# Score a pronunciation (returns probability 0-1)
-score = g2p.score_pronunciation("READ", ["R", "IY", "D"])
-print(f"Likelihood: {score:.4f}")
-
-# Compare pronunciations
-read_present = g2p.score_pronunciation("READ", ["R", "IY", "D"])
-read_past = g2p.score_pronunciation("READ", ["R", "EH", "D"])
-
-# Choose scoring method
-score = g2p.score_pronunciation("the", ["DH", "AH"], method="geometric")
+model = G2P(model="model.g2p.gz")
+details = model.score_pronunciation_details("read", ["R", "IY1", "D"])
+print(details.score, details.log_probability, details.supported)
+print(details.to_dict())  # numeric values, public phones, null for no path
+score = model.score_pronunciation("read", ["R", "IY1", "D"])
 ```
 
-### Scoring Methods
+Only two methods are supported:
 
-The `method` parameter controls how per-phone probabilities are combined:
+| Method | Meaning |
+| --- | --- |
+| `geometric` (default) | exp(log sequence mass / cooked letter positions) |
+| `product` | Raw sequence probability under independent position emissions |
 
-| Method | Formula | Best For |
-|--------|---------|----------|
-| `geometric` (default) | ⁿ√(p₁ × p₂ × ... × pₙ) | Balanced scoring |
-| `product` | p₁ × p₂ × ... × pₙ | Strict matching |
-| `arithmetic` | (p₁ + p₂ + ... + pₙ) / n | Lenient scoring |
-| `harmonic` | n / (1/p₁ + 1/p₂ + ... + 1/pₙ) | Penalize weak links |
-| `min` | min(p₁, p₂, ..., pₙ) | Worst-case focus |
+Unknown methods raise `ValueError`. This alpha API replaces the previous
+unordered per-phone maximum aggregation and removes arithmetic, harmonic and
+minimum methods. Reversed or repeated phones need their own complete matching
+path; finding those phones somewhere in the word is insufficient.
 
-**Geometric mean** (default) is recommended because:
-- Handles varying pronunciation lengths fairly
-- Doesn't collapse to zero from one rare phone
-- Penalizes consistently weak pronunciations
+`PronunciationScore` records `score`, `probability`, `log_probability`,
+`positions`, effective public `phones`, `supported`, and `method`. No matching
+path has score/probability zero, log probability `None`, and supported false.
+No cooked positions is unsupported. A supported sequence can have raw probability
+zero from floating-point underflow while retaining finite log probability;
+use `supported` and log probability to distinguish that case. Log-space forward
+summation keeps long-sequence calculations stable. Deterministic leaves are
+point masses, so a model without ambiguous distributions has coarser scores.
 
-### Score Interpretation
+Geometric normalization reduces length bias across words; for variants of one
+word, position count is fixed and both methods give the same ranking. Neither
+score is a calibrated probability of correctness. There are no universal
+thresholds defining common, rare or erroneous pronunciations. Zero support can
+be a legitimate acronym, foreign pronunciation, or sparse training support.
 
-Scores are probabilities between 0 and 1:
-- `> 0.5` = Very likely pronunciation
-- `0.1 - 0.5` = Common pronunciation
-- `0.01 - 0.1` = Less common but valid
-- `< 0.01` = Rare or irregular
-- `0` = Contains impossible letter→phone mapping
+### Training and saved-material bounds
 
-### How It Works
+A rich-context model may memorize an unusual pronunciation in its own training
+lexicon and assign it mass one. `train_g2p(..., width=1)` is an explicit coarse
+orthographic-compatibility baseline; it also has sparse-data and memorization
+limits. A stronger outlier assessment needs held-out words (keeping every
+variant of a word in the same group) and empirical ranking evidence. Scores
+prioritize manual review rather than declare errors or detect abbreviations.
 
-1. Gets model's per-letter probability distributions (width=1 model recommended)
-2. For each phone in the target pronunciation, finds its probability in the corresponding letter's distribution
-3. Combines per-phone probabilities using the selected method
-
-### Width=1 Models for Scoring
-
-For pronunciation scoring, train a model with `width=1` (single letter context):
-
-```python
-dt = G2PDecisionTree(
-    width=1,  # Pure letter-to-phone probabilities
-    store_distributions=True,
-)
-```
-
-This gives clean letter→phone probability distributions without context interference.
+Phonebox `.g2p.gz`, `.jsonl`, and native `.cart` loading restore their embedded
+preprocessing metadata. Native CART probabilities are stored as float32, so
+round-trip numerical comparisons need tolerance. Metadata absent from an old
+artifact is not invented. Multigram candidate likelihood is unsupported; its
+EM unit distribution alone is not the full saved unit-language-model likelihood.
 
 ## Dictionary Validation Tools
 

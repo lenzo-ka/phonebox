@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import json
+import math
 import subprocess
 import sys
 from pathlib import Path
 
 import pytest
 
-from phonebox import G2P
+from phonebox import G2P, PronunciationScore
 from phonebox.pronunciation_analysis import (
     find_low_scores,
     find_score_gaps,
@@ -17,25 +18,35 @@ from phonebox.pronunciation_analysis import (
     strip_stress,
     triage_entries,
 )
+from phonebox.pronunciation_scoring import validate_score_method
 
 
 class FakeScorer:
     def __init__(self):
         self.calls = []
 
-    def score_pronunciation(self, word, phones, method="geometric"):
+    def score_pronunciation_details(self, word, phones, method="geometric"):
         self.calls.append((word, phones, method))
-        return {"AH0": 0.2, "EH1": 0.8}[phones[0]]
+        score = {"AH0": 0.2, "EH1": 0.8}[phones[0]]
+        return PronunciationScore(
+            score,
+            score,
+            math.log(score),
+            1,
+            tuple(phones),
+            True,
+            validate_score_method(method),
+        )
 
 
 def test_score_api_preserves_phones_sorts_and_preserves_entry_fields():
     scorer = FakeScorer()
-    scored = score_pronunciations(scorer, "read", ["AH0", "EH1"], method="harmonic")
+    scored = score_pronunciations(scorer, "read", ["AH0", "EH1"], method="product")
     assert scored == {"EH1": 0.8, "AH0": 0.2}
     assert strip_stress("DH AH0") == ["DH", "AH"]
     assert scorer.calls == [
-        ("read", ["AH0"], "harmonic"),
-        ("read", ["EH1"], "harmonic"),
+        ("read", ["AH0"], "product"),
+        ("read", ["EH1"], "product"),
     ]
     assert list(
         score_entries(scorer, [{"word": "read", "freq": 3, "prons": ["AH0"]}])
