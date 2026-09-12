@@ -268,13 +268,21 @@ class LexiconReviewRecord:
     @property
     def entry(self) -> str:
         """Dense dictionary label, independent of the source's variant suffix."""
-        return self.word if self.rank == 1 else f"{self.word}({self.rank})"
+        return self.entry_label()
 
-    def to_dict(self) -> dict:
-        """Return numeric JSON-compatible review values and complete origins."""
+    def entry_label(self, *, number_senses: bool = True) -> str:
+        """Return the ranked label, optionally repeating the bare spelling."""
+        return (
+            self.word
+            if not number_senses or self.rank == 1
+            else f"{self.word}({self.rank})"
+        )
+
+    def to_dict(self, *, number_senses: bool = True) -> dict:
+        """Return numeric values and origins, optionally without sense suffixes."""
         return {
             "word": self.word,
-            "entry": self.entry,
+            "entry": self.entry_label(number_senses=number_senses),
             "phones": list(self.phones),
             "score": self.score,
             "probability": self.probability,
@@ -298,15 +306,17 @@ class LexiconReviewResult:
     order: str
     filtered: bool
 
-    def to_dict(self) -> dict:
-        """Return an envelope suitable for strict JSON serialization."""
+    def to_dict(self, *, number_senses: bool = True) -> dict:
+        """Return strict JSON values with the selected entry-label presentation."""
         return {
             "source_entries": self.source_entries,
             "unique_variants": self.unique_variants,
             "method": self.method,
             "order": self.order,
             "filtered": self.filtered,
-            "records": [record.to_dict() for record in self.records],
+            "records": [
+                record.to_dict(number_senses=number_senses) for record in self.records
+            ],
         }
 
 
@@ -448,9 +458,16 @@ def review_lexicon_file(
 
 
 def format_lexicon_review(
-    result: LexiconReviewResult, *, format: str = "tsv", header: bool = True
+    result: LexiconReviewResult,
+    *,
+    format: str = "tsv",
+    header: bool = True,
+    number_senses: bool = True,
 ) -> Iterator[str]:
-    """Yield data-only TSV, strict JSON/JSONL, or two-column dictionary lines."""
+    """Yield data-only formats with optional ranked pronunciation suffixes.
+
+    number_senses changes entry labels only; ranks, ordering and origins remain.
+    """
     if format == "dict" and (result.filtered or result.order != "variants"):
         raise ValueError("dictionary format requires unfiltered variants order")
     if format == "dict" and any(
@@ -460,21 +477,29 @@ def format_lexicon_review(
             "dictionary format requires nonempty words and effective pronunciations"
         )
     if format == "json":
-        yield json.dumps(result.to_dict(), ensure_ascii=False, allow_nan=False)
+        yield json.dumps(
+            result.to_dict(number_senses=number_senses),
+            ensure_ascii=False,
+            allow_nan=False,
+        )
     elif format == "jsonl":
         for record in result.records:
-            yield json.dumps(record.to_dict(), ensure_ascii=False, allow_nan=False)
+            yield json.dumps(
+                record.to_dict(number_senses=number_senses),
+                ensure_ascii=False,
+                allow_nan=False,
+            )
     elif format in {"tsv", "dict"}:
         if format == "tsv" and header:
             yield "score\tentry\tphones\tword\trank\tlog_probability\tstatus\tsource_lines"
         for record in result.records:
             phones = " ".join(record.phones)
             if format == "dict":
-                fields = [record.entry, phones]
+                fields = [record.entry_label(number_senses=number_senses), phones]
             else:
                 fields = [
                     repr(record.score),
-                    record.entry,
+                    record.entry_label(number_senses=number_senses),
                     phones,
                     record.word,
                     str(record.rank),

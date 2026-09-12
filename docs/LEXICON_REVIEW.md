@@ -9,6 +9,8 @@ phonebox train --locale en --phoneset cmu --width 1 --no-prune \
   --lexicon words.dict -o model.g2p.gz
 phonebox dict review words.dict -m model.g2p.gz -o review.tsv
 phonebox dict review words.dict -m model.g2p.gz --format dict -o ranked.dict
+phonebox dict review words.dict -m model.g2p.gz --format dict \
+  --no-number-senses -o ranked-bare.dict
 ```
 
 CMUdict is a documented public input: fetch it with `phonebox dict fetch cmudict`
@@ -54,7 +56,7 @@ phonebox dict review words.dict -m model.g2p.gz --no-header \
 cut -f2,3 worst.tsv > selected.dict
 ```
 
-`entry` uses bare/(2)/(3) labels assigned by descending within-word likelihood;
+`entry` defaults to bare/(2)/(3) labels assigned by descending within-word likelihood;
 `phones` are the effective normalized public tokens used for scoring. JSON and
 JSONL preserve source labels, variant suffixes, physical lines and original phones
 in `origins`. Each review reads one input lexicon; origin line numbers refer
@@ -68,9 +70,15 @@ literal mapping grammar as dictionary processing and runs before model cooking.
 variants best first. Ties retain source order. `--threshold` selects scores strictly
 below its value, and `--limit` caps the selected records. Ranks are assigned before
 filtering: filtered TSV/JSON can contain rank gaps. Dense bare/(2)/(3) numbering
-is guaranteed for the unfiltered population only. Dictionary format implicitly
+is guaranteed for the unfiltered population with numbering enabled only. Dictionary format implicitly
 uses variants order and rejects threshold/limit or an explicit incompatible order;
 it writes exactly two fields, without metadata mistaken for phone tokens.
+`--no-number-senses` repeats the bare orthographic spelling for every variant;
+`--number-senses` explicitly enables the default CMUdict-style suffixes. Both
+settings apply to TSV, dictionary, JSON and JSONL labels without changing rank,
+origins or order. Use `--order variants` (implicit for dictionary output) to keep
+each spelling's most compatible pronunciation first. Numbering refers to ranked
+pronunciation variants, not inferred semantic senses.
 An empty effective pronunciation can still be reviewed in TSV/JSON, but
 dictionary export rejects it rather than emitting an unreadable empty entry.
 
@@ -99,6 +107,8 @@ with open("words.dict", encoding="utf-8") as lines:
 for line in format_lexicon_review(result, format="dict"):
     print(line)
 # result.to_dict() retains numeric scores and source provenance.
+# Set number_senses=False on the formatter or result/record.to_dict()
+# to repeat bare spellings while retaining rank and origins.
 ```
 
 `review_lexicon_file` is the file convenience wrapper. APIs return structured

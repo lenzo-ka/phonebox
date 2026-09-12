@@ -431,3 +431,85 @@ def test_official_cartlet_decision_export_load_score(tmp_path, feature, names):
     loaded = G2P(model=model)
     assert loaded.pronounce("a") == ["A"]
     assert loaded.score_pronunciation_details("a", ["A"]).score == 1.0
+
+
+@pytest.mark.parametrize("number_senses", [True, False])
+def test_number_senses_shared_labels_and_unchanged_provenance(number_senses):
+    result = review_lexicon(
+        Scorer(),
+        [
+            "word(9) B1",
+            "other(7) C1",
+            "word(5) A1",
+            "word A2",
+            "word(3) C1",
+            "other A1",
+        ],
+        order="variants",
+    )
+    labels = (
+        ["word", "word(2)", "word(3)", "other", "other(2)"]
+        if number_senses
+        else ["word"] * 3 + ["other"] * 2
+    )
+    data = result.to_dict(number_senses=number_senses)
+    assert [r["entry"] for r in data["records"]] == labels
+    assert [r.rank for r in result.records] == [1, 2, 3, 1, 2]
+    assert [o.label for o in result.records[0].origins] == ["word(5)", "word"]
+    assert result.records[1].phones == ("B",)  # Equal scores retain source order.
+    for record, serialized in zip(result.records, data["records"], strict=True):
+        assert record.to_dict(number_senses=number_senses) == serialized
+        assert record.entry == record.entry_label()
+        expected = record.to_dict()
+        expected["entry"] = serialized["entry"]
+        assert serialized == expected
+    for format in ("tsv", "dict", "json", "jsonl"):
+        lines = list(
+            format_lexicon_review(
+                result, format=format, header=False, number_senses=number_senses
+            )
+        )
+        if format == "json":
+            actual = [r["entry"] for r in json.loads(lines[0])["records"]]
+        elif format == "jsonl":
+            actual = [json.loads(line)["entry"] for line in lines]
+        else:
+            actual = [line.split("\t")[1 if format == "tsv" else 0] for line in lines]
+        assert actual == labels
+
+
+@pytest.mark.parametrize("format", ["tsv", "dict", "json", "jsonl"])
+def test_cli_optional_number_senses_actual_model(tmp_path, capsys, format):
+    from phonebox import train_g2p
+    from phonebox.cli.main import main
+
+    source = tmp_path / "words.dict"
+    source.write_text("a(9) B\na(3) A\nb B\n")
+    model = tmp_path / "model.g2p.gz"
+    train_g2p(source, locale="en", phoneset="ipa", width=1, prune=False, output=model)
+    args = [
+        "dict",
+        "review",
+        str(source),
+        "-m",
+        str(model),
+        "--order",
+        "variants",
+        "--format",
+        format,
+        "--no-header",
+    ]
+    for flag in (None, "--number-senses", "--no-number-senses"):
+        assert main(args + ([flag] if flag else [])) == 0
+        lines = capsys.readouterr().out.splitlines()
+        if format == "json":
+            records = json.loads(lines[0])["records"]
+            labels = [r["entry"] for r in records]
+            assert [r["rank"] for r in records] == [1, 2, 1]
+        elif format == "jsonl":
+            labels = [json.loads(line)["entry"] for line in lines]
+        else:
+            labels = [line.split("\t")[1 if format == "tsv" else 0] for line in lines]
+        assert labels == (
+            ["a", "a", "b"] if flag == "--no-number-senses" else ["a", "a(2)", "b"]
+        )

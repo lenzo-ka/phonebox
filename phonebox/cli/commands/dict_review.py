@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from argparse import BooleanOptionalAction
 from pathlib import Path
 
 from ...converter import G2P
@@ -53,6 +54,12 @@ def setup_dict_review_command(subparsers) -> None:
         "--no-header", action="store_true", help="Omit TSV column names"
     )
     parser.add_argument(
+        "--number-senses",
+        action=BooleanOptionalAction,
+        default=True,
+        help="Number ranked variants as word, word(2), ... (default: enabled)",
+    )
+    parser.add_argument(
         "--phone-map",
         type=Path,
         help="JSON literal phone mapping before saved model cooking",
@@ -97,7 +104,12 @@ def handle_dict_review(args) -> int:
         limit=args.limit,
         order=order,
     )
-    lines = format_lexicon_review(result, format=args.format, header=not args.no_header)
+    lines = format_lexicon_review(
+        result,
+        format=args.format,
+        header=not args.no_header,
+        number_senses=args.number_senses,
+    )
     # Run shared format validation before replacing a named destination.
     first = next(lines, None)
     with open_output(args.output) as stream:
