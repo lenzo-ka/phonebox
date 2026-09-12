@@ -67,8 +67,8 @@ installation support on every platform.
 
 ## Release preparation
 
-The 0.2.0 changelog is unreleased until a release is explicitly authorized.
-Preparation does not create a tag, publish a GitHub release, or upload to PyPI.
+Keep a release changelog undated until publication is explicitly authorized.
+Preparation alone does not create a tag, publish a GitHub release, or upload to PyPI.
 
 1. Work on a release branch and update `pyproject.toml` and
    `phonebox.__version__` together. Keep the changelog date unset until the cut.
