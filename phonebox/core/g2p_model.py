@@ -971,10 +971,9 @@ class G2PDecisionTree:
                     )
 
             # Load dictionary hash
-            if "dict_hash" in config:
-                self.dict_hash = config["dict_hash"]
-                if self.verbose:
-                    logger.info("Model trained from dictionary: %s", self.dict_hash)
+            self.dict_hash = pick("dict_hash", None)
+            if self.dict_hash and self.verbose:
+                logger.info("Model trained from dictionary: %s", self.dict_hash)
 
     def __repr__(self) -> str:
         return (

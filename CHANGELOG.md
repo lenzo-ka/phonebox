@@ -14,6 +14,8 @@ Changes since `v0.1.0`:
   CLI/config defaults. The primary workflow preserves stress, uses IPA-tagged
   phones, trains serially with the native CART trainer, and prunes with a 5%
   validation split by default. CMU dictionaries require `phoneset="cmu"`.
+- Restore the dictionary content hash on CART model load and re-export using
+  the same nested-metadata precedence as other model configuration.
 - Save training-time preprocessing with CART and multigram models, including
   locale policy, transliteration rules, joins, scalar flags, and spelling
   rewrites. Current save/load paths preserve those choices.
@@ -22,6 +24,12 @@ Changes since `v0.1.0`:
   Bundling remains a decision-tree feature.
 - Preserve Spanish Unicode equivalence and acute weak-vowel hiatus cues; fold
   Italian accented a/i/u in the stressless spelling policy.
+
+### Licensing
+
+- Change the code license from MIT at `v0.1.0` to BSD 2-Clause in post-tag
+  commit `f807a46`. Packaged ICU/CLDR exemplar data additionally carries
+  Unicode-3.0 with its complete notice.
 
 ### Locale and dictionary APIs
 
@@ -61,4 +69,5 @@ See [upgrade guidance](docs/RELEASING.md#upgrading-from-010) before migrating.
 
 Initial tagged alpha baseline (`v0.1.0`): decision-tree G2P, EM alignment,
 multigram models, dictionary/model tooling, and standalone tree inference.
-The project license is BSD 2-Clause; 0.2.0 also packages Unicode-licensed data.
+This tag used the MIT license. The later code-license change and
+Unicode-licensed data addition are recorded under 0.2.0 above.

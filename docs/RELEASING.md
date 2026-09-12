@@ -6,8 +6,9 @@
 CLI, or saved-model compatibility. Pin `phonebox==0.2.0` when adopting this line.
 The [changelog](../CHANGELOG.md) records the changes since `v0.1.0`.
 
-- Use `phonebox.train_g2p` or `G2P.train` for dictionary-to-CART training and
-  consume the returned `TrainingResult` (`model`, `metrics`, and artifact paths).
+- Use `phonebox.train_g2p` or `train_g2p_from_config` for dictionary-to-CART
+  training and consume their `TrainingResult` (`model`, `metrics`, and artifact
+  paths). `G2P.train` wraps the same workflow and returns a `G2P` predictor.
   `phonebox train` and config training share this workflow. Replace
   `phonebox model build --config ...` with `phonebox train --config ...`.
   Prepared alignments and vectors remain separate low-level operations under
@@ -73,9 +74,15 @@ Preparation does not create a tag, publish a GitHub release, or upload to PyPI.
 
 Only after the owner explicitly authorizes publication, set the changelog date,
 review the final version commit, rerun release checks, and create `v0.2.0` at the
-verified commit. Publish release notes from the changelog and upload the checked
-wheel and sdist using the project's chosen release credentials and tooling.
-Record artifact hashes and published URLs. These steps remain pending during
+verified commit. Publishing the GitHub release triggers
+[`.github/workflows/publish.yml`](https://github.com/lenzo-ka/phonebox/blob/main/.github/workflows/publish.yml): it checks
+release-tag/package-version agreement, rebuilds the wheel and sdist from that
+release, runs `twine check`, and publishes the resulting artifacts to PyPI via
+trusted publishing in the `pypi` GitHub environment (`id-token: write`). Confirm
+the environment and PyPI trusted-publisher configuration before publishing the
+GitHub release; publication is the trigger, not a draft release. Local readiness
+artifacts are checks, not the files uploaded by this workflow. Record the workflow
+result, published artifact hashes, and URLs. These steps remain pending during
 release preparation.
 
 Phonebox code is BSD 2-Clause. Packaged ICU/CLDR-derived exemplar data carries
