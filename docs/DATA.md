@@ -73,6 +73,28 @@ phonebox train --locale en_US --phoneset cmu \
   --remove-stress
 ```
 
+### French liaison annotations
+
+To train a CART model to emit liaison markers or other annotated pronunciation
+tails, the training lexicon must include those symbols explicitly on the
+**pronunciation side**. Do not assume an ordinary French pronunciation lexicon
+contains these annotations: inspect its format and inventory before training.
+The symbols must also survive the selected phone preprocessing.
+
+The French policy supplies input-side padding (`liaison_pad="#"`) for alignment;
+it does not create pronunciation-side liaison annotations. The input sentinel
+and the target symbols have different roles: the target marker need not be a
+literal `#`. Do not append `#` to dictionary spellings yourself to enable this
+behavior. Selecting `--locale fr` or `--locale fr_FR` alone does not annotate a
+lexicon or teach the model when liaison should occur.
+
+A lexicon containing only ordinary word pronunciations supplies no explicit
+liaison-marker targets. If liaison output is required, prepare an annotated
+lexicon with a documented marker convention and compatible phone processing.
+Word-level G2P output is not a sentence-level decision about whether to realize
+liaison before the next word. These data requirements apply equally to the
+Python training API and CLI; bundling does not add missing annotations.
+
 ## Complete Pipeline
 
 ```bash

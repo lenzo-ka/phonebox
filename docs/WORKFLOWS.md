@@ -85,3 +85,5 @@ n:m inference uses the full library.
 [Lexicon review](LEXICON_REVIEW.md) accepts dictionary lines directly, preserves
 all source origins after effective-phone deduplication, and assigns full-population
 ranks before filtering. JSONL candidate scoring is a separate input adapter.
+
+For French CART training, see [liaison annotation requirements](DATA.md#french-liaison-annotations): input padding does not supply pronunciation-side markers missing from the lexicon.
