@@ -14,7 +14,6 @@ decision tree implementation:
 from __future__ import annotations
 
 import hashlib
-import math
 from collections import Counter, defaultdict
 from datetime import UTC, datetime
 from pathlib import Path
@@ -24,6 +23,7 @@ from typing import Any, cast
 from cartlet import (
     CRITERION_ENTROPY,
     PROB_HIGH_CONFIDENCE,
+    read_cart_metadata,
 )
 from cartlet import DecisionTree as GenericDecisionTree
 
@@ -40,6 +40,11 @@ from ..constants import (
     DICT_HASH_LENGTH,
     FILE_ENCODING,
     LENGTH_PENALTY_WEIGHT,
+)
+from ..pronunciation_scoring import (
+    PronunciationScore,
+    score_sequence,
+    validate_score_method,
 )
 from ..utils.io import is_dict_comment
 from .em_align import EMAlign
@@ -488,22 +493,24 @@ class G2PDecisionTree:
         Returns:
             List of raw phonemes (may include joined phonemes and epsilon)
         """
-        # Get valid letter vocabulary from model header (if available)
-        letter_vocab = self._get_letter_vocabulary()
+        return cast(list[str], self._predict_positions(word, return_dist=False))
 
-        predictions = []
+    def _predict_positions(
+        self, word: str, *, return_dist: bool
+    ) -> list[str | dict[str, float]]:
+        """Apply one saved vocabulary policy to labels and distributions."""
+        letter_vocab = self._get_letter_vocabulary()
+        predictions: list[str | dict[str, float]] = []
         for vec in self.vectorizer.vectorize_word(word):
-            # Check if center letter is in vocabulary
             if letter_vocab and not self._is_valid_vector(vec, letter_vocab):
-                # OOV letter → epsilon (don't call tree)
                 predictions.append(self.vectorizer.epsilon)
             else:
-                # Known letter → use tree. cartlet's predict() is generic
-                # (returns Any) but in classification mode it produces the
-                # phone-label string; cast to keep the public list[str]
-                # signature accurate.
-                pred = cast(str, self._cart.predict(vec))
-                predictions.append(pred)
+                predictions.append(
+                    cast(
+                        "str | dict[str, float]",
+                        self._cart.predict(vec, return_dist=return_dist),
+                    )
+                )
         return predictions
 
     def _get_letter_vocabulary(self) -> set | None:
@@ -565,15 +572,7 @@ class G2PDecisionTree:
         Returns:
             List of distributions (one per letter)
         """
-        dists: list[str | dict[str, float]] = []
-        for vec in self.vectorizer.vectorize_word(word):
-            # cartlet.predict(return_dist=True) returns dict[str, float]
-            # for classification leaves; cast since the signature is generic.
-            dist = cast(
-                "str | dict[str, float]", self._cart.predict(vec, return_dist=True)
-            )
-            dists.append(dist)
-        return dists
+        return self._predict_positions(word, return_dist=True)
 
     def pronounce_with_confidence(self, word: str) -> tuple[list[str], list[float]]:
         """
@@ -648,60 +647,29 @@ class G2PDecisionTree:
 
         return nbest_cooked
 
+    def score_pronunciation_details(
+        self, word: str, phones: list[str], method: str = "geometric"
+    ) -> PronunciationScore:
+        """Score complete ordered emissions using saved model preprocessing.
+
+        Geometric mass is normalized per cooked letter position; product is
+        raw sequence mass. Scores measure model compatibility, not correctness.
+        Exceptions are deliberately excluded from this calculation.
+        """
+        validate_score_method(method)
+        target = self.vectorizer.uncook(self.vectorizer.cook_phones(phones))
+        return score_sequence(
+            self._predict_distributions(word),
+            target,
+            lambda label: self.vectorizer.uncook([label]),
+            method,
+        )
+
     def score_pronunciation(
         self, word: str, phones: list[str], method: str = "geometric"
     ) -> float:
-        """
-        Score how likely a given pronunciation is for a word.
-
-        Uses a greedy alignment: for each target phone, find the position
-        with highest probability for that phone.
-
-        Args:
-            word: The word to score
-            phones: List of phonemes to score
-            method: How to combine per-phone scores:
-                - "geometric" (default): geometric mean, length-normalized
-                - "product": raw product of probabilities
-                - "arithmetic": arithmetic mean
-                - "min": minimum (weakest link)
-                - "harmonic": harmonic mean
-
-        Returns:
-            Overall score (0.0 to 1.0, higher is better)
-        """
-        # Get distributions from model
-        dists = self._predict_distributions(word)
-
-        # Cook the phones to match model's internal representation
-        cooked_phones = self.vectorizer.cook_phones(phones)
-
-        # For each phone, find the best probability across all positions
-        phone_scores = []
-
-        for phone in cooked_phones:
-            best_prob = 0.0
-            for dist in dists:
-                if isinstance(dist, dict):
-                    prob = dist.get(phone, 0.0)
-                    best_prob = max(best_prob, prob)
-            phone_scores.append(best_prob)
-
-        # If no scores or any zero, return 0
-        if not phone_scores or any(s == 0 for s in phone_scores):
-            return 0.0
-
-        if method == "product":
-            return math.prod(phone_scores)
-        if method == "arithmetic":
-            return sum(phone_scores) / len(phone_scores)
-        if method == "min":
-            return min(phone_scores)
-        if method == "harmonic":
-            return len(phone_scores) / sum(1 / s for s in phone_scores)
-        # geometric (default)
-        log_sum = sum(math.log(s) for s in phone_scores)
-        return math.exp(log_sum / len(phone_scores))
+        """Return ordered sequence compatibility; see score_pronunciation_details."""
+        return self.score_pronunciation_details(word, phones, method).score
 
     def build_exceptions_dict(self, infile=None) -> dict[str, list[str]]:
         """
@@ -898,6 +866,11 @@ class G2PDecisionTree:
             path: Path to model file (.g2p.gz, .jsonl.gz, .cart, etc.)
         """
         config = self._cart.load_model(path, format=self._format_for(path))
+        if Path(path).suffix == ".cart":
+            metadata = read_cart_metadata(path)
+            if metadata:
+                config = dict(config or {})
+                config["metadata"] = {**config.get("metadata", {}), **metadata}
 
         # Store header for vocabulary access (OOV checking)
         self._model_header = config if config else {}

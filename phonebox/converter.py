@@ -25,6 +25,7 @@ from .constants import (
 from .core.decision_tree import DecisionTree
 from .locale_resolution import canonical_locale
 from .normalize import normalize_text, tokenize_raw
+from .pronunciation_scoring import PronunciationScore
 
 
 class G2P:
@@ -380,31 +381,21 @@ class G2P:
         """Check if model has probability distributions at leaves."""
         return self._dt.store_distributions
 
+    def score_pronunciation_details(
+        self, word: str, phones: list[str], method: str = "geometric"
+    ) -> PronunciationScore:
+        """Return ordered model compatibility and sequence/log probability."""
+        return self._dt.score_pronunciation_details(word, phones, method)
+
     def score_pronunciation(
         self, word: str, phones: list[str], method: str = "geometric"
     ) -> float:
+        """Return ordered sequence mass, optionally normalized per letter position.
+
+        Only geometric and product methods are supported. Model compatibility
+        does not establish that a pronunciation is correct or erroneous.
         """
-        Score a specific pronunciation using the model's probability distributions.
-
-        Args:
-            word: Word to score
-            phones: Target phoneme sequence
-            method: How to combine per-phone scores:
-                - "geometric" (default): geometric mean, length-normalized
-                - "product": raw product of probabilities
-                - "arithmetic": arithmetic mean
-                - "min": minimum (weakest link)
-                - "harmonic": harmonic mean
-
-        Returns:
-            Overall score (0.0 to 1.0), higher is better.
-
-        Examples:
-            >>> g2p = G2P(model='models/en_US_nostress.g2p.gz')
-            >>> score = g2p.score_pronunciation("READ", ["R", "IY", "D"])
-            >>> print(f"Score: {score:.3f}")
-        """
-        return self._dt.score_pronunciation(word, phones, method=method)
+        return self.score_pronunciation_details(word, phones, method).score
 
     def __repr__(self) -> str:
         return f"G2P(locale={self.locale}, phoneset={self.phoneset})"

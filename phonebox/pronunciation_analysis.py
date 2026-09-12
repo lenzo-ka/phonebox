@@ -11,7 +11,12 @@ from collections.abc import Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, Literal, Protocol
 
-ScoreMethod = Literal["geometric", "product", "arithmetic", "min", "harmonic"]
+from .pronunciation_scoring import (
+    PronunciationScore,
+    ScoreMethod,
+    validate_score_method,
+)
+
 Category = Literal["REVIEW", "FOREIGN", "ABBREV", "FUNCTION", "OK"]
 CATEGORIES: tuple[Category, ...] = ("REVIEW", "FOREIGN", "ABBREV", "FUNCTION", "OK")
 
@@ -19,9 +24,9 @@ CATEGORIES: tuple[Category, ...] = ("REVIEW", "FOREIGN", "ABBREV", "FUNCTION", "
 class PronunciationScorer(Protocol):
     """Minimal scoring interface accepted by the batch helpers."""
 
-    def score_pronunciation(
+    def score_pronunciation_details(
         self, word: str, phones: list[str], method: str = "geometric"
-    ) -> float: ...
+    ) -> PronunciationScore: ...
 
 
 @dataclass(frozen=True)
@@ -65,12 +70,24 @@ def score_pronunciations(
     pronunciations: Sequence[str],
     method: ScoreMethod = "geometric",
 ) -> dict[str, float]:
-    """Score variants, retaining original spellings in descending score order."""
-    scored = {
-        pron: scorer.score_pronunciation(word, pron.split(), method=method)
+    """Score variants by sequence log mass, retaining source-order ties.
+
+    Requires detailed model scores so raw probability underflow cannot turn
+    unequal supported likelihoods into false ties. Returned scores are numeric.
+    """
+    validate_score_method(method)
+    details = {
+        pron: scorer.score_pronunciation_details(word, pron.split(), method=method)
         for pron in pronunciations
     }
-    return dict(sorted(scored.items(), key=lambda item: -item[1]))
+    ordered = sorted(
+        details.items(),
+        key=lambda item: (
+            item[1].log_probability is None,
+            -(item[1].log_probability or 0.0),
+        ),
+    )
+    return {pron: result.score for pron, result in ordered}
 
 
 def score_entries(
