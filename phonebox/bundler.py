@@ -13,6 +13,7 @@ from cartlet import read_cart_metadata
 
 from .constants import FILE_ENCODING
 from .portable_normalization import compile_metadata_preprocessing
+from .utils.io import paths_refer_to_same_file
 
 
 def _ensure_cart_format(model_path: str) -> tuple[str, bool]:
@@ -78,6 +79,10 @@ def bundle_g2p(model_path: str, output_path: str) -> None:
     Raises:
         ValueError: The model is a multigram artifact, which is not supported.
     """
+    if not str(output_path).strip():
+        raise ValueError("output must be a nonempty bundle path")
+    if paths_refer_to_same_file(model_path, output_path):
+        raise ValueError("bundle output must differ from the input model")
     model = Path(model_path)
     if not model.exists() and model.with_suffix(model.suffix + ".units.json").is_file():
         raise ValueError(

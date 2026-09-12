@@ -5,6 +5,7 @@ from __future__ import annotations
 import sys
 
 from ...constants import FILE_ENCODING
+from ._common import expected_input_errors
 
 
 def setup_normalize_command(subparsers):
@@ -40,6 +41,7 @@ Examples:
     parser.set_defaults(func=handle_normalize)
 
 
+@expected_input_errors
 def handle_normalize(args):
     """Handle 'phonebox normalize' command."""
     from ...normalize import normalize_text, tokenize_raw

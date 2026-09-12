@@ -11,6 +11,12 @@ from __future__ import annotations
 from ..constants import DEFAULT_NBEST_COUNT, NBEST_TOP_K_PER_POSITION
 
 
+def validate_nbest_count(n: int) -> None:
+    """Require a positive count before inference or exception lookup."""
+    if n <= 0:
+        raise ValueError("n must be a positive number of alternatives")
+
+
 def generate_nbest(
     distributions: list[dict[str, float]], n: int = DEFAULT_NBEST_COUNT
 ) -> list[tuple[list[str], float]]:
@@ -33,6 +39,7 @@ def generate_nbest(
 
         Returns top n combinations with scores
     """
+    validate_nbest_count(n)
     if not distributions:
         return []
 

@@ -16,6 +16,8 @@ from phonebox.eval.cmudict_compare import (
     write_results,
 )
 
+from ._common import expected_input_errors, require_distinct_output
+
 
 def setup_cmudict_compare_command(subparsers) -> None:
     parser = subparsers.add_parser(
@@ -51,6 +53,7 @@ def setup_cmudict_compare_command(subparsers) -> None:
     parser.set_defaults(func=handle_compare_cmudict)
 
 
+@expected_input_errors
 def handle_compare_cmudict(args: argparse.Namespace) -> int:
     if args.check:
         try:
@@ -63,6 +66,13 @@ def handle_compare_cmudict(args: argparse.Namespace) -> int:
             print(f"CMUdict comparison check failed: {exc}", file=sys.stderr)
             return 2
         return 0 if actual == expected else 1
+    markdown = args.markdown or Path("docs/CMUDICT_COMPARISON.md")
+    if (status := require_distinct_output(args.refresh, markdown)) is not None:
+        return status
+    if args.lexicon is not None:
+        for output in (args.refresh, markdown):
+            if (status := require_distinct_output(args.lexicon, output)) is not None:
+                return status
     try:
         if args.lexicon is None:
             with tempfile.TemporaryDirectory() as tmp:
@@ -78,7 +88,6 @@ def handle_compare_cmudict(args: argparse.Namespace) -> int:
         print(f"CMUdict comparison failed: {exc}", file=sys.stderr)
         return 2
     write_results(args.refresh, result)
-    markdown = args.markdown or Path("docs/CMUDICT_COMPARISON.md")
     markdown.parent.mkdir(parents=True, exist_ok=True)
     markdown.write_text(render_markdown(result), encoding="utf-8")
     return 0

@@ -226,14 +226,22 @@ class MultigramG2P:
 
     # ----------- save/load
 
+    @staticmethod
+    def export_paths(path: str | Path) -> tuple[Path, Path]:
+        """Return the unit and language-model sidecars written for a stem."""
+        path = Path(path)
+        return (
+            path.with_suffix(path.suffix + ".units.json"),
+            path.with_suffix(path.suffix + ".lm.json"),
+        )
+
     def export(self, path: str | Path) -> None:
         if not self.lm.is_trained:
             raise RuntimeError("nothing to export — train first")
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
 
-        units_path = path.with_suffix(path.suffix + ".units.json")
-        lm_path = path.with_suffix(path.suffix + ".lm.json")
+        units_path, lm_path = self.export_paths(path)
 
         units_serialised = [
             [list(letters), list(phones), prob]

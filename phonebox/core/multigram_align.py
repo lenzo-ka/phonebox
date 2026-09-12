@@ -479,6 +479,23 @@ class MultigramAligner:
         if not pair_list:
             raise ValueError("no input pairs")
 
+        # Each unit consumes 1..max_l letters and min_p..max_p phones.
+        # An admissible pair needs an integer number of units satisfying both
+        # length bounds. Reject an entirely impossible corpus before EM;
+        # numerical failures during later iterations remain internal errors.
+        def admissible(letters: tuple[str, ...], phones: tuple[str, ...]) -> bool:
+            n_l, n_p = len(letters), len(phones)
+            if not n_l or (not self.max_p and n_p):
+                return False
+            minimum = (n_l + self.max_l - 1) // self.max_l
+            if self.max_p:
+                minimum = max(minimum, (n_p + self.max_p - 1) // self.max_p)
+            maximum = min(n_l, n_p // self.min_p) if self.min_p else n_l
+            return minimum <= maximum
+
+        if not any(admissible(letters, phones) for letters, phones in pair_list):
+            raise ValueError("no admissible input pairs for the configured spans")
+
         self.q = self._initial_distribution(pair_list)
         prev_ll: float | None = None
         self._loglik_history = []

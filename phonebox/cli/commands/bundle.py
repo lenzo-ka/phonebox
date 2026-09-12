@@ -6,6 +6,8 @@ import argparse
 import os
 import sys
 
+from ._common import expected_input_errors
+
 
 def setup_bundle_command(subparsers):
     """Setup bundle command."""
@@ -34,6 +36,7 @@ Library usage:
     parser.set_defaults(func=handle_bundle)
 
 
+@expected_input_errors
 def handle_bundle(args):
     """Handle 'phonebox bundle' command."""
     from ...bundler import bundle_g2p
@@ -50,6 +53,8 @@ def handle_bundle(args):
         print("           g2p = G2PPredictor.from_embedded()", file=sys.stderr)
         print("           g2p.pronounce_text('Hello, world!')", file=sys.stderr)
         return 0
+    except (ImportError, OSError, ValueError):
+        raise
     except Exception as error:
         print(f"Error: {error}", file=sys.stderr)
         return 1
