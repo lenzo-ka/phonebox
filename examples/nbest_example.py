@@ -61,7 +61,7 @@ either	AY DH ER
     dt.export(str(model_path))
 
     print(f"\nDone: Model saved to: {model_path}")
-    print("  Model version: 2 (supports n-best)")
+    print(f"  Model version: {DecisionTree.VERSION} (supports n-best)")
 
     # Cleanup
     dict_path.unlink()
