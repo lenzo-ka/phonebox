@@ -234,3 +234,22 @@ def test_dict_export_vectors_preserves_stdout_and_forwards_width(dictionary, cap
     rows = capsys.readouterr().out.splitlines()
     assert rows
     assert all(len(row.split()) == 4 for row in rows)
+
+
+def test_config_rejects_core_phoneset_alias_with_public_option_guidance(
+    dictionary, tmp_path, capsys
+):
+    config = {
+        "dictionary": str(dictionary),
+        "locale": "en",
+        "phoneset_name": "cmu",
+        "prune": False,
+    }
+    with pytest.raises(ValueError, match="phoneset_name.*phoneset"):
+        train_g2p_from_config(config)
+    config["output"] = str(tmp_path / "alias.g2p.gz")
+    path = tmp_path / "alias.json"
+    path.write_text(json.dumps(config))
+    assert main(["train", "--config", str(path)]) == 2
+    error = capsys.readouterr().err
+    assert "phoneset_name" in error and "phoneset" in error

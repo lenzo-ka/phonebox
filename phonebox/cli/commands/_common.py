@@ -9,7 +9,7 @@ from functools import wraps
 from pathlib import Path
 from typing import ParamSpec
 
-from ...constants import DEFAULT_LOCALE, DEFAULT_PHONESET
+from ...constants import CONTEXT_WINDOW_SIZE, DEFAULT_LOCALE, DEFAULT_PHONESET
 from ...utils.io import paths_refer_to_same_file
 
 # Conventional exit code for a bad-input / usage error (missing file, etc.).
@@ -41,8 +41,8 @@ def add_vectorizer_args(
     """Add the locale/phoneset/stress options shared by vectorizer-driven commands.
 
     ``cased`` and ``target_first`` add the corresponding optional flags only for
-    commands that consume them, keeping each command's surface identical to its
-    definitions; context width is shared by all these consumers.
+    commands that consume them. Locale, phoneset, stress, and context width
+    share one definition and set of defaults.
     """
     parser.add_argument(
         "--locale",
@@ -108,5 +108,8 @@ def require_distinct_output(
 def add_width_arg(parser: argparse.ArgumentParser) -> None:
     """Add the context width consumed by vectorization and prepared training."""
     parser.add_argument(
-        "--width", type=int, default=7, help="Odd context width (default: 7)"
+        "--width",
+        type=int,
+        default=CONTEXT_WINDOW_SIZE,
+        help=f"Odd context width (default: {CONTEXT_WINDOW_SIZE})",
     )

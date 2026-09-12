@@ -135,6 +135,10 @@ def train_g2p_from_config(
 ) -> TrainingResult:
     """Train through the primary workflow from a configuration mapping or file."""
     supplied = load_config(str(config)) if isinstance(config, (str, Path)) else config
+    if "phoneset_name" in supplied:
+        raise ValueError(
+            "Unsupported training config option phoneset_name; use phoneset"
+        )
     accepted = {
         name
         for function in (train_g2p, G2PDecisionTree)
