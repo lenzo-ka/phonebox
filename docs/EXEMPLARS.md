@@ -52,6 +52,7 @@ is opt-in through the mapping argument; the generic resolver does not infer it.
 Install the development requirements, then run:
 
 ```bash
+python -m pip install ".[dev]"
 python -m phonebox exemplars generate --output phonebox/config/exemplars.json
 python -m phonebox exemplars generate --output phonebox/config/exemplars.json --check
 ```

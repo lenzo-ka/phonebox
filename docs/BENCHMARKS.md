@@ -1,6 +1,11 @@
 # G2P Benchmarks
 
-## Measured results (this repo)
+For the release preparation measurement with recorded source and data provenance,
+see [the reproducible CMUdict comparison](CMUDICT_COMPARISON.md). The older
+results below use a different split and are retained as historical context;
+they are not measurements of the current release.
+
+## Historical measured results
 
 CMUdict, 1:1 `G2PDecisionTree`, **pure g2p** (no exceptions dictionary), trained
 on a 133,166-entry split and evaluated on a held-out 2,000-word test, single

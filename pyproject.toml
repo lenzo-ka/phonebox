@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "phonebox"
 version = "0.2.0"
-description = "Fast, lightweight grapheme-to-phoneme conversion using decision trees"
+description = "Train G2P models, generate pronunciations, and review pronunciation lexicons"
 readme = "README.md"
 authors = [
     {name = "Kevin Lenzo (lenzo-ka)"},
@@ -71,6 +71,8 @@ viz = [
 
 [project.urls]
 "Homepage" = "https://github.com/lenzo-ka/phonebox"
+"Documentation" = "https://github.com/lenzo-ka/phonebox/blob/main/docs/README.md"
+"Changelog" = "https://github.com/lenzo-ka/phonebox/blob/main/CHANGELOG.md"
 "Bug Reports" = "https://github.com/lenzo-ka/phonebox/issues"
 "Source" = "https://github.com/lenzo-ka/phonebox"
 

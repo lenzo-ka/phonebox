@@ -2,6 +2,13 @@
 
 ## Overview
 
+Examples show CART models. Confidence and n-best use dictionary fallback by
+default: a known exception returns its selected pronunciation with score 1.0.
+Load with `use_dict_fallback=False` in Python to inspect tree emissions.
+These scores measure model compatibility, not calibrated correctness; see
+[ordered scoring](PERFORMANCE_AND_SCORING.md). Illustrative output below
+depends on the trained model and stress policy.
+
 Phonebox supports **confidence scores** and **n-best pronunciation lists** for grapheme-to-phoneme conversion. This feature helps identify:
 
 - **Uncertain predictions**: Phonemes with low confidence scores
@@ -15,7 +22,7 @@ Phonebox supports **confidence scores** and **n-best pronunciation lists** for g
 Distributions are stored by default. To train a model:
 
 ```bash
-phonebox train --locale en_US --lexicon my_dict.txt -o model.g2p.gz
+phonebox train --locale en_US --phoneset cmu --lexicon my_dict.txt -o model.g2p.gz
 ```
 
 This stores probability distributions at ambiguous decision tree leaves, enabling confidence scores and n-best generation.
@@ -35,7 +42,7 @@ phonebox pronounce hello -m model.g2p.gz --with-confidence
 ```python
 from phonebox import G2P
 
-g2p = G2P(model='model.g2p.gz')
+g2p = G2P(model='model.g2p.gz', use_dict_fallback=False)
 phones, confidences = g2p.pronounce_with_confidence('hello')
 # phones = ['HH', 'AH', 'L', 'OW']
 # confidences = [0.95, 0.82, 0.98, 0.87]
@@ -64,7 +71,7 @@ phonebox pronounce read -m model.g2p.gz --nbest 3
 ```python
 from phonebox import G2P
 
-g2p = G2P(model='model.g2p.gz')
+g2p = G2P(model='model.g2p.gz', use_dict_fallback=False)
 nbest = g2p.pronounce_nbest('read', n=3)
 
 for phones, score in nbest:
@@ -79,14 +86,14 @@ for phones, score in nbest:
 
 ### `store_distributions` (config key, default `true`)
 
-Controls whether probability distributions are stored at tree leaves. Set in
-a YAML config passed via `--config`, or as a constructor argument to
+Controls whether probability distributions are stored at tree leaves. Use a
+TOML/JSON config passed via `--config` (YAML requires `phonebox[config]`),
+or a constructor argument to
 `DecisionTree` / `G2P.train(...)`.
 
 **Effect:**
-- Model size: ~5-10% increase
-- Training time: No significant change
-- Inference time: 1-best unchanged, n-best adds ~2-5ms/word
+- Retaining distributions can increase exported model size.
+- Runtime and size depend on the model and requested alternative count.
 
 **When to use:**
 - You need confidence scores
@@ -122,14 +129,14 @@ require `phonebox[config]`:
 Flag low-confidence predictions for human review:
 
 ```python
-g2p = G2P(model='model.g2p.gz')
+g2p = G2P(model='model.g2p.gz', use_dict_fallback=False)
 
 with open('words.txt') as f:
     for word in f:
         word = word.strip()
         phones, confs = g2p.pronounce_with_confidence(word)
 
-        min_conf = min(confs) if confs else 1.0
+        min_conf = min(confs) if confs else 0.0
         if min_conf < 0.6:
             print(f"WARNING:  Low confidence on '{word}': {min_conf:.2f}")
             print(f"   Pronunciation: {' '.join(phones)}")
@@ -211,38 +218,22 @@ differs:
 | `store_distributions` | Leaf type | Confidence | N-Best |
 |-----------------------|-----------|------------|--------|
 | `True` (default)      | dict of `{class: probability}` | per-phoneme probabilities | up to many alternatives |
-| `False`               | single class label | always 1.0 | always 1 result |
+| `False`               | single class label | always 1.0 | at most 1 result |
 
 Both kinds of model load through the same `G2P(model=...)` / `DecisionTree`
 loader. If you call `pronounce_with_confidence()` or `pronounce_nbest()` on a
 model trained without distributions, you get 1.0 / single-result fallbacks,
 not an error.
 
-## Performance
+## Measuring performance
 
-### Model Size
-
-Tested on CMUdict (133k words):
-
-| Configuration | Model Size | Increase |
-|--------------|-----------|----------|
-| Baseline (no dists) | 2.4 MB | - |
-| With distributions (entropy=0.1) | 2.6 MB | +8% |
-| With distributions (entropy=0.05) | 2.8 MB | +17% |
-
-### Inference Speed
-
-Tested on 10,000 words:
-
-| Operation | Time per word |
-|-----------|--------------|
-| 1-best (no dists) | 0.12 ms |
-| 1-best (with dists) | 0.12 ms |
-| with_confidence | 0.14 ms |
-| nbest (n=5) | 0.18 ms |
-| nbest (n=10) | 0.24 ms |
-
-**Key insight:** 1-best speed unchanged. Sorted distributions enable fast `next(iter(dict))` lookup.
+See [the reproducible CMUdict comparison](CMUDICT_COMPARISON.md) for measured
+training accuracy, timing, and complete export sizes at its recorded source and
+dependency versions. That report does not benchmark confidence or n-best latency.
+Measure those operations on your own saved model and representative word list;
+record the model configuration, fallback setting, alternative count, dependency
+versions and machine. Compare exported artifact sizes and repeat timing runs
+under the same conditions rather than assuming a fixed overhead.
 
 ## API Reference
 
@@ -284,8 +275,13 @@ class G2P:
 
 ### Training
 
+Confidence and n-best use dictionary fallback by default. A known exception
+returns its selected pronunciation with score 1.0; Python examples disable
+fallback to inspect tree emissions. Scores are model compatibility, not
+calibrated correctness. See [ordered scoring](PERFORMANCE_AND_SCORING.md).
+
 ```bash
-phonebox train --locale en_US --lexicon dict.txt -o model.g2p.gz [options]
+phonebox train --locale en_US --phoneset cmu --lexicon dict.txt -o model.g2p.gz [options]
 ```
 
 Distributions are stored by default; pass `--no-store-distributions` to omit
@@ -313,17 +309,18 @@ from phonebox import G2P
 g2p_train = G2P.train(
     'cmudict.dict',
     locale='en_US',
+    phoneset='cmu',
     store_distributions=True,
     output='model.g2p.gz'
 )
 
 # 2. Load trained model
-g2p = G2P(model='model.g2p.gz')
+g2p = G2P(model='model.g2p.gz', use_dict_fallback=False)
 
 # 3. Use confidence scoring
 phones, confs = g2p.pronounce_with_confidence('algorithm')
 print(f"Pronunciation: {' '.join(phones)}")
-print(f"Min confidence: {min(confs):.2f}")
+print(f"Min confidence: {min(confs) if confs else 0.0:.2f}")
 
 # 4. Get alternatives
 for phones, score in g2p.pronounce_nbest('either', n=3):
@@ -336,7 +333,7 @@ for phones, score in g2p.pronounce_nbest('either', n=3):
 from phonebox import G2P
 import csv
 
-g2p = G2P(model='model.g2p.gz')
+g2p = G2P(model='model.g2p.gz', use_dict_fallback=False)
 
 with open('words.txt') as infile, open('output.csv', 'w') as outfile:
     writer = csv.writer(outfile)
@@ -367,13 +364,17 @@ with open('words.txt') as infile, open('output.csv', 'w') as outfile:
 
 ## Troubleshooting
 
+All-one confidences can also arise from dictionary fallback. N-best paths may
+uncook to identical public phone sequences; they are emission-path alternatives,
+not an exhaustive or deduplicated list of dictionary variants.
+
 ### "Model doesn't support n-best"
 
-**Cause:** Model was trained without distributions
+Missing distributions produce deterministic fallbacks rather than an unsupported-feature error. Retraining can retain distributions where leaves are ambiguous.
 
 **Solution:** Retrain (distributions are enabled by default):
 ```bash
-phonebox train --locale en_US --lexicon dict.txt -o new_model.g2p.gz
+phonebox train --locale en_US --phoneset cmu --lexicon dict.txt -o new_model.g2p.gz
 ```
 
 ### "All confidences are 1.0"
@@ -389,7 +390,7 @@ phonebox train --locale en_US --lexicon dict.txt -o new_model.g2p.gz
 
 ### "N-best only returns 1 result"
 
-**Cause:** Model doesn't have distributions (see above)
+**Possible causes:** deterministic leaves, omitted distributions, or dictionary fallback.
 
 **Solution:** Retrain with default settings (distributions are on by default)
 

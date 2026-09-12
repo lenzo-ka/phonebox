@@ -9,6 +9,10 @@ Phonebox separates **training** (development) from **inference** (production):
 | Training | Build models from dictionaries | Full phonebox library |
 | Inference | Pronounce words in production | Bundled standalone Python file |
 
+Install Phonebox in a training environment supported by its runtime dependencies;
+see [installation scope](RELEASING.md#installation-scope). FastAPI and other
+service frameworks below are separate optional application dependencies.
+
 ## Creating Deployable Bundles
 
 Standalone bundles support decision-tree models. Use the full phonebox library
@@ -18,7 +22,7 @@ or CLI for multigram inference.
 
 ```bash
 # Fetch dictionary and train
-phonebox dict fetch cmudict
+phonebox dict fetch cmudict --data-dir data
 phonebox train --locale en_US --phoneset cmu \
   --lexicon data/cmudict/cmudict.dict \
   -o model.g2p.gz \
