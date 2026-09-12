@@ -50,14 +50,14 @@ def phone_mapping_transform(
     cooked: dict[str, list[str]] = {}
     for source, target in mapping.items():
         if not isinstance(source, str) or not source:
-            raise TypeError("phone mapping keys must be nonempty strings")
+            raise ValueError("phone mapping keys must be nonempty strings")
         values = [target] if isinstance(target, str) else target
         if (
             not isinstance(values, list)
             or not values
             or not all(isinstance(phone, str) and phone for phone in values)
         ):
-            raise TypeError(
+            raise ValueError(
                 "phone mapping values must be nonempty strings or lists of them"
             )
         cooked[source] = values

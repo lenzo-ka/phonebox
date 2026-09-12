@@ -67,6 +67,10 @@ Examples:
     )
     process_parser.set_defaults(func=handle_dict_process)
 
+    from .dict_review import setup_dict_review_command
+
+    setup_dict_review_command(dict_subparsers)
+
     # phonebox dict export-vectors
     export_vectors_parser = dict_subparsers.add_parser(
         "export-vectors",

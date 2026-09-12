@@ -14,6 +14,7 @@ decision tree implementation:
 from __future__ import annotations
 
 import hashlib
+import math
 from collections import Counter, defaultdict
 from datetime import UTC, datetime
 from pathlib import Path
@@ -26,6 +27,7 @@ from cartlet import (
     read_cart_metadata,
 )
 from cartlet import DecisionTree as GenericDecisionTree
+from cartlet.utils import is_decision_node
 
 from phonebox.utils.logging_config import get_logger
 
@@ -865,7 +867,56 @@ class G2PDecisionTree:
         Args:
             path: Path to model file (.g2p.gz, .jsonl.gz, .cart, etc.)
         """
-        config = self._cart.load_model(path, format=self._format_for(path))
+        # cartlet applies decoded fields directly. Normalize only decoding/schema
+        # failures here, so all callers receive an expected invalid-input error.
+        try:
+            config = self._cart.load_model(path, format=self._format_for(path))
+        except (KeyError, TypeError, AttributeError) as exc:
+            raise ValueError(f"Invalid CART model artifact: {exc}") from exc
+        if not isinstance(config, dict) or not isinstance(
+            config.get("metadata", {}), dict
+        ):
+            raise ValueError("Invalid CART model metadata")
+        pending = [self._cart.model]
+        while pending:
+            node = pending.pop()
+            if isinstance(node, str):
+                continue
+            if (
+                isinstance(node, dict)
+                and node
+                and all(
+                    isinstance(label, str)
+                    and isinstance(prob, (int, float))
+                    and not isinstance(prob, bool)
+                    and math.isfinite(prob)
+                    and prob >= 0
+                    for label, prob in node.items()
+                )
+                and any(node.values())
+            ):
+                continue
+            if is_decision_node(node):
+                feature, operator, value = node[:3]
+                known_feature = (
+                    isinstance(feature, str) and feature in self._cart.feature_names
+                ) or (
+                    isinstance(feature, int)
+                    and not isinstance(feature, bool)
+                    and feature >= 0
+                )
+                if not known_feature or operator not in ("=", "<"):
+                    raise ValueError("Invalid CART model decision")
+                if operator == "<":
+                    try:
+                        finite_threshold = math.isfinite(float(value))
+                    except (TypeError, ValueError) as exc:
+                        raise ValueError("Invalid CART model threshold") from exc
+                    if not finite_threshold:
+                        raise ValueError("Invalid CART model threshold")
+                pending.extend(node[3:5])
+                continue
+            raise ValueError("Invalid CART model tree structure")
         if Path(path).suffix == ".cart":
             metadata = read_cart_metadata(path)
             if metadata:

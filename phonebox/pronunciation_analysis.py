@@ -6,11 +6,16 @@ for prioritizing human review, not a language detector or correctness verdict.
 
 from __future__ import annotations
 
+import json
+import math
 import re
-from collections.abc import Iterable, Iterator, Mapping, Sequence
+from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Literal, Protocol
 
+from .dictionary import phone_mapping_transform
+from .lexicon import LexiconEntry, parse_dict_entry
 from .pronunciation_scoring import (
     PronunciationScore,
     ScoreMethod,
@@ -152,7 +157,7 @@ def classify_variant(
     phones = pronunciation.split()
     letters = re.sub(r"[^a-z]", "", word.lower())
     if score == 0:
-        return "ABBREV", "spelled out (0 score)"
+        return "REVIEW", "no model support; cause undetermined"
     if len(letters) <= 4 and len(phones) > len(letters) * 1.5:
         return "ABBREV", "spelled out"
     if word.lower() in {
@@ -225,4 +230,271 @@ __all__ = [
     "score_pronunciations",
     "strip_stress",
     "triage_entries",
+]
+
+
+def _likelihood_key(
+    log_probability: float | None,
+    positions: int,
+    method: str,
+    *,
+    within_word: bool = False,
+) -> float:
+    """Retain mathematical likelihood order when exponentiation underflows."""
+    if log_probability is None:
+        return -math.inf
+    return (
+        log_probability
+        if within_word or method == "product"
+        else log_probability / positions
+    )
+
+
+@dataclass(frozen=True)
+class LexiconReviewRecord:
+    """One effective pronunciation with dense rank and all source occurrences."""
+
+    word: str
+    phones: tuple[str, ...]
+    score: float
+    probability: float
+    log_probability: float | None
+    supported: bool
+    positions: int
+    method: str
+    rank: int
+    origins: tuple[LexiconEntry, ...]
+
+    @property
+    def entry(self) -> str:
+        """Dense dictionary label, independent of the source's variant suffix."""
+        return self.word if self.rank == 1 else f"{self.word}({self.rank})"
+
+    def to_dict(self) -> dict:
+        """Return numeric JSON-compatible review values and complete origins."""
+        return {
+            "word": self.word,
+            "entry": self.entry,
+            "phones": list(self.phones),
+            "score": self.score,
+            "probability": self.probability,
+            "log_probability": self.log_probability,
+            "supported": self.supported,
+            "positions": self.positions,
+            "method": self.method,
+            "rank": self.rank,
+            "origins": [origin.to_dict() for origin in self.origins],
+        }
+
+
+@dataclass(frozen=True)
+class LexiconReviewResult:
+    """Selected ranked records plus unfiltered population and effective method."""
+
+    records: tuple[LexiconReviewRecord, ...]
+    source_entries: int
+    unique_variants: int
+    method: str
+    order: str
+    filtered: bool
+
+    def to_dict(self) -> dict:
+        """Return an envelope suitable for strict JSON serialization."""
+        return {
+            "source_entries": self.source_entries,
+            "unique_variants": self.unique_variants,
+            "method": self.method,
+            "order": self.order,
+            "filtered": self.filtered,
+            "records": [record.to_dict() for record in self.records],
+        }
+
+
+def review_lexicon(
+    scorer: PronunciationScorer,
+    lines: Iterable[str],
+    *,
+    method: str = "geometric",
+    phone_mapping: Mapping[str, str | list[str]] | None = None,
+    phone_transform: Callable[[list[str]], list[str]] | None = None,
+    threshold: float | None = None,
+    limit: int | None = None,
+    order: str = "worst",
+) -> LexiconReviewResult:
+    """Score shared dictionary entries, deduplicate effective phones, then rank.
+
+    Saved model preprocessing owns stress; an optional caller mapping/transform
+    runs first. Groups retain exact base spelling and source order. Threshold
+    and limit select already-ranked records, leaving dense ranks unchanged.
+    This measures model compatibility, not correctness or semantic sense order.
+    """
+    validate_score_method(method)
+    if not callable(getattr(scorer, "score_pronunciation_details", None)):
+        raise ValueError(
+            "lexicon review requires detailed CART scoring; multigram scoring is unsupported"
+        )
+    if order not in {"worst", "variants"}:
+        raise ValueError("order must be worst or variants")
+    if threshold is not None and (
+        not math.isfinite(threshold) or not 0 <= threshold <= 1
+    ):
+        raise ValueError("threshold must be finite and between 0 and 1")
+    if limit is not None and (
+        isinstance(limit, bool) or not isinstance(limit, int) or limit < 0
+    ):
+        raise ValueError("limit must be a nonnegative integer")
+    if phone_mapping is not None and phone_transform is not None:
+        raise ValueError("choose phone_mapping or phone_transform, not both")
+    if phone_mapping is not None:
+        phone_transform = phone_mapping_transform(phone_mapping)
+    groups: dict[
+        str, dict[tuple[str, ...], tuple[PronunciationScore, list[LexiconEntry]]]
+    ] = {}
+    entries = 0
+    for number, line in enumerate(lines, 1):
+        origin = parse_dict_entry(line, line_number=number)
+        if origin is None:
+            continue
+        entries += 1
+        phones = list(origin.phones)
+        if phone_transform is not None:
+            phones = phone_transform(phones)
+        if (
+            not isinstance(phones, list)
+            or not phones
+            or any(
+                not isinstance(p, str) or not p or any(c.isspace() for c in p)
+                for p in phones
+            )
+        ):
+            raise ValueError(
+                "phone transform must return nonempty whitespace-free phone strings"
+            )
+        details = scorer.score_pronunciation_details(origin.word, phones, method=method)
+        if any(not math.isfinite(v) for v in (details.score, details.probability)) or (
+            details.log_probability is not None
+            and not math.isfinite(details.log_probability)
+        ):
+            raise ValueError("scorer returned nonfinite values")
+        effective = tuple(details.phones)
+        if any(
+            not isinstance(p, str) or not p or any(c.isspace() for c in p)
+            for p in effective
+        ):
+            raise ValueError("effective phones must be nonempty whitespace-free tokens")
+        group = groups.setdefault(origin.word, {})
+        if effective in group:
+            group[effective][1].append(origin)
+        else:
+            group[effective] = (details, [origin])
+    ranked = []
+    for word, candidates in groups.items():
+        ordered = sorted(
+            candidates.items(),
+            key=lambda item: (
+                -_likelihood_key(
+                    item[1][0].log_probability,
+                    item[1][0].positions,
+                    method,
+                    within_word=True,
+                )
+            ),
+        )
+        for rank, (ranked_phones, (details, origins)) in enumerate(ordered, 1):
+            ranked.append(
+                LexiconReviewRecord(
+                    word,
+                    ranked_phones,
+                    details.score,
+                    details.probability,
+                    details.log_probability,
+                    details.supported,
+                    details.positions,
+                    method,
+                    rank,
+                    tuple(origins),
+                )
+            )
+    if not entries:
+        raise ValueError("no pronunciation entries to review")
+    total = len(ranked)
+    if order == "worst":
+        ranked.sort(
+            key=lambda record: (
+                _likelihood_key(record.log_probability, record.positions, method),
+                record.origins[0].line_number,
+            )
+        )
+    if threshold is not None:
+        ranked = [record for record in ranked if record.score < threshold]
+    if limit is not None:
+        ranked = ranked[:limit]
+    return LexiconReviewResult(
+        tuple(ranked),
+        entries,
+        total,
+        method,
+        order,
+        threshold is not None or limit is not None,
+    )
+
+
+def review_lexicon_file(
+    scorer: PronunciationScorer, path: str | Path, **options
+) -> LexiconReviewResult:
+    """Review a UTF-8 pronunciation dictionary without modifying it."""
+    with Path(path).open(encoding="utf-8") as lines:
+        return review_lexicon(scorer, lines, **options)
+
+
+def format_lexicon_review(
+    result: LexiconReviewResult, *, format: str = "tsv", header: bool = True
+) -> Iterator[str]:
+    """Yield data-only TSV, strict JSON/JSONL, or two-column dictionary lines."""
+    if format == "dict" and (result.filtered or result.order != "variants"):
+        raise ValueError("dictionary format requires unfiltered variants order")
+    if format == "dict" and any(
+        not record.word or not record.phones for record in result.records
+    ):
+        raise ValueError(
+            "dictionary format requires nonempty words and effective pronunciations"
+        )
+    if format == "json":
+        yield json.dumps(result.to_dict(), ensure_ascii=False, allow_nan=False)
+    elif format == "jsonl":
+        for record in result.records:
+            yield json.dumps(record.to_dict(), ensure_ascii=False, allow_nan=False)
+    elif format in {"tsv", "dict"}:
+        if format == "tsv" and header:
+            yield "score\tentry\tphones\tword\trank\tlog_probability\tstatus\tsource_lines"
+        for record in result.records:
+            phones = " ".join(record.phones)
+            if format == "dict":
+                fields = [record.entry, phones]
+            else:
+                fields = [
+                    repr(record.score),
+                    record.entry,
+                    phones,
+                    record.word,
+                    str(record.rank),
+                    ""
+                    if record.log_probability is None
+                    else repr(record.log_probability),
+                    "supported" if record.supported else "unsupported",
+                    ",".join(str(origin.line_number) for origin in record.origins),
+                ]
+            if any("\t" in field or "\n" in field or "\r" in field for field in fields):
+                raise ValueError("review fields must not contain tabs or newlines")
+            yield "\t".join(fields)
+    else:
+        raise ValueError("format must be tsv, json, jsonl, or dict")
+
+
+__all__ += [
+    "LexiconReviewRecord",
+    "LexiconReviewResult",
+    "review_lexicon",
+    "review_lexicon_file",
+    "format_lexicon_review",
 ]

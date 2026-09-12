@@ -106,3 +106,7 @@ release preparation.
 Phonebox code is BSD 2-Clause. Packaged ICU/CLDR-derived exemplar data carries
 Unicode-3.0; ship `LICENSE`, `LICENSE-UNICODE`, and `THIRD_PARTY_NOTICES.md`
 with distributions. See [third-party notices](../THIRD_PARTY_NOTICES.md).
+
+See [lexicon review and variant ordering](LEXICON_REVIEW.md) for the shared
+`review_lexicon` / `review_lexicon_file` APIs and `phonebox dict review` numeric
+TSV/JSON output and unfiltered dictionary reordering.

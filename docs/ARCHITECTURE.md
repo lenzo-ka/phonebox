@@ -266,3 +266,7 @@ dt.align()
 dt.train()
 dt.export('model.g2p.gz')
 ```
+
+See [lexicon review and variant ordering](LEXICON_REVIEW.md) for the shared
+`review_lexicon` / `review_lexicon_file` APIs and `phonebox dict review` numeric
+TSV/JSON output and unfiltered dictionary reordering.

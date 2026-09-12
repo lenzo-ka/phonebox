@@ -68,6 +68,10 @@ Changes since `v0.1.0`:
 
 ### Evaluation and tooling
 
+- Add shared lexicon review and variant ordering APIs plus `phonebox dict review`,
+  with numeric TSV/JSON, stable likelihood ranks, effective-phone deduplication
+  retaining all source origins, and unfiltered two-column dictionary output.
+
 - Add a current library/API/CLI workflow guide and correct removed-command,
   prepared-vector loading, held-out test, scoring, and context-demo examples.
 - Use the native trainer by default in dictionary accuracy evaluation and base
