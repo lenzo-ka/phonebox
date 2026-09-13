@@ -43,6 +43,39 @@ pip install 'phonebox[config]'          # YAML training configuration
 pip install 'phonebox[sklearn]'         # Optional scikit-learn trainer
 ```
 
+## Alignment and the CART workflow
+
+The CART path uses **epsilon scattering**, a term coined by Kevin Lenzo in the
+[1998 work with Alan Black and Vincent Pagel](#references). Epsilon denotes an
+empty phone emission: a spelling position can participate in an alignment
+without producing a sound. The current workflow is:
+
+1. **Prepare the units.** Apply the selected spelling normalization and rewrite
+   rules, optional stress removal, and configured letter/phone joins. A joined
+   unit can represent several letters or phones.
+2. **Align by epsilon scattering.** Enumerate placements of empty phone targets
+   across the processed input positions while preserving phone order. Score
+   these alternatives with letter–phone probabilities, select the best alignment
+   for each entry, and re-estimate the probabilities from those choices. Iterate
+   until the stopping criterion or iteration limit is reached.
+3. **Train the tree.** Turn each aligned position into a spelling-context window
+   and its phone target, count repeated vectors, and train CART to predict a
+   phone unit or epsilon. Boundary padding supplies context at word edges.
+4. **Predict.** Reuse the saved preprocessing and context windows, predict the
+   targets, remove epsilon emissions, and expand joined phone units into the
+   output pronunciation.
+
+This CART aligner requires at least as many processed input positions as phone
+units; entries exceeding its alignment-combination limit are also omitted.
+Locale-specific input padding, such as the French liaison sentinel, is separate
+from empty phone emissions. Liaison targets still require explicit
+[pronunciation-side annotations](https://github.com/lenzo-ka/phonebox/blob/main/docs/DATA.md#french-liaison-annotations).
+The multigram path instead learns n:m joint units and decodes their sequences.
+
+Epsilon scattering illustrates a broader possibilia approach: make admissible
+alternatives explicit, then use evidence to choose among them. Here the
+alternatives are alignment candidates within the configured model and limits.
+
 ## Train an English model and bundle it
 
 This recipe downloads CMUdict, trains a decision tree, and writes a standalone
