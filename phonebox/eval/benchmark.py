@@ -352,9 +352,13 @@ def _native(dataset: PreparedDataset, system: str, directory: Path):
         artifacts = list(model.export_paths(directory / "model.g2p"))
     training_seconds = time.perf_counter() - started
     started = time.perf_counter()
-    model.export(
-        str(directory / "model.g2p.gz") if system == "cart" else directory / "model.g2p"
-    )
+    # Model-only benchmarks exclude dictionary storage as well as lookup.
+    model.exceptions = {}
+    if system == "cart":
+        model.export(str(directory / "model.g2p.gz"), include_exceptions=False)
+    else:
+        model.export(directory / "model.g2p")
+    accounting["dictionary_entries"] = 0
     export_seconds = time.perf_counter() - started
     return (
         model.pronounce,
@@ -489,8 +493,8 @@ def _phonetisaurus(dataset: PreparedDataset, directory: Path, prefix: Path):
     settings = {
         "max_letter_span": 2,
         "max_phone_span": 2,
-        "letter_deletions": False,
-        "phone_deletions": True,
+        "seq1_del": False,
+        "seq2_del": True,
         "alignment_iterations": 11,
         "restrict": True,
         "grow": False,
@@ -672,8 +676,10 @@ def run_benchmark(
         "settings": {
             **settings,
             "threads": 1,
-            "letter_preprocessing": _IDENTITY,
+            "letter_preprocessing": deepcopy(_IDENTITY),
             "phone_mapping": None,
+            "dictionary_lookup": False,
+            "evaluation_scope": "held-out spellings; model only; dictionary lookup disabled",
             "remove_stress": False,
         },
         "metrics": metrics,

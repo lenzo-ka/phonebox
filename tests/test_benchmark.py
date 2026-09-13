@@ -27,6 +27,16 @@ def test_actual_native_training_identity_and_population(tmp_path, system):
     assert report["training"]["supplied_entries"] == 3
     assert report["training"]["retained_entries"] == 3
     assert report["training"]["model_bytes"] > 0
+    assert report["training"]["dictionary_entries"] == 0
+    if system == "cart":
+        from phonebox.core.g2p_model import G2PDecisionTree
+
+        reloaded = G2PDecisionTree()
+        reloaded.load_model(str(tmp_path / system / "model.g2p.gz"))
+        assert reloaded.exceptions == {}
+    else:
+        saved = json.loads((tmp_path / system / "model.g2p.units.json").read_text())
+        assert saved["exceptions"] == {}
     assert report["settings"]["letter_preprocessing"]["source"] == {
         "norm_rules": None,
         "g2p_rules": None,
