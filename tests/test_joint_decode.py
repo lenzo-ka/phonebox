@@ -68,3 +68,16 @@ def test_alignment_prior_does_not_reweight_the_trained_sequence_lm(a_prior):
     assert joint_decode(["x"], {a: a_prior, b: 1 - a_prior}, lm, 1) == ["A"]
     lm.train([[b]] * 3 + [[a]])
     assert joint_decode(["x"], {a: a_prior, b: 1 - a_prior}, lm, 1) == ["B"]
+
+
+@pytest.mark.parametrize("beam", [-1, True, 0.5])
+def test_low_level_decoder_rejects_invalid_beam_even_for_empty_input(beam):
+    with pytest.raises(ValueError, match="decode beam must be a nonnegative integer"):
+        joint_decode([], {}, MultigramLM(), 1, beam=beam)
+
+
+def test_explicit_large_beam_agrees_with_exact_toy_decode():
+    aligner, lm = _train_toy()
+    assert joint_decode(list("chat"), aligner.q, lm, 2, beam=100) == joint_decode(
+        list("chat"), aligner.q, lm, 2, beam=0
+    )

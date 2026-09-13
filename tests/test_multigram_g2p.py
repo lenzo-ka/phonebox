@@ -205,7 +205,7 @@ def test_disabled_config_joins_persist_after_reload(tmp_path):
     assert loaded.preprocessor.cook_letters("gli", g2p=True) == ["g", "l", "i"]
 
 
-@pytest.mark.parametrize("version", [None, "1", "2", "3", "4", "5", "999"])
+@pytest.mark.parametrize("version", [None, "1", "2", "3", "4", "5", "6", "999"])
 def test_unsupported_scoring_versions_require_retraining(tmp_path, version):
     model = MultigramG2P(
         max_letter_span=1,
@@ -332,8 +332,52 @@ def test_serialized_model_declares_decoding_objective(tmp_path):
     units_path, lm_path = model.export_paths(path)
     data = json.loads(units_path.read_text())
     assert data["scoring"] == "unit-lm-with-eos"
-    assert json.loads(lm_path.read_text())["version"] == 2
+    assert json.loads(lm_path.read_text())["version"] == 3
     data["scoring"] = "q-plus-unit-lm"
     units_path.write_text(json.dumps(data))
     with pytest.raises(ValueError, match="unsupported multigram decoding objective"):
+        MultigramG2P.load(path)
+
+
+def test_order_eight_long_context_changes_reloaded_model_prediction(tmp_path):
+    shared = list("cdefgh")
+    pairs = [(list("acdefghz"), ["A", *shared, "ZA"])] * 3
+    pairs += [(list("bcdefghz"), ["B", *shared, "ZB"])] * 10
+    predictions = {}
+    for order in (7, 8):
+        model = MultigramG2P(
+            max_letter_span=1,
+            max_phone_span=1,
+            min_phone_span=1,
+            em_max_iterations=2,
+            lm_order=order,
+        )
+        model.train_from_pairs(pairs)
+        path = tmp_path / f"order-{order}.g2p"
+        model.export(path)
+        loaded = MultigramG2P.load(path)
+        assert loaded.lm.order == order
+        predictions[order] = loaded.pronounce("acdefghz")
+    # The disambiguating 'a' is seven units back; an order-seven model cannot
+    # condition on it and instead prefers the globally more common ZB ending.
+    assert predictions[7][-1] == "ZB"
+    assert predictions[8] == ["A", *shared, "ZA"]
+
+
+@pytest.mark.parametrize("beam", [-1, True, 1.5])
+def test_invalid_beam_refused_before_training(beam):
+    with pytest.raises(ValueError, match="decode beam must be a nonnegative integer"):
+        MultigramG2P(decode_beam=beam)
+
+
+def test_saved_model_order_must_match_lm_count_levels(tmp_path):
+    model = MultigramG2P(max_letter_span=1, max_phone_span=1, em_max_iterations=2)
+    model.train_from_pairs([(["x"], ["K"])])
+    path = tmp_path / "order-mismatch.g2p"
+    model.export(path)
+    metadata_path, _ = model.export_paths(path)
+    metadata = json.loads(metadata_path.read_text())
+    metadata["lm_order"] = 8
+    metadata_path.write_text(json.dumps(metadata))
+    with pytest.raises(ValueError, match="model and LM orders differ"):
         MultigramG2P.load(path)

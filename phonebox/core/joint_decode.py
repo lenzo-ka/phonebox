@@ -35,6 +35,13 @@ _State = tuple[str, ...]
 _Cell = tuple[float, int, _State, str]  # (score, back_position, back_state, uid)
 
 
+def validate_decode_beam(beam: int) -> int:
+    """Validate the explicit hypothesis beam: zero is exact, positive approximate."""
+    if type(beam) is not int or beam < 0:
+        raise ValueError("decode beam must be a nonnegative integer")
+    return beam
+
+
 def joint_decode(
     letters: list[str],
     q: dict[Unit, float],
@@ -52,8 +59,12 @@ def joint_decode(
     probabilities determine candidate support, not an additional path weight.
 
     Args:
-        beam: If > 0, keep only the top-``beam`` hypotheses per position.
+        beam: Zero searches exactly. A positive value expands only the best
+            ``beam`` histories per position, an approximation that can discard
+            the optimal pronunciation. Higher LM orders retain longer histories
+            and can create many more states; choose a beam explicitly if needed.
     """
+    validate_decode_beam(beam)
     n = len(letters)
     if n == 0:
         return []
@@ -104,4 +115,4 @@ def joint_decode(
     return phones
 
 
-__all__ = ["joint_decode"]
+__all__ = ["joint_decode", "validate_decode_beam"]

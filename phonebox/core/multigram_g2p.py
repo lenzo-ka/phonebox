@@ -32,7 +32,7 @@ from ..constants import (
 from ..lexicon import parse_dict_line
 from ..utils.io import is_dict_comment
 from ..utils.logging_config import get_logger
-from .joint_decode import joint_decode
+from .joint_decode import joint_decode, validate_decode_beam
 from .multigram_align import MultigramAligner
 from .multigram_lm import (
     LETTER_JOIN,
@@ -60,7 +60,7 @@ def decode_phones(target: str) -> list[str]:
 class MultigramG2P:
     """n:m G2P: EM unit model + unit n-gram LM + joint Viterbi decode."""
 
-    VERSION = "6"
+    VERSION = "7"
     SCORING = "unit-lm-with-eos"
 
     def __init__(
@@ -93,7 +93,7 @@ class MultigramG2P:
         self.lm = MultigramLM(order=lm_order)
         self.verbose = verbose
         self.parallel_viterbi = parallel_viterbi
-        self.decode_beam = decode_beam
+        self.decode_beam = validate_decode_beam(decode_beam)
         self._max_l = max_letter_span
         self.use_dict_fallback = False
         self.exceptions: dict[str, list[str]] = {}
@@ -297,7 +297,7 @@ class MultigramG2P:
             max_letter_span=meta["max_letter_span"],
             max_phone_span=meta["max_phone_span"],
             min_phone_span=meta["min_phone_span"],
-            lm_order=meta.get("lm_order", 2),
+            lm_order=meta.get("lm_order"),
             decode_beam=meta.get("decode_beam", 0),
         )
         inst.aligner.q = {(tuple(L), tuple(P)): prob for (L, P, prob) in meta["units"]}
@@ -310,6 +310,8 @@ class MultigramG2P:
         inst.lm = MultigramLM.from_dict(
             json.loads(lm_path.read_text(encoding=FILE_ENCODING))
         )
+        if inst.lm.order != meta["lm_order"]:
+            raise ValueError("multigram model and LM orders differ")
         if any(not inst.lm.supports_unit(unit) for unit in inst.aligner.q):
             raise ValueError(
                 "multigram decoder units are outside the LM prediction vocabulary"

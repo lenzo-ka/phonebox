@@ -43,6 +43,9 @@ def train_multigram(
 ) -> MultigramTrainingResult:
     """Cook a dictionary, train n:m G2P, and optionally export its sidecars.
 
+    ``lm_order`` accepts 1–8 (default 2). ``decode_beam=0`` is exact;
+    positive beams bound expanded histories per position approximately and may
+    discard the best path. Higher orders increase count memory and decode states.
     With no output, training does not write files. Raw-word inference replays
     the attached Vectorizer; train_from_pairs remains the cooked-token API.
     """

@@ -16,6 +16,7 @@ from phonebox.constants import (
     DEFAULT_TEST_FRACTION,
     DEFAULT_TRAINER,
 )
+from phonebox.core.multigram_lm import SUPPORTED_LM_ORDERS
 from phonebox.eval.g2p_compare import print_results_table, run_compare
 from phonebox.eval.g2p_compare_all import (
     CompareAllConfig,
@@ -74,8 +75,13 @@ def setup_compare_commands(subparsers) -> None:
     loc_p.add_argument("--max-letter-span", type=int, default=2)
     loc_p.add_argument("--max-phone-span", type=int, default=2)
     loc_p.add_argument("--em-iterations", type=int, default=15)
-    loc_p.add_argument("--lm-order", type=int, default=2, choices=[1, 2, 3])
-    loc_p.add_argument("--decode-beam", type=int, default=0)
+    loc_p.add_argument("--lm-order", type=int, default=2, choices=SUPPORTED_LM_ORDERS)
+    loc_p.add_argument(
+        "--decode-beam",
+        type=int,
+        default=0,
+        help="0 searches exactly (default); positive beams approximate by limiting expanded histories.",
+    )
     loc_p.add_argument("--parallel-align", action="store_true")
     loc_p.add_argument("--parallel-viterbi", action="store_true")
     loc_p.add_argument("-v", "--verbose", action="store_true")
@@ -114,9 +120,16 @@ def setup_compare_commands(subparsers) -> None:
     sweep.add_argument(
         "--lm-orders",
         type=int,
+        choices=SUPPORTED_LM_ORDERS,
         nargs="*",
         default=[2, 3],
         help="Language-model orders to evaluate",
+    )
+    sweep.add_argument(
+        "--decode-beam",
+        type=int,
+        default=0,
+        help="0 searches exactly (default); positive beams approximate by limiting expanded histories.",
     )
     sweep.add_argument("--seed", type=int, default=42)
     sweep.add_argument("--max-test", type=int, default=2000)
@@ -377,6 +390,7 @@ def handle_compare_sweep(args) -> int:
             locales=locales,
             letter_spans=args.letter_spans,
             lm_orders=args.lm_orders,
+            decode_beam=args.decode_beam,
             seed=args.seed,
             max_test=args.max_test,
             em_iterations=args.em_iterations,
@@ -396,6 +410,7 @@ def handle_compare_sweep(args) -> int:
             rows,
             letter_spans=args.letter_spans,
             lm_orders=args.lm_orders,
+            decode_beam=args.decode_beam,
             seed=args.seed,
             max_test=args.max_test,
             em_iterations=args.em_iterations,
