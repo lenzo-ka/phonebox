@@ -2,6 +2,21 @@
 
 External programs are optional executables, never Python runtime dependencies.
 Their raw logs and artifacts stay in the caller's dedicated work directory.
+Adapters invoke the authors' implementations as subprocesses; their algorithms
+are not copied here and their separate software licenses apply.
+
+Sequitur: Bisani and Ney (2008), joint-sequence models,
+https://doi.org/10.1016/j.specom.2008.01.002;
+https://github.com/sequitur-g2p/sequitur-g2p.
+
+Phonetisaurus: Novak, Minematsu, and Hirose (2016), "Phonetisaurus: Exploring
+grapheme-to-phoneme conversion with joint n-gram models in the WFST framework,"
+Natural Language Engineering 22(6), 907–938;
+https://www.cambridge.org/core/journals/natural-language-engineering/article/phonetisaurus-exploring-graphemetophoneme-conversion-with-joint-ngram-models-in-the-wfst-framework/F1160C3866842F0B707924EB30B8E753;
+https://github.com/AdolfVonKleist/Phonetisaurus.
+
+See docs/BENCHMARK_TOOLCHAINS.md and docs/REPRODUCIBLE_BENCHMARKS.md for pinned
+toolchains, dataset citations, and license notices.
 """
 
 from __future__ import annotations
