@@ -59,7 +59,7 @@ def decode_phones(target: str) -> list[str]:
 class MultigramG2P:
     """n:m G2P: EM unit model + unit n-gram LM + joint Viterbi decode."""
 
-    VERSION = "4"
+    VERSION = "5"
 
     def __init__(
         self,
@@ -165,7 +165,7 @@ class MultigramG2P:
                 len(aligned_units),
             )
         t_lm = time()
-        self.lm.train(aligned_units)
+        self.lm.train(aligned_units, vocabulary=self.aligner.q)
         if self.verbose:
             logger.info(
                 "MultigramG2P: LM done in %.1fs (%d vocab)",
@@ -213,9 +213,8 @@ class MultigramG2P:
     def pronounce(self, word: str) -> list[str]:
         """Predict phones for a raw word using saved training preprocessing.
 
-        Legacy v3 models without a preprocessing snapshot retain their former
-        lowercase, per-character behavior.  Use :meth:`pronounce_letters` for
-        an explicitly pre-cooked token sequence.
+        Use :meth:`pronounce_letters` for an explicitly pre-cooked token
+        sequence. Models without a preprocessor use lowercase characters.
         """
         letters = (
             self.preprocessor.cook_letters(word, g2p=True)
@@ -282,11 +281,10 @@ class MultigramG2P:
         path = Path(path)
         units_path = path.with_suffix(path.suffix + ".units.json")
         meta = json.loads(units_path.read_text(encoding=FILE_ENCODING))
-        version = meta.get("version", "1")
-        if version in ("1", "2") and "lm_path" not in meta:
+        if meta.get("version") != cls.VERSION:
             raise ValueError(
-                f"model version {version} used the removed tree/greedy decoder; "
-                "retrain with MultigramG2P v3 and export again"
+                "unsupported multigram model version; retrain and export "
+                f"with MultigramG2P v{cls.VERSION}"
             )
         inst = cls(
             max_letter_span=meta["max_letter_span"],
@@ -305,6 +303,10 @@ class MultigramG2P:
         inst.lm = MultigramLM.from_dict(
             json.loads(lm_path.read_text(encoding=FILE_ENCODING))
         )
+        if any(not inst.lm.supports_unit(unit) for unit in inst.aligner.q):
+            raise ValueError(
+                "multigram decoder units are outside the LM prediction vocabulary"
+            )
         if meta.get("use_dict_fallback"):
             inst.use_dict_fallback = True
             inst.exceptions = {
