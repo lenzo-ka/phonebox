@@ -144,6 +144,7 @@ class EMAlign:
         self.verbose = verbose
         self.parallel = parallel
         self.num_workers = num_workers if num_workers else max(1, cpu_count() - 1)
+        self._alignment_history: list[dict[str, int | float]] = []
         self.init_data: list = []
         self.model: dict[str, dict[str, float]] | None = None
         self.em_data: list[list] | None = None
@@ -486,8 +487,19 @@ class EMAlign:
 
         return changed
 
+    @property
+    def alignment_history(self) -> list[dict[str, int | float]]:
+        """JSON-serializable iteration records from the most recent align run.
+
+        Each record contains the one-based iteration, number of changed
+        alignments, and changed-entry ratio. Returns a copy; ``align`` resets
+        the history even when the new input fails validation.
+        """
+        return [dict(record) for record in self._alignment_history]
+
     def align(self, init: bool = True) -> None:
-        """Iterate over the aligning, model building"""
+        """Iterate alignment/model updates, retaining actual convergence history."""
+        self._alignment_history = []
         start = time()
         if init:
             self.initialize()
@@ -499,6 +511,9 @@ class EMAlign:
 
         for n in range(self.max_iterations):
             changed, ratio = self.align_once(n + 1)
+            self._alignment_history.append(
+                {"iteration": n + 1, "changed": changed, "ratio": ratio}
+            )
             self.make_model()
             if ratio < self.min_change_ratio or not changed:
                 break
