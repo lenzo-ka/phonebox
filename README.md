@@ -209,6 +209,10 @@ The [developer benchmark protocol](https://github.com/lenzo-ka/phonebox/blob/mai
 compares both Phonebox models with independently run Sequitur and Phonetisaurus
 on pinned, shared data. It records preparation, split hashes, settings, and
 source provenance so subsequent implementations can be measured again.
+Reported errors are for held-out words with dictionary lookup disabled. A
+dictionary-backed pronouncer can use stored pronunciations for covered words;
+its running-text accuracy depends on token coverage and appropriate variant
+selection, and is not measured by the held-out score alone.
 
 ## References
 

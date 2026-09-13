@@ -24,6 +24,11 @@ bundles together with their models. See [migration notes](docs/RELEASING.md#upgr
 
 ### Documentation and evaluation
 
+- Add shared public benchmark data preparation, model adapters, CLI commands, and
+  validated aggregate reporting for CART, n:m, Sequitur, and Phonetisaurus.
+  Pin dataset and toolchain sources, preserve pronunciation groups, and record
+  split hashes, licenses, training admission, and prediction failures.
+
 - Refresh the pinned CMUdict CART/multigram comparison with Cartlet 0.6.0,
   retaining the exact source, dependency, data, and split provenance.
 - Explain the CART alignment workflow and epsilon scattering in the README,

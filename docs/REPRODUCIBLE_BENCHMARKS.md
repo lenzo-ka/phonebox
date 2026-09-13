@@ -48,6 +48,45 @@ selects the minimum-edit reference, breaking ties deterministically. Missing
 and empty predictions remain in the test denominator. Training admission
 counts distinguish supplied examples from examples a model can align.
 
+## Held-out accuracy and dictionary-backed pronunciation
+
+**Every reported WER and PER is on held-out spellings with dictionary lookup
+disabled.** Training, development, and test spellings are disjoint after shared
+preparation. Development references select only the declared model setting;
+test references are used only for scoring. This measures generalization to
+unseen dictionary entries, not the error rate of a deployed dictionary-backed
+pronouncer on running text.
+
+Phonebox's CART deployment path supports a compact exceptions list. After
+training, it stores corrections for admitted training words that the model
+mispronounces, plus a selected reference pronunciation for words with multiple
+variants. A correctly predicted word with one reference needs no stored
+correction. Selection favors the reference closest to the model's prediction;
+it does not preserve every alternative or necessarily the first input variant.
+The automatic list is built from admitted alignment data, so omitted training
+entries must not be described as memorized. Lookup also depends on the saved
+preprocessing and matching spelling keys.
+
+The multigram model supports an explicit exceptions dictionary, but its basic
+trainer does not automatically memorize the full lexicon. Phonetisaurus's
+application layer likewise supports dictionary substitution; the benchmark
+uses its model-only decoder and supplies no reference lexicon. The benchmark
+therefore measures the same unseen-word task for all four systems.
+
+In a dictionary-backed application, frequent covered words can use stored
+pronunciations, and the model handles uncovered words. High **token coverage**
+can therefore make practical error much lower than held-out dictionary-type
+error. Conceptually, overall accuracy is
+
+`coverage × dictionary accuracy + (1 − coverage) × OOV accuracy`.
+
+The quantities must refer to the same target material and scoring policy.
+Word-frequency distributions motivate retaining frequent forms, but a
+held-out lexicon test does not measure running-text coverage or its OOV
+accuracy. A stored pronunciation also need not be the appropriate variant
+in every context. We report no deployment accuracy estimate without that
+additional evidence.
+
 ## Developer API and CLI
 
 Install the developer environment with `python -m pip install -e '.[dev]'`.
@@ -105,8 +144,10 @@ belong in the public results snapshot.
 
 Compare measured systems within the same prepared dataset and split hashes.
 Record model settings, source and dependency versions, training admission,
-prediction failures, model size, and timing alongside WER and PER. A timing
-measurement on a shared machine is descriptive, not a controlled speed ranking.
+prediction failures, model size, and timing alongside WER and PER. Training plus export is reported as the complete model-production time, including
+any declared development selection. Runs may use different platforms; the JSON
+records each environment. These timings are descriptive, not a controlled speed
+ranking.
 
 Published paper results are relevant context. A replication claim additionally
 requires matching the original dictionary revision, split, normalization,
