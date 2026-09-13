@@ -7,6 +7,8 @@ from collections.abc import Mapping
 from datetime import UTC, datetime
 from pathlib import Path
 
+from phonebox.core.joint_decode import validate_decode_beam
+from phonebox.core.multigram_lm import validate_lm_order
 from phonebox.core.vectorizer import Vectorizer
 from phonebox.eval.g2p_compare import (
     build_gold_variants,
@@ -40,6 +42,7 @@ def run_g2p_sweep(
     locales: list[str],
     letter_spans: list[int],
     lm_orders: list[int],
+    decode_beam: int = 0,
     seed: int = 42,
     max_test: int = 2000,
     em_iterations: int = 15,
@@ -48,6 +51,9 @@ def run_g2p_sweep(
     relaxed_locales: frozenset[str] = frozenset(),
 ) -> dict[str, dict[tuple[int, int], dict[str, float]]]:
     """Train and evaluate every requested locale/span/order combination."""
+    for order in lm_orders:
+        validate_lm_order(order)
+    validate_decode_beam(decode_beam)
     lexicons = select_locale_paths(lexicons, locales)
     locales = list(lexicons)
     relaxed_locales = frozenset(canonical_locales(list(relaxed_locales)))
@@ -68,6 +74,7 @@ def run_g2p_sweep(
                     parallel_align=parallel_align,
                     parallel_viterbi=parallel_align,
                     lm_order=order,
+                    decode_beam=decode_beam,
                 ).model
 
                 def predict(word: str, _model=model, _vec=vec) -> list[str]:
@@ -95,6 +102,7 @@ def format_g2p_sweep(
     *,
     letter_spans: list[int],
     lm_orders: list[int],
+    decode_beam: int = 0,
     seed: int = 42,
     max_test: int = 2000,
     em_iterations: int = 15,
@@ -114,6 +122,7 @@ def format_g2p_sweep(
         f"- Locales: {', '.join(rows)}",
         f"- Letter spans: {letter_spans}",
         f"- LM orders: {lm_orders}",
+        f"- Decode beam: {decode_beam} (0 exact; positive approximate)",
         "",
         "Each cell shows ``WER% / PER%`` (lower is better). PER is primary.",
         "",

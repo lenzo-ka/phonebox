@@ -24,7 +24,7 @@ dependencies until it is rerun.
 
 ### Multigram scoring artifacts
 
-New multigram exports use model version 6 and LM scoring version 2. The LM
+New multigram exports use model version 7 and LM count format version 3. The LM
 prediction events are all retained alignment units, all units observed on
 Viterbi paths, and the end-of-sequence event. The start marker is context-only.
 Add-k probabilities use that fixed event set; unknown units raise `ValueError`
@@ -37,7 +37,10 @@ objective without adding a weighting parameter.
 
 Older multigram artifacts are rejected with a retraining instruction, including
 version 4 exports with the previous unnormalized LM and version 5 exports
-with the q-plus-LM objective. Retrain and export both
+with the q-plus-LM objective, as well as version 6 exports with the old
+fixed-order count layout. Version 7 stores sparse count levels for the requested
+order (1–8), while preserving normalized add-k and the unit-LM-with-EOS objective.
+Retrain and export both
 sidecars together. This is a Phonebox multigram scoring change, independent of
 Cartlet's tree format; it does not change CART artifacts. Historical benchmark
 reports retain their exact source/scoring behavior and must not be relabeled as
