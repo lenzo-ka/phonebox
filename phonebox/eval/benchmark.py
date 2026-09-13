@@ -477,11 +477,20 @@ def _sequitur_stop(output: Path) -> dict[str, Any]:
     else:
         raise ValueError("Sequitur did not report its training stop reason")
     iterations = re.findall(r"^iteration: (\d+)$", log, re.MULTILINE)
-    likelihoods = [
-        float(value)
-        for value in re.findall(r"^LL devel: ([-+\d.eE]+)$", log, re.MULTILINE)
-    ]
-    if not iterations or not likelihoods or not all(map(math.isfinite, likelihoods)):
+    try:
+        likelihoods = [
+            float(value)
+            for value in re.findall(r"^LL devel:[ \t]*(.*)$", log, re.MULTILINE)
+        ]
+    except ValueError as error:
+        raise ValueError(
+            "Sequitur training log has malformed development evidence"
+        ) from error
+    if (
+        not iterations
+        or len(likelihoods) != len(iterations)
+        or not all(map(math.isfinite, likelihoods))
+    ):
         raise ValueError("Sequitur training log lacks finite development evidence")
     return {
         "stop_reason": reason,

@@ -387,3 +387,27 @@ def test_native_receipts_refuse_incomplete_or_over_cap_traces(monkeypatch, over_
         _cart_convergence(EMAlign(max_iterations=2))
     with pytest.raises(ValueError, match="incomplete or over-cap"):
         _multigram_convergence(MultigramAligner(max_iterations=2))
+
+
+@pytest.mark.parametrize("last_value", ["nan", "inf", "-inf", "invalid", ""])
+def test_sequitur_rejects_bad_likelihood_after_finite_observation(tmp_path, last_value):
+    from phonebox.eval.benchmark import _sequitur_stop
+
+    output = tmp_path / "log"
+    output.write_text(
+        "iteration: 0\nLL devel: -12\niteration: 1\n"
+        f"LL devel: {last_value}\niteration converged.\n"
+    )
+    with pytest.raises(ValueError, match="development evidence"):
+        _sequitur_stop(output)
+
+
+def test_sequitur_rejects_missing_iteration_likelihood(tmp_path):
+    from phonebox.eval.benchmark import _sequitur_stop
+
+    output = tmp_path / "log"
+    output.write_text(
+        "iteration: 0\nLL devel: -12\niteration: 1\niteration converged.\n"
+    )
+    with pytest.raises(ValueError, match="development evidence"):
+        _sequitur_stop(output)
