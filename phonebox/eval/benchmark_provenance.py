@@ -56,6 +56,7 @@ def write_tool_receipt(
     source = Path(source_dir).resolve(strict=True)
     if not binary.is_file() or not source.is_dir():
         raise ValueError("Receipt inputs require a binary file and source directory")
+    source = Path(_git(source, "rev-parse", "--show-toplevel").decode().strip())
     revision = _git(source, "rev-parse", "HEAD").decode().strip()
     if revision != expected_revision:
         raise ValueError("Tool source Git HEAD differs from expected_revision")
@@ -98,10 +99,9 @@ def write_tool_receipt(
     )
     if paths_refer_to_same_file(binary, destination):
         raise ValueError("Receipt output must differ from its executable")
-    source_root = Path(_git(source, "rev-parse", "--show-toplevel").decode().strip())
-    tracked = _git(source_root, "ls-files", "-z").decode().split("\0")
+    tracked = _git(source, "ls-files", "-z").decode().split("\0")
     if any(
-        name and paths_refer_to_same_file(source_root / name, destination)
+        name and paths_refer_to_same_file(source / name, destination)
         for name in tracked
     ):
         raise ValueError("Receipt output must differ from tracked source files")

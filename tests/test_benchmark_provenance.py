@@ -105,6 +105,21 @@ def test_tracked_diff_is_captured_and_untracked_source_rejected(inputs):
     assert receipt.read_bytes() == before
 
 
+def test_source_subdirectory_checks_the_whole_repository(inputs):
+    binary, source, revision = inputs
+    nested = source / "subdirectory"
+    nested.mkdir()
+    result = write_tool_receipt(
+        binary, nested, declared_version="source-1", expected_revision=revision
+    )
+    assert result["source_revision"] == revision
+    (source / "untracked.py").write_text("outside the requested subdirectory")
+    with pytest.raises(ValueError, match="untracked"):
+        write_tool_receipt(
+            binary, nested, declared_version="source-1", expected_revision=revision
+        )
+
+
 @pytest.mark.parametrize(
     "build",
     [
