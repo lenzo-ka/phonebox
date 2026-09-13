@@ -20,7 +20,7 @@ saved locale preprocessing for repeatable inference.
 
 Phonebox is **alpha**. Each `0.X.0` release may break APIs, commands, or model
 workflows; patch releases within a minor line are intended to remain compatible.
-See the [0.2.0 changes](https://github.com/lenzo-ka/phonebox/blob/main/CHANGELOG.md)
+See the [0.3.0 changes](https://github.com/lenzo-ka/phonebox/blob/main/CHANGELOG.md)
 and [upgrade guide](https://github.com/lenzo-ka/phonebox/blob/main/docs/RELEASING.md).
 
 ## Install

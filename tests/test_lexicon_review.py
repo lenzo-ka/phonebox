@@ -360,11 +360,11 @@ def test_cli_rejects_actual_multigram_sidecars(tmp_path, capsys):
         [],
         None,
         3,
-        {"model": None},
-        {"model": []},
-        {"model": {}},
-        {"model": {"A": "bad"}},
-        {"model": "A", "metadata": []},
+        {"schema_version": 2, "model": None},
+        {"schema_version": 2, "model": []},
+        {"schema_version": 2, "model": {}},
+        {"schema_version": 2, "model": {"A": "bad"}},
+        {"schema_version": 2, "model": "A", "metadata": []},
     ],
 )
 def test_invalid_model_shapes_library_and_cli(tmp_path, capsys, data):
@@ -513,3 +513,47 @@ def test_cli_optional_number_senses_actual_model(tmp_path, capsys, format):
         assert labels == (
             ["a", "a", "b"] if flag == "--no-number-senses" else ["a", "a(2)", "b"]
         )
+
+
+@pytest.mark.parametrize("operator,boundary_phone", [("<=", "A"), ("<", "B")])
+@pytest.mark.parametrize("suffix", [".json", ".g2p.gz", ".cart"])
+def test_cartlet_numerical_boundary_roundtrip(
+    tmp_path, operator, boundary_phone, suffix
+):
+    """Format-2 strict/inclusive nodes survive full and standalone G2P loading."""
+    from cartlet import DecisionTree as Cartlet
+
+    from phonebox import G2P
+    from phonebox.core.g2p_model import G2PDecisionTree
+    from phonebox.runner import G2PRunner
+
+    tree = Cartlet(features=[{"name": "letter", "type": "num", "dtype": "float"}])
+    tree.model = [0, operator, 1.0, "A", "B"]
+    original = tmp_path / "source.json"
+    tree.export(str(original), metadata={"width": 1, "phoneset": "ipa"})
+    loaded = G2PDecisionTree()
+    loaded.load_model(str(original))
+    exported = tmp_path / ("roundtrip" + suffix)
+    loaded.export(str(exported))
+    G2P(model=exported)  # The public wrapper admits both valid operators.
+    reloaded = G2PDecisionTree()
+    reloaded.load_model(str(exported))
+    assert reloaded._cart.predict([0.0]) == "A"
+    assert reloaded._cart.predict([1.0]) == boundary_phone
+    assert reloaded._cart.predict([2.0]) == "B"
+    if suffix == ".cart":
+        runner = G2PRunner(str(exported))
+        assert runner.predict([1.0]) == boundary_phone
+
+
+def test_g2p_rejects_valid_cartlet_regression_leaf(tmp_path):
+    from cartlet import DecisionTree as Cartlet
+
+    from phonebox import G2P
+
+    tree = Cartlet(task="regression")
+    tree.model = [1.0, 0.0, 1]
+    path = tmp_path / "regression.json"
+    tree.export(str(path))
+    with pytest.raises(ValueError, match="G2P requires phone-string leaves"):
+        G2P(model=path)

@@ -3,6 +3,27 @@
 Phonebox is an alpha library. Each `0.X.0` release may break APIs and workflows;
 patch releases within a minor line are intended to remain compatible.
 
+## 0.3.0 — Unreleased
+
+### Cartlet 0.6 integration
+
+- Require `cartlet>=0.6.0,<0.7.0` for base and sklearn installations, keeping the
+  dependency within its compatible alpha minor line.
+- Delegate model schema and tree validation to Cartlet, accepting both strict
+  `<` and inclusive `<=` numerical nodes in model load/re-export workflows.
+  Keep the G2P-specific requirement for phone-string leaves or distributions.
+- Normalize upstream invalid-artifact errors consistently across library and
+  CLI callers, preserving existing output files when lexicon review fails.
+- Test numerical threshold boundaries through JSON, compressed G2P, and binary
+  model round trips, including the lightweight runner.
+
+**Upgrading:** this line uses Cartlet model format 2. Older binary and
+unversioned JSON/JSONL/pickle artifacts are not automatically migrated. Retrain
+or explicitly convert with the original writer release; regenerate standalone
+bundles together with their models. See [migration notes](docs/RELEASING.md#upgrading-from-020).
+
+Release preparation does not authorize a tag or publication.
+
 ## 0.2.0 — 2026-09-12
 
 Changes since `v0.1.0`:

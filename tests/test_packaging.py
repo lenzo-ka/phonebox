@@ -11,6 +11,8 @@ import zipfile
 from email.parser import Parser
 from pathlib import Path
 
+from packaging.requirements import Requirement
+
 
 def _build(source: Path, output: Path, kind: str) -> None:
     subprocess.run(
@@ -80,7 +82,9 @@ def test_wheel_and_sdist_versions_resources_and_notices(tmp_path):
         assert "sklearn" in metadata.get_all("Provides-Extra", [])
         assert "icu" not in metadata.get_all("Provides-Extra", [])
         assert any(
-            requirement.startswith("cartlet[sklearn]>=0.5.0")
+            Requirement(requirement).name == "cartlet"
+            and Requirement(requirement).extras == {"sklearn"}
+            and str(Requirement(requirement).specifier) == "<0.7.0,>=0.6.0"
             for requirement in metadata.get_all("Requires-Dist", [])
         )
         assert metadata["Version"] == version
@@ -99,7 +103,9 @@ def test_wheel_and_sdist_versions_resources_and_notices(tmp_path):
         assert "sklearn" in metadata.get_all("Provides-Extra", [])
         assert "icu" not in metadata.get_all("Provides-Extra", [])
         assert any(
-            requirement.startswith("cartlet[sklearn]>=0.5.0")
+            Requirement(requirement).name == "cartlet"
+            and Requirement(requirement).extras == {"sklearn"}
+            and str(Requirement(requirement).specifier) == "<0.7.0,>=0.6.0"
             for requirement in metadata.get_all("Requires-Dist", [])
         )
         assert metadata["Version"] == version

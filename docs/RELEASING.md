@@ -1,9 +1,31 @@
 # Upgrading and preparing a release
 
+## Upgrading from 0.2.0
+
+0.3.0 adopts Cartlet 0.6 and requires `cartlet>=0.6.0,<0.7.0`, including the
+optional sklearn trainer. Both projects treat alpha minor lines as potentially
+breaking. Pin `phonebox==0.3.0` when adopting this line after publication.
+
+Cartlet now owns validation of its format-2 binary models and schema-version-2
+JSON/JSONL/pickle envelopes. Strict `<` and inclusive `<=` numerical comparisons
+retain their meaning through Phonebox loading, re-export, and runtime prediction.
+Phonebox still requires phone-string leaves or distributions over phone strings.
+Invalid artifacts raise a consistent `ValueError` in the library and an input
+error in the CLI.
+
+Older or unversioned artifacts are not automatically migrated. Retrain with
+this line, or inspect them with the Cartlet release that originally wrote them
+and explicitly convert their representation. Rebuild standalone bundles with
+their exported models; do not mix copied format-1 runners with format-2 models.
+See the [Cartlet 0.6 model contracts](https://github.com/lenzo-ka/cartlet/blob/v0.6.0/docs/model_contracts.md#saved-models).
+Locale exemplar data and historical benchmark provenance are unchanged by this
+integration; a recorded report remains a measurement of its named source and
+dependencies until it is rerun.
+
 ## Upgrading from 0.1.0
 
-0.2.0 is a new alpha minor line. Review integrations rather than assuming API,
-CLI, or saved-model compatibility. Pin `phonebox==0.2.0` when adopting this line.
+The 0.2.0 line introduced the following changes. Review these when upgrading
+from 0.1.0, then apply the 0.3.0 migration notes above.
 The [changelog](../CHANGELOG.md) records the changes since `v0.1.0`.
 
 - Use `phonebox.train_g2p` or `train_g2p_from_config` for dictionary-to-CART
@@ -51,7 +73,7 @@ The [changelog](../CHANGELOG.md) records the changes since `v0.1.0`.
 
 The [CMUdict report](CMUDICT_COMPARISON.md) is measured at its recorded source
 revision and dependency versions. Its CART benchmark helper is unpruned, unlike
-primary training's default. Updating documentation or releasing 0.2.0 does not
+primary training's default. Updating documentation or releasing a new version does not
 make those historical metrics a measurement of the release commit. Rerunning
 on newer code creates a new snapshot.
 
@@ -91,7 +113,7 @@ Preparation alone does not create a tag, publish a GitHub release, or upload to 
 ## Authorized release cut
 
 Only after the owner explicitly authorizes publication, set the changelog date,
-review the final version commit, rerun release checks, and create `v0.2.0` at the
+review the final version commit, rerun release checks, and create the matching version tag (for example, `v0.3.0`) at the
 verified commit. Publishing the GitHub release triggers
 [`.github/workflows/publish.yml`](https://github.com/lenzo-ka/phonebox/blob/main/.github/workflows/publish.yml): it checks
 release-tag/package-version agreement, rebuilds the wheel and sdist from that
