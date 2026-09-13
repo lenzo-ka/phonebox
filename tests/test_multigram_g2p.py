@@ -205,7 +205,7 @@ def test_disabled_config_joins_persist_after_reload(tmp_path):
     assert loaded.preprocessor.cook_letters("gli", g2p=True) == ["g", "l", "i"]
 
 
-@pytest.mark.parametrize("version", [None, "1", "2", "3", "4", "999"])
+@pytest.mark.parametrize("version", [None, "1", "2", "3", "4", "5", "999"])
 def test_unsupported_scoring_versions_require_retraining(tmp_path, version):
     model = MultigramG2P(
         max_letter_span=1,
@@ -321,4 +321,19 @@ def test_model_load_rejects_decoder_units_outside_lm_events(tmp_path):
     data["units"].append([["z"], ["Z"], 0.01])
     units_path.write_text(json.dumps(data))
     with pytest.raises(ValueError, match="outside the LM prediction vocabulary"):
+        MultigramG2P.load(path)
+
+
+def test_serialized_model_declares_decoding_objective(tmp_path):
+    model = MultigramG2P(max_letter_span=1, max_phone_span=1, em_max_iterations=2)
+    model.train_from_pairs([(["x"], ["K"])])
+    path = tmp_path / "objective.g2p"
+    model.export(path)
+    units_path, lm_path = model.export_paths(path)
+    data = json.loads(units_path.read_text())
+    assert data["scoring"] == "unit-lm-with-eos"
+    assert json.loads(lm_path.read_text())["version"] == 2
+    data["scoring"] = "q-plus-unit-lm"
+    units_path.write_text(json.dumps(data))
+    with pytest.raises(ValueError, match="unsupported multigram decoding objective"):
         MultigramG2P.load(path)

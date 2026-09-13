@@ -37,12 +37,16 @@ bundles together with their models. See [migration notes](docs/RELEASING.md#upgr
 
 ### Multigram scoring
 
+- Score complete multigram sequences with the unit LM alone. Alignment q still
+  defines candidate units, but is no longer multiplied into the LM score again.
+  Save the explicit `unit-lm-with-eos` objective; older q-plus-LM models require
+  retraining. This is an intentional modeling change, not a smoothing parameter.
 - Include the trained end-of-sequence transition when choosing a complete
   pronunciation, correcting the previous prefix-only terminal ranking.
 - Normalize the unit LM over its declared inference units and end-of-sequence
   event, with the start marker used only as context. Preserve alignment units
   absent from Viterbi paths, including silent-phone units.
-- Version new multigram models as 5 and their LM scoring as 2. Reject older
+- Version new multigram models as 6 and their LM scoring as 2. Reject older
   artifacts with a clear retraining instruction; CART formats are unchanged.
 - Replace an unsupported historical smoothing claim with the actual scoring
   contract and use the model version in newly rendered comparisons.
