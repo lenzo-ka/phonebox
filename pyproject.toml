@@ -45,6 +45,10 @@ config = [
 sklearn = [
     "cartlet[sklearn]>=0.6.0,<0.7.0",
 ]
+# The reproducible benchmark driver uses the package and standard library.
+# External Sequitur/Phonetisaurus training toolchains are isolated native builds;
+# see docs/REPRODUCIBLE_BENCHMARKS.md for pinned developer installation recipes.
+# Do not add their compiled dependencies to the runtime or standalone bundle.
 dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",

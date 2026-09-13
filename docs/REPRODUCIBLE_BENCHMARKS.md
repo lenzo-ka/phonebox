@@ -1,0 +1,150 @@
+# Reproducing G2P comparisons
+
+The developer benchmark compares Phonebox's traditional CART model and n-to-m
+multigram model with the authors' Sequitur and Phonetisaurus implementations.
+Each system receives the same prepared training, development, and test data.
+Results describe the recorded source revisions and settings; they are not a
+claim of state-of-the-art performance.
+
+## Data and protocol
+
+CMUdict is identified by a Git commit and file digest, rather than a package
+release number. Its pronunciation variants remain in the same spelling group
+when splitting. Stress-preserved and stress-removed experiments are separate
+conditions; duplicate pronunciations are removed after the stress mapping.
+The new comparison reserves development data as well as test data, so its
+scores need not match the earlier two-way [CMUdict comparison](CMUDICT_COMPARISON.md).
+
+The additional witnesses use the official SIGMORPHON 2021 French medium-resource
+and Italian low-resource splits. Italian has only 100 test entries: small
+changes in its word error rate should not be interpreted as a reliable system
+ranking. We report each dataset separately, without averaging across resource
+levels.
+
+Shared preparation preserves NFC spelling and the supplied phone token
+boundaries. CMUdict spellings are lowercased. The task data retain case and
+accents, with no additional stress stripping. These experiments deliberately
+use identity letter processing, rather than the shipped locale rewriting rules.
+For example, Italian `si` and `sì` would otherwise collapse across the published
+train/test boundary. The loader checks the prepared split intersections before
+training. It does not silently repair a contaminated split.
+
+CART uses epsilon scattering and local context decision trees; the multigram
+model learns variable-length letter-to-phone units and their sequence model.
+Sequitur supplies an independent joint-sequence implementation, and
+Phonetisaurus uses joint n-grams compiled into a weighted finite-state
+transducer. All four predict from the model alone: dictionary fallback and
+reference-pronunciation substitution are disabled.
+
+The benchmark fixes model settings before testing. Sequitur's order is selected
+from orders 1–3 using development phone error rate, then word error rate, then
+the smaller order. Phonetisaurus uses its upstream example order of eight.
+These choices are bounded baseline configurations, not an exhaustive tuning
+study. Test results do not determine hyperparameters.
+
+Word error rate accepts any recorded reference pronunciation. Phone error rate
+uses edit distance divided by reference phones; for multiple references it
+selects the minimum-edit reference, breaking ties deterministically. Missing
+and empty predictions remain in the test denominator. Training admission
+counts distinguish supplied examples from examples a model can align.
+
+## Developer API and CLI
+
+Install the developer environment with `python -m pip install -e '.[dev]'`.
+The benchmark driver adds no runtime dependencies. External training programs
+need their own native builds; a Python decoder wheel alone is insufficient.
+The [verified Linux toolchain recipes](BENCHMARK_TOOLCHAINS.md) record source pins.
+
+Run each experiment in its own ignored directory:
+
+```sh
+phonebox compare benchmark --dataset italian --system cart \
+  --work-dir .cache/benchmarks/italian-cart \
+  --output .cache/benchmarks/italian-cart.json
+phonebox compare benchmark --dataset italian --system multigram \
+  --work-dir .cache/benchmarks/italian-multigram \
+  --output .cache/benchmarks/italian-multigram.json
+phonebox compare benchmark --dataset italian --system sequitur \
+  --sequitur-executable .cache/toolchains/sequitur/venv/bin/g2p.py \
+  --work-dir .cache/benchmarks/italian-sequitur \
+  --output .cache/benchmarks/italian-sequitur.json
+phonebox compare benchmark --dataset italian --system phonetisaurus \
+  --phonetisaurus-prefix .cache/toolchains/phonetisaurus/prefix \
+  --work-dir .cache/benchmarks/italian-phonetisaurus \
+  --output .cache/benchmarks/italian-phonetisaurus.json
+phonebox compare benchmark-report .cache/benchmarks/italian-*.json \
+  --output .cache/benchmarks/italian.md
+```
+
+Repeat with `--dataset french` or `--dataset cmudict`. For the second CMUdict
+condition, add `--remove-stress` and use new work and result paths. The CLI help
+lists the required external executables and cache options. Progress goes to
+standard error; aggregate measurements go to the requested JSON file.
+
+The CLI delegates to the same library functions:
+
+```python
+from pathlib import Path
+from phonebox.eval.benchmark_data import load_dataset
+from phonebox.eval.benchmark import run_benchmark
+from phonebox.eval.benchmark_report import render_benchmark_report
+
+data = load_dataset("italian", Path(".cache/benchmarks/data"))
+result = run_benchmark(data, "cart", Path(".cache/benchmarks/api-italian-cart"))
+markdown = render_benchmark_report([result])
+```
+
+`PreparedDataset.metadata` records source licenses, hashes, preparation, and
+split populations. `run_benchmark` returns a JSON-serializable result. The report
+renderer checks matching prepared splits and test populations, rejects duplicate
+system rows, and labels unmeasured systems. Models, logs, and raw predictions
+stay in the experiment directory; only aggregate result JSON and its rendering
+belong in the public results snapshot.
+
+## Interpreting and replicating results
+
+Compare measured systems within the same prepared dataset and split hashes.
+Record model settings, source and dependency versions, training admission,
+prediction failures, model size, and timing alongside WER and PER. A timing
+measurement on a shared machine is descriptive, not a controlled speed ranking.
+
+Published paper results are relevant context. A replication claim additionally
+requires matching the original dictionary revision, split, normalization,
+reference handling, metric definition, and training protocol. Running newer
+CMUdict through the authors' software is a new controlled comparison; it does
+not by itself replicate the historical number. Where those details cannot be
+matched, published scores must be labeled separately rather than inserted into
+the measured-results table.
+
+## Sources, credit, and licensing
+
+The benchmark downloads data into an ignored cache. The package contains source
+manifests and aggregate measurements, not the downloaded dictionaries, trained
+external models, or word-level predictions. Data licenses remain separate from
+Phonebox's software license.
+
+- [CMUdict](https://github.com/cmusphinx/cmudict) provides its own
+  [license](https://github.com/cmusphinx/cmudict/blob/74790861f652b15e4ac49015a90074ad62a27690/LICENSE).
+  The loader records the exact revision and digest.
+- The [SIGMORPHON 2021 task snapshot](https://github.com/sigmorphon/2021-task1/tree/821bcdece5a47820872215969f275004b0abe80c)
+  declares its data CC BY-SA 3.0 and its code Apache 2.0. Cite
+  [Ashby et al. (2021)](https://aclanthology.org/2021.sigmorphon-1.13/) and
+  [Lee et al. (2020), WikiPron](https://aclanthology.org/2020.lrec-1.521/).
+  Preserve these attributions and the data license when sharing prepared data.
+- [Sequitur](https://github.com/sequitur-g2p/sequitur-g2p) is GPL-2.0-only.
+  Cite Bisani and Ney (2008), *Joint-sequence models for grapheme-to-phoneme
+  conversion*, Speech Communication 50(5), 434–451,
+  [doi:10.1016/j.specom.2008.01.002](https://doi.org/10.1016/j.specom.2008.01.002).
+- [Phonetisaurus](https://github.com/AdolfVonKleist/Phonetisaurus) is BSD-3-Clause.
+  Cite Novak, Minematsu, and Hirose (2016), *Phonetisaurus: Exploring
+  grapheme-to-phoneme conversion with joint n-gram models in the WFST framework*,
+  Natural Language Engineering 22(6), 907–938.
+  Its training toolchain uses [OpenFst](https://www.openfst.org/) (Apache 2.0)
+  and [MITLM](https://github.com/mitlm/mitlm) (BSD-3-Clause).
+  For MITLM, cite Hsu and Glass (2008), *Iterative Language Model Estimation:
+  Efficient Data Structure & Algorithms*, Interspeech, 841–844.
+
+External tools are installed separately for development and invoked as
+subprocesses. They are not Phonebox runtime dependencies or vendored package
+contents. Retain their licenses and notices with any redistributed copies.
+This build uses MITLM; it does not require SRILM.

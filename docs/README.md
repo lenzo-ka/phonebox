@@ -17,6 +17,7 @@ provide a separate standard-library-only inference path.
 | Read or regenerate orthographic locale inventories | [ICU exemplars](EXEMPLARS.md) |
 | Record dictionary identity and external provenance | [Content identifiers](DICT_VERSION_SCHEMA.md), [versioning examples](VERSIONING_EXAMPLES.md) |
 | Run model evaluations | [Evaluation commands](G2P_EVAL.md), [accuracy interpretation](ACCURACY.md) |
+| Reproduce measured native and external baselines | [Developer benchmark protocol](REPRODUCIBLE_BENCHMARKS.md) |
 | Reproduce the public CMUdict comparison | [CMUdict comparison](CMUDICT_COMPARISON.md) |
 | Understand package organization | [Architecture](ARCHITECTURE.md) |
 | Prepare an authorized release | [Release procedure](RELEASING.md) |
