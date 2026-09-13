@@ -112,6 +112,7 @@ def render_benchmark_report(results: Sequence[Mapping[str, Any]]) -> str:
             "WER accepts any reference pronunciation; PER uses the minimum-edit "
             "reference and its phone count. Missing predictions remain errors. "
             "Each condition uses identical prepared splits across systems. "
+            "Scores measure held-out model predictions with dictionary lookup disabled. "
             "These are measured baseline runs, not historical-paper replications.",
             "",
         ]
@@ -139,7 +140,7 @@ def render_benchmark_report(results: Sequence[Mapping[str, Any]]) -> str:
                 f"Train/dev/test words: {counts['train']['words']:,} / "
                 f"{counts['dev']['words']:,} / {counts['test']['words']:,}.",
                 "",
-                "| System | WER (%) | PER (%) | Empty predictions | Train + export (s) | Predict (s) | Model bytes |",
+                "| System | Held-out WER (%) | Held-out PER (%) | Empty predictions | Train + export (s) | Predict (s) | Model bytes |",
                 "| --- | ---: | ---: | ---: | ---: | ---: | ---: |",
             ]
             for row in sorted(
