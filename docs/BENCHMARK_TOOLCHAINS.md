@@ -318,3 +318,7 @@ The same file controls profile and full training. For example, a CPU experiment
 may set `{"threads": 1}`; altering architecture or stopping settings must be
 disclosed with its own result. The public API accepts the validated settings
 object through `settings=` or `run_benchmark(..., neural_settings=...)`.
+
+`threads` accepts any positive integer, with a default of 2. Choose the resource budget
+for your machine explicitly; a particular experiment's one-thread limit belongs
+to its launcher/settings receipt rather than a reusable library restriction.
