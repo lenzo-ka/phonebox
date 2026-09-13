@@ -17,7 +17,11 @@ from phonebox.constants import (
     DEFAULT_TRAINER,
 )
 from phonebox.core.multigram_lm import SUPPORTED_LM_ORDERS
-from phonebox.eval.g2p_compare import print_results_table, run_compare
+from phonebox.eval.g2p_compare import (
+    EVALUATION_TIMING_NOTE,
+    print_results_table,
+    run_compare,
+)
 from phonebox.eval.g2p_compare_all import (
     CompareAllConfig,
     run_compare_all,
@@ -52,6 +56,7 @@ def setup_compare_commands(subparsers) -> None:
     all_p = sp.add_parser(
         "all",
         help="All six IPA locales (writes docs/G2P_COMPARE*.md)",
+        epilog=EVALUATION_TIMING_NOTE,
     )
     all_p.add_argument("--lexicon-dir", type=Path, default=None)
     all_p.add_argument("--g2p-dir", type=Path, default=None)
@@ -65,7 +70,7 @@ def setup_compare_commands(subparsers) -> None:
     all_p.add_argument("--locales", nargs="*")
     all_p.set_defaults(func=handle_compare_all)
 
-    loc_p = sp.add_parser("locale", help="Single locale")
+    loc_p = sp.add_parser("locale", help="Single locale", epilog=EVALUATION_TIMING_NOTE)
     loc_p.add_argument("--lexicon", required=True, type=Path)
     loc_p.add_argument("--locale", required=True)
     loc_p.add_argument("--phoneset", default=DEFAULT_MULTIGRAM_PHONESET)
@@ -95,7 +100,9 @@ def setup_compare_commands(subparsers) -> None:
     loc_p.add_argument("--no-config-joins", action="store_true")
     loc_p.set_defaults(func=handle_compare_locale)
 
-    sweep = sp.add_parser("sweep", help="Sweep multigram span and LM order")
+    sweep = sp.add_parser(
+        "sweep", help="Sweep multigram span and LM order", epilog=EVALUATION_TIMING_NOTE
+    )
     sweep.add_argument(
         "--lexicon-dir",
         type=Path,
