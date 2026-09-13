@@ -261,11 +261,13 @@ def train_baseline(
         trainer="native",
         parallel_align=False,
         max_combinations=5000,
-        use_dict_fallback=use_dict_fallback,
+        # Do not infer correction exceptions that an explicit table replaces.
+        use_dict_fallback=use_dict_fallback and exceptions is None,
     )
     dt.load_prondict(iter(train_lines))
     dt.align()
     dt.train(prune=False)
+    dt.use_dict_fallback = use_dict_fallback
     if exceptions is not None:
         dt.exceptions = exceptions
     return dt

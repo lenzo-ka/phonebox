@@ -99,3 +99,33 @@ def test_sweep_separates_stage_times_and_renders_them(tmp_path, monkeypatch):
     markdown = g2p_sweep.format_g2p_sweep(rows, letter_spans=[1], lm_orders=[2])
     assert "| 1 | 2 | 3.000 | 5.000 | 7.000 |" in markdown
     assert "metric calculation" in markdown
+
+
+@pytest.mark.parametrize("explicit_exceptions", [False, True])
+def test_baseline_does_not_predict_training_words_for_replaced_exceptions(
+    monkeypatch, explicit_exceptions
+):
+    from phonebox.core.g2p_model import G2PDecisionTree
+
+    original = G2PDecisionTree.pronounce
+    calls = []
+
+    def record(model, word):
+        calls.append(word)
+        return original(model, word)
+
+    monkeypatch.setattr(G2PDecisionTree, "pronounce", record)
+    table = {"cat": ["OVERRIDE"]} if explicit_exceptions else None
+    model = g2p_compare.train_baseline(
+        "en_US",
+        "cmu",
+        ["cat K AE T", "cap K AE P"],
+        use_dict_fallback=True,
+        exceptions=table,
+    )
+    assert model.use_dict_fallback is True
+    if explicit_exceptions:
+        assert calls == []
+        assert model.pronounce("cat") == ["OVERRIDE"]
+    else:
+        assert sorted(calls) == ["cap", "cat"]
