@@ -41,7 +41,11 @@ def result(system="cart"):
             "empty_predictions": 1,
             "prediction_errors": 1,
         },
-        "timings": {"training_seconds": 0.2, "prediction_seconds": 0.01},
+        "timings": {
+            "training_seconds": 0.2,
+            "prediction_seconds": 0.01,
+            "export_seconds": 0.0,
+        },
         "training": {"model_bytes": 123},
     }
 
@@ -127,6 +131,8 @@ def test_incompatible_results_refused(mutation, message):
         (("dataset", "preparation", "remove_stress"), []),
         (("training", "model_bytes"), 1.5),
         (("timings", "training_seconds"), float("inf")),
+        (("timings", "export_seconds"), -1),
+        (("timings", "export_seconds"), float("nan")),
     ],
 )
 def test_malformed_aggregate_counts_and_numbers_refused(path, value):
@@ -143,6 +149,23 @@ def test_per_can_exceed_100_without_becoming_invalid():
     row = result()
     row["metrics"]["per_variant_pct"] = 150
     assert "| 150.00 |" in render_benchmark_report([row])
+
+
+def test_training_total_includes_native_export_once_and_external_export_once():
+    native, external = result(), result("sequitur")
+    native["timings"].update(training_seconds=1.0, export_seconds=0.25)
+    external["timings"].update(training_seconds=1.25, export_seconds=0.0)
+    rendered = render_benchmark_report([native, external])
+    assert "Train + export (s)" in rendered
+    assert "| Phonebox CART | 50.00 | 25.00 | 1 | 1.25 |" in rendered
+    assert "| Sequitur | 50.00 | 25.00 | 1 | 1.25 |" in rendered
+
+
+def test_training_total_cannot_overflow_finite_components():
+    row = result()
+    row["timings"].update(training_seconds=1e308, export_seconds=1e308)
+    with pytest.raises(ValueError, match="training plus export time"):
+        render_benchmark_report([row])
 
 
 @pytest.mark.parametrize("bad", [None, [], {}, {"schema_version": 1}, "wrong shape"])

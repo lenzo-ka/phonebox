@@ -139,7 +139,7 @@ def render_benchmark_report(results: Sequence[Mapping[str, Any]]) -> str:
                 f"Train/dev/test words: {counts['train']['words']:,} / "
                 f"{counts['dev']['words']:,} / {counts['test']['words']:,}.",
                 "",
-                "| System | WER (%) | PER (%) | Empty predictions | Train (s) | Predict (s) | Model bytes |",
+                "| System | WER (%) | PER (%) | Empty predictions | Train + export (s) | Predict (s) | Model bytes |",
                 "| --- | ---: | ---: | ---: | ---: | ---: | ---: |",
             ]
             for row in sorted(
@@ -154,7 +154,11 @@ def render_benchmark_report(results: Sequence[Mapping[str, Any]]) -> str:
                     _number(metrics["wer_relaxed_pct"], "WER"),
                     _number(metrics["per_variant_pct"], "PER"),
                     _number(metrics["empty_predictions"], "empty predictions"),
-                    _number(timing["training_seconds"], "training time"),
+                    _number(
+                        _number(timing["training_seconds"], "training time")
+                        + _number(timing["export_seconds"], "export time"),
+                        "training plus export time",
+                    ),
                     _number(timing["prediction_seconds"], "prediction time"),
                     _number(training["model_bytes"], "model bytes"),
                 ]
@@ -184,8 +188,9 @@ def render_benchmark_report(results: Sequence[Mapping[str, Any]]) -> str:
             "",
             "Full configuration, source/dependency provenance, training admission "
             "counts, and error accounting are retained in the accompanying JSON. "
-            "Timing includes the recorded training procedure (including development "
-            "selection where used); shared-machine timing is descriptive. "
+            "Train + export includes the recorded training procedure (including "
+            "development selection where used) and export; external training "
+            "already includes export. Shared-machine timing is descriptive. "
             "The 100-word Italian test is a small witness, not a precise ranking.",
             "",
         ]
