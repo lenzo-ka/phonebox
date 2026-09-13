@@ -5,7 +5,12 @@ from pathlib import Path
 
 import pytest
 
-from phonebox.eval.benchmark import _predictions, run_benchmark
+from phonebox.eval.benchmark import (
+    _cart_convergence,
+    _multigram_convergence,
+    _predictions,
+    run_benchmark,
+)
 from phonebox.eval.benchmark_data import _assemble
 
 
@@ -29,6 +34,13 @@ def test_actual_native_training_identity_and_population(tmp_path, system):
     assert report["training"]["retained_entries"] == 3
     assert report["training"]["model_bytes"] > 0
     assert report["training"]["dictionary_entries"] == 0
+    convergence = report["training"]["convergence"]
+    assert convergence["max_iterations"] == 100
+    assert convergence["converged"] is True
+    assert convergence["cap_censored"] is False
+    assert convergence["stop_reason"] == "converged"
+    trace_key = "history" if system == "cart" else "observed_pre_update_loglik_history"
+    assert convergence["iterations"] == len(convergence[trace_key])
     if system == "cart":
         from phonebox.core.g2p_model import G2PDecisionTree
 
@@ -41,6 +53,8 @@ def test_actual_native_training_identity_and_population(tmp_path, system):
 
         assert report["settings"]["g2p_version"] == MultigramG2P.VERSION
         assert report["settings"]["lm_version"] == MultigramLM.VERSION
+        assert report["settings"]["scoring"] == MultigramG2P.SCORING
+        assert report["settings"]["em_max_iterations"] == 100
         saved = json.loads((tmp_path / system / "model.g2p.units.json").read_text())
         assert saved["exceptions"] == {}
     assert report["settings"]["letter_preprocessing"]["source"] == {
@@ -319,3 +333,57 @@ def test_sequitur_invalid_budgets_before_side_effects(tmp_path, budgets):
             sequitur_extension_iterations=budgets[2],
         )
     assert not (tmp_path / "run").exists()
+
+
+def test_native_receipts_distinguish_iteration_caps(monkeypatch):
+    from phonebox.core.em_align import EMAlign
+    from phonebox.core.multigram_align import MultigramAligner
+    from phonebox.core.vectorizer import Vectorizer
+
+    cart = EMAlign(
+        locale=Vectorizer(phoneset_name="ipa"),
+        max_iterations=1,
+        parallel=False,
+        verbose=False,
+    )
+    cart.load_prondict(["ab A B", "ac A C"])
+    monkeypatch.setattr(cart, "align_once", lambda iteration: (1, 0.5))
+    cart.align()
+    cart_receipt = _cart_convergence(cart)
+    assert cart_receipt["history"] == [{"iteration": 1, "changed": 1, "ratio": 0.5}]
+    mg = MultigramAligner(max_iterations=1)
+    mg.fit([(["a"], ["A"])])
+    mg_receipt = _multigram_convergence(mg)
+    assert mg_receipt["last_relative_change"] is None
+    for receipt in (cart_receipt, mg_receipt):
+        assert receipt["iterations"] == 1
+        assert receipt["stop_reason"] == "iteration_limit"
+        assert receipt["cap_censored"] is True
+        assert receipt["converged"] is False
+
+
+def test_native_receipts_refuse_missing_observations():
+    from phonebox.core.em_align import EMAlign
+    from phonebox.core.multigram_align import MultigramAligner
+
+    with pytest.raises(ValueError, match="convergence evidence"):
+        _cart_convergence(EMAlign())
+    with pytest.raises(ValueError, match="convergence evidence"):
+        _multigram_convergence(MultigramAligner())
+
+
+@pytest.mark.parametrize("over_cap", [False, True])
+def test_native_receipts_refuse_incomplete_or_over_cap_traces(monkeypatch, over_cap):
+    from phonebox.core.em_align import EMAlign
+    from phonebox.core.multigram_align import MultigramAligner
+
+    count = 3 if over_cap else 1
+    history = [{"iteration": i + 1, "changed": 1, "ratio": 0.5} for i in range(count)]
+    monkeypatch.setattr(EMAlign, "alignment_history", property(lambda self: history))
+    monkeypatch.setattr(
+        MultigramAligner, "loglik_history", property(lambda self: [-1.0] * count)
+    )
+    with pytest.raises(ValueError, match="incomplete or over-cap"):
+        _cart_convergence(EMAlign(max_iterations=2))
+    with pytest.raises(ValueError, match="incomplete or over-cap"):
+        _multigram_convergence(MultigramAligner(max_iterations=2))

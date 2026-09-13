@@ -39,7 +39,9 @@ from pathlib import Path, PureWindowsPath
 from typing import TYPE_CHECKING, Any
 
 from phonebox.constants import JOIN_CHAR
+from phonebox.core.em_align import EMAlign
 from phonebox.core.g2p_model import G2PDecisionTree
+from phonebox.core.multigram_align import MultigramAligner
 from phonebox.core.multigram_g2p import MultigramG2P
 from phonebox.core.multigram_lm import MultigramLM
 from phonebox.core.vectorizer import Vectorizer
@@ -293,6 +295,58 @@ def _predictions(
     return result
 
 
+def _cart_convergence(aligner: EMAlign) -> dict[str, Any]:
+    history = aligner.alignment_history
+    if not history:
+        raise ValueError("CART alignment did not record convergence evidence")
+    last = history[-1]
+    converged = not last["changed"] or last["ratio"] < aligner.min_change_ratio
+    if len(history) > aligner.max_iterations or (
+        not converged and len(history) < aligner.max_iterations
+    ):
+        raise ValueError("CART alignment recorded an incomplete or over-cap trace")
+    return {
+        "criterion": "changed == 0 or changed-entry ratio < threshold",
+        "threshold": aligner.min_change_ratio,
+        "max_iterations": aligner.max_iterations,
+        "iterations": len(history),
+        "converged": converged,
+        "cap_censored": not converged and len(history) >= aligner.max_iterations,
+        "stop_reason": "converged" if converged else "iteration_limit",
+        "history": history,
+    }
+
+
+def _multigram_convergence(aligner: MultigramAligner) -> dict[str, Any]:
+    history = aligner.loglik_history
+    if not history or not all(map(math.isfinite, history)):
+        raise ValueError(
+            "multigram alignment did not record finite convergence evidence"
+        )
+    relative = (
+        abs(history[-1] - history[-2]) / max(1.0, abs(history[-2]))
+        if len(history) > 1
+        else None
+    )
+    converged = relative is not None and relative < aligner.conv
+    if len(history) > aligner.max_iter or (
+        not converged and len(history) < aligner.max_iter
+    ):
+        raise ValueError("multigram alignment recorded an incomplete or over-cap trace")
+    return {
+        "criterion": "absolute relative observed log-likelihood change < threshold",
+        "threshold": aligner.conv,
+        "max_iterations": aligner.max_iter,
+        "iterations": len(history),
+        "converged": converged,
+        "cap_censored": not converged and len(history) >= aligner.max_iter,
+        "stop_reason": "converged" if converged else "iteration_limit",
+        "last_relative_change": relative,
+        "history_semantics": "log-likelihood observed before each M-step, not a final-model rescore",
+        "observed_pre_update_loglik_history": history,
+    }
+
+
 def _native(dataset: PreparedDataset, system: str, directory: Path):
     vectorizer = _identity_vectorizer(dataset.metadata.get("phoneset", "ipa"))
     # These checks catch reserved syntax/phone-join tokens before they silently
@@ -313,7 +367,7 @@ def _native(dataset: PreparedDataset, system: str, directory: Path):
             "trainer": "native",
             "width": 7,
             "max_combinations": 5000,
-            "max_iterations": 10,
+            "max_iterations": 100,
             "parallel_align": False,
             "prune": False,
             "use_dict_fallback": False,
@@ -326,7 +380,7 @@ def _native(dataset: PreparedDataset, system: str, directory: Path):
             trainer="native",
             width=7,
             max_combinations=5000,
-            max_iterations=10,
+            max_iterations=100,
             parallel_align=False,
             use_dict_fallback=False,
         )
@@ -342,19 +396,22 @@ def _native(dataset: PreparedDataset, system: str, directory: Path):
         model.train(prune=False)
         retained = len(model.em.init_data)
         accounting = {
+            "convergence": _cart_convergence(model.em),
             "candidate_entries": len(model.em.seen),
             "retained_entries": retained,
             "skipped_entries": len(dataset.train) - retained,
         }
+        settings["min_change_ratio"] = model.em.min_change_ratio
         artifacts = [directory / "model.g2p.gz"]
     else:
         settings = {
             "g2p_version": MultigramG2P.VERSION,
             "lm_version": MultigramLM.VERSION,
+            "scoring": MultigramG2P.SCORING,
             "max_letter_span": 2,
             "max_phone_span": 2,
             "min_phone_span": 0,
-            "em_max_iterations": 10,
+            "em_max_iterations": 100,
             "lm_order": 2,
             "parallel_align": False,
             "parallel_viterbi": False,
@@ -364,7 +421,7 @@ def _native(dataset: PreparedDataset, system: str, directory: Path):
             max_letter_span=2,
             max_phone_span=2,
             min_phone_span=0,
-            em_max_iterations=10,
+            em_max_iterations=100,
             lm_order=2,
             parallel_align=False,
             parallel_viterbi=False,
@@ -374,9 +431,18 @@ def _native(dataset: PreparedDataset, system: str, directory: Path):
             [(list(word), phones) for word, phones in dataset.train]
         )
         accounting = {
+            "convergence": _multigram_convergence(model.aligner),
             "retained_entries": metrics["aligned_entries"],
             "skipped_entries": metrics["skipped_entries"],
         }
+        settings.update(
+            {
+                "em_convergence_threshold": model.aligner.conv,
+                "min_unit_mass": model.aligner.min_unit_mass,
+                "decode_beam": model.decode_beam,
+                "lm_add_k": model.lm.add_k,
+            }
+        )
         artifacts = list(model.export_paths(directory / "model.g2p"))
     training_seconds = time.perf_counter() - started
     started = time.perf_counter()

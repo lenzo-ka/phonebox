@@ -48,7 +48,7 @@ of epsilon-placement combinations exceeds the configured limit. These are
 model-specific admission limits: the shared dataset retains such candidates,
 and results report actual retained and skipped entries.
 
-The benchmark uses width **7**, at most **10** alignment iterations,
+The benchmark uses width **7**, at most **100** alignment iterations,
 `max_combinations=5000`, native tree training, and **no pruning**. This is a
 fixed baseline, not the default pruned primary training workflow and not a
 search for the best context width or tree settings. See the
@@ -71,17 +71,20 @@ modified Kneser–Ney estimator.
 
 [`joint_decode`](../phonebox/core/joint_decode.py) keeps hypotheses by input
 position and joint-unit history. Each transition must match the next letter
-span and adds the log unit probability and the unit LM log score. It chooses
+span and adds the unit LM log score. The final transition includes EOS.
+Alignment q defines candidate support, without an additional probability
+factor. Model version 6 records `unit-lm-with-eos`; the normalized LM event
+format is version 2. It chooses
 a complete path rather than greedily emitting a phone for each letter. A
 word with no complete segmentation in the saved unit inventory returns an
 empty prediction; occurrences of its individual letters in training do not
 guarantee a composable unit path.
 
 The benchmark caps letter and phone spans at **2**, allows **0** phones per
-unit, runs at most **10** EM iterations, and uses a **bigram** unit LM.
+unit, runs at most **100** EM iterations, and uses a **bigram** unit LM.
 Current inherited defaults are convergence threshold `1e-4`, minimum unit
 mass `1e-8`, and decode beam **0**: no beam truncation. These choices are
-recordable implementation settings, not properties required by the general
+recorded implementation settings, not properties required by the general
 n:m approach. The native LM supports orders 1–3; this baseline does not tune
 that order on the test set.
 

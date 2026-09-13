@@ -66,6 +66,20 @@ Phonetisaurus uses joint n-grams compiled into a weighted finite-state
 transducer. All four predict from the model alone: dictionary fallback and
 reference-pronunciation substitution are disabled.
 
+Native CART and multigram alignment allow at most **100** iterations with
+existing stopping criteria: CART stops at zero changes (or below its configured
+change ratio); multigram stops when relative observed likelihood change is
+below `1e-4`. Results store the actual full trace, stopping criterion, iteration
+count and cap-censoring in `training.convergence`. Multigram likelihoods are
+observed before each M-step, not a separate final-model rescore. A successful
+run or a fixed cap alone does not demonstrate convergence. Older cap-10 native
+snapshots are initial diagnostics, not results of this final protocol.
+
+Multigram inference uses the complete unit-LM sequence score including EOS;
+alignment q supplies candidate support, without an extra unigram factor.
+Results record model/LM versions and the saved scoring identifier dynamically.
+Historical q-plus-LM snapshots retain their original semantics and source pins.
+
 The benchmark fixes model settings before testing. Sequitur's order is selected
 from orders 1–3 using development phone error rate, then word error rate, then
 the smaller order. Each order uses the upstream convergence test with minimum
