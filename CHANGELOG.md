@@ -34,6 +34,12 @@ bundles together with their models. See [migration notes](docs/RELEASING.md#upgr
 - Replace an unsupported historical smoothing claim with the actual scoring
   contract and use the model version in newly rendered comparisons.
 
+### Training diagnostics
+
+- Expose defensive, JSON-serializable CART alignment iteration history through
+  `EMAlign.alignment_history`, recording actual changed counts and ratios per
+  run so callers can distinguish convergence from reaching an iteration cap.
+
 ### Documentation and evaluation
 
 - Refresh the pinned CMUdict CART/multigram comparison with Cartlet 0.6.0,
