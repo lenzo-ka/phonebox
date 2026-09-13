@@ -36,6 +36,11 @@ def test_actual_native_training_identity_and_population(tmp_path, system):
         reloaded.load_model(str(tmp_path / system / "model.g2p.gz"))
         assert reloaded.exceptions == {}
     else:
+        from phonebox.core.multigram_g2p import MultigramG2P
+        from phonebox.core.multigram_lm import MultigramLM
+
+        assert report["settings"]["g2p_version"] == MultigramG2P.VERSION
+        assert report["settings"]["lm_version"] == MultigramLM.VERSION
         saved = json.loads((tmp_path / system / "model.g2p.units.json").read_text())
         assert saved["exceptions"] == {}
     assert report["settings"]["letter_preprocessing"]["source"] == {

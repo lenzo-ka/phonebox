@@ -41,6 +41,7 @@ from typing import TYPE_CHECKING, Any
 from phonebox.constants import JOIN_CHAR
 from phonebox.core.g2p_model import G2PDecisionTree
 from phonebox.core.multigram_g2p import MultigramG2P
+from phonebox.core.multigram_lm import MultigramLM
 from phonebox.core.vectorizer import Vectorizer
 from phonebox.eval.benchmark_data import _split_digest
 from phonebox.eval.cmudict_compare import _code_fingerprint, _git_revision, sha256_file
@@ -347,6 +348,8 @@ def _native(dataset: PreparedDataset, system: str, directory: Path):
         artifacts = [directory / "model.g2p.gz"]
     else:
         settings = {
+            "g2p_version": MultigramG2P.VERSION,
+            "lm_version": MultigramLM.VERSION,
             "max_letter_span": 2,
             "max_phone_span": 2,
             "min_phone_span": 0,
