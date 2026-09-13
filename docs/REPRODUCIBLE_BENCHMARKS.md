@@ -4,7 +4,8 @@ The developer benchmark compares Phonebox's traditional CART model and n-to-m
 multigram model with the authors' Sequitur and Phonetisaurus implementations.
 Each system receives the same prepared training, development, and test data.
 Results describe the recorded source revisions and settings; they are not a
-claim of state-of-the-art performance.
+claim of state-of-the-art performance. The [methods guide](G2P_METHODS.md)
+explains each alignment, learning, decoding, and dictionary-lookup approach.
 
 ## Data and protocol
 

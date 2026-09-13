@@ -60,3 +60,74 @@ The C++ pipeline is alignment, MITLM language-model estimation, and ARPA-to-WFST
 compilation, followed by model-only decoding. Python bindings are not needed for
 this route. The driver never supplies a gold lexicon to the decoder; doing so
 could substitute reference pronunciations for model predictions.
+
+On the verified Ubuntu build host, GCC/G++/GFortran 13.3.0, Autoconf 2.71,
+Automake 1.16.5, Libtool 2.4.7, and Make 4.3 were available. Start in a fresh
+`.cache/toolchains/phonetisaurus` directory. The following commands install
+only into its private prefix; they do not install system packages.
+
+```sh
+export PHONEBOX_TOOLCHAIN_ROOT="$PWD"
+export PATH="$PHONEBOX_TOOLCHAIN_ROOT/prefix/bin:$PATH"
+export MAKEFLAGS=-j2 CMAKE_BUILD_PARALLEL_LEVEL=2
+export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
+export NUMEXPR_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1 BLIS_NUM_THREADS=1
+
+git clone https://github.com/mjansche/openfst.git openfst
+git -C openfst checkout e04f9c15fab41a3544355857a8b0c71ee9229825
+git clone https://github.com/mitlm/mitlm.git mitlm
+git -C mitlm checkout 553edca763a8e142edd8ef6d51404bbf43b79c95
+git clone https://github.com/AdolfVonKleist/Phonetisaurus.git phonetisaurus
+git -C phonetisaurus checkout f08d3dfb10b8d619e665a9581d2a327bcc2504f7
+
+mkdir -p build-prerequisites
+cd build-prerequisites
+apt-get download autoconf-archive=20220903-3
+printf '%s  %s\n' \
+  36b178ef82b4a7fe8c4b7c4992b569b6f61454f2d1ec7b17f28d2570174a95b7 \
+  autoconf-archive_20220903-3_all.deb | sha256sum -c -
+dpkg-deb -x autoconf-archive_20220903-3_all.deb extracted
+export ACLOCAL_PATH="$PHONEBOX_TOOLCHAIN_ROOT/build-prerequisites/extracted/usr/share/aclocal${ACLOCAL_PATH:+:$ACLOCAL_PATH}"
+
+cd "$PHONEBOX_TOOLCHAIN_ROOT/openfst"
+autoreconf -fi
+./configure --prefix="$PHONEBOX_TOOLCHAIN_ROOT/prefix" \
+  --enable-static --enable-shared --enable-far --enable-ngram-fsts \
+  CXXFLAGS='-O2 -std=c++11'
+nice -n 10 make -j2
+nice -n 10 make -j2 install
+
+cd "$PHONEBOX_TOOLCHAIN_ROOT/mitlm"
+autoreconf -i
+./configure --prefix="$PHONEBOX_TOOLCHAIN_ROOT/prefix" \
+  CXXFLAGS='-O2 -std=c++11'
+nice -n 10 make -j2
+nice -n 10 make -j2 install
+
+cd "$PHONEBOX_TOOLCHAIN_ROOT/phonetisaurus"
+./configure --prefix="$PHONEBOX_TOOLCHAIN_ROOT/prefix" \
+  --with-openfst-includes="$PHONEBOX_TOOLCHAIN_ROOT/prefix/include" \
+  --with-openfst-libs="$PHONEBOX_TOOLCHAIN_ROOT/prefix/lib" \
+  CXXFLAGS='-O2 -std=c++11 -fno-fast-math'
+nice -n 10 make -j2
+nice -n 10 make -j2 install
+```
+
+Regenerating OpenFst's build files avoids a dependency on an obsolete Automake
+executable named by the checked-in generated files. The archive download above
+supplies MITLM's required Autoconf macros without a global package installation.
+The OpenFst source is a developer mirror, not an assertion that these bytes
+came from an official release tarball.
+
+The trailing `-fno-fast-math` matters with the verified compiler. The upstream
+decoder build adds `-ffast-math`; the initial GCC 13 build returned empty paths
+even for known words. Rebuilding with the final override restored correct
+predictions on the same existing FST and word list. No training data, model,
+order, or algorithm source changed. This is a build correction, not model tuning.
+
+MITLM order eight also failed on a degenerate nine-example fixture with no
+higher-order contexts. The representative toolchain smoke used longer synthetic
+sequences; it verifies execution and token transport, not scientific accuracy.
+A real experiment failure must be recorded rather than silently retried at a
+different order. Preserve complete build logs, upstream licenses, compiler
+settings, and the per-executable receipts with the experiment.

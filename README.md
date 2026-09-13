@@ -205,7 +205,8 @@ See the [release checks](https://github.com/lenzo-ka/phonebox/blob/main/docs/REL
 for validation. Contributions should include tests for behavior changes and
 keep Python APIs, CLI help, and documentation consistent.
 
-The [developer benchmark protocol](https://github.com/lenzo-ka/phonebox/blob/main/docs/REPRODUCIBLE_BENCHMARKS.md)
+The [methods guide](https://github.com/lenzo-ka/phonebox/blob/main/docs/G2P_METHODS.md)
+explains how the compared models learn and predict. The [developer benchmark protocol](https://github.com/lenzo-ka/phonebox/blob/main/docs/REPRODUCIBLE_BENCHMARKS.md)
 compares both Phonebox models with independently run Sequitur and Phonetisaurus
 on pinned, shared data. It records preparation, split hashes, settings, and
 source provenance so subsequent implementations can be measured again.
