@@ -2,7 +2,7 @@
 
 Start with the [project README](../README.md) and [quick start](../QUICKSTART.md).
 Full-package installation depends on available ICU backend wheels; see
-[installation scope and 0.2.0 migration](RELEASING.md). Exported CART bundles
+[installation scope and migration](RELEASING.md). Exported CART bundles
 provide a separate standard-library-only inference path.
 
 | Task | Guide |

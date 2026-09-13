@@ -20,7 +20,7 @@ saved locale preprocessing for repeatable inference.
 
 Phonebox is **alpha**. Each `0.X.0` release may break APIs, commands, or model
 workflows; patch releases within a minor line are intended to remain compatible.
-See the [0.2.0 changes](https://github.com/lenzo-ka/phonebox/blob/main/CHANGELOG.md)
+See the [0.3.0 changes](https://github.com/lenzo-ka/phonebox/blob/main/CHANGELOG.md)
 and [upgrade guide](https://github.com/lenzo-ka/phonebox/blob/main/docs/RELEASING.md).
 
 ## Install
@@ -42,6 +42,39 @@ Optional extras:
 pip install 'phonebox[config]'          # YAML training configuration
 pip install 'phonebox[sklearn]'         # Optional scikit-learn trainer
 ```
+
+## Alignment and the CART workflow
+
+The CART path uses **epsilon scattering**, a term coined by Kevin Lenzo in the
+[1998 work with Alan Black and Vincent Pagel](#references). Epsilon denotes an
+empty phone emission: a spelling position can participate in an alignment
+without producing a sound. The current workflow is:
+
+1. **Prepare the units.** Apply the selected spelling normalization and rewrite
+   rules, optional stress removal, and configured letter/phone joins. A joined
+   unit can represent several letters or phones.
+2. **Align by epsilon scattering.** Enumerate placements of empty phone targets
+   across the processed input positions while preserving phone order. Score
+   these alternatives with letter–phone probabilities, select the best alignment
+   for each entry, and re-estimate the probabilities from those choices. Iterate
+   until the stopping criterion or iteration limit is reached.
+3. **Train the tree.** Turn each aligned position into a spelling-context window
+   and its phone target, count repeated vectors, and train CART to predict a
+   phone unit or epsilon. Boundary padding supplies context at word edges.
+4. **Predict.** Reuse the saved preprocessing and context windows, predict the
+   targets, remove epsilon emissions, and expand joined phone units into the
+   output pronunciation.
+
+This CART aligner requires at least as many processed input positions as phone
+units; entries exceeding its alignment-combination limit are also omitted.
+Locale-specific input padding, such as the French liaison sentinel, is separate
+from empty phone emissions. Liaison targets still require explicit
+[pronunciation-side annotations](https://github.com/lenzo-ka/phonebox/blob/main/docs/DATA.md#french-liaison-annotations).
+The multigram path instead learns n:m joint units and decodes their sequences.
+
+Epsilon scattering illustrates a broader possibilia approach: make admissible
+alternatives explicit, then use evidence to choose among them. Here the
+alternatives are alignment candidates within the configured model and limits.
 
 ## Train an English model and bundle it
 
@@ -171,6 +204,21 @@ pip install -e '.[dev]'
 See the [release checks](https://github.com/lenzo-ka/phonebox/blob/main/docs/RELEASING.md#release-preparation)
 for validation. Contributions should include tests for behavior changes and
 keep Python APIs, CLI help, and documentation consistent.
+
+## References
+
+Background on letter–phone alignment, decision-tree G2P, and lexicon compression:
+
+- Alan W. Black, Kevin Lenzo, and Vincent Pagel (1998).
+  [“Issues in Building General Letter to Sound Rules.”](https://www.isca-archive.org/ssw_1998/black98_ssw.html)
+  *Third ESCA Workshop on Speech Synthesis*, pp. 77–80.
+  Describes lexicon-derived alignments, CART pronunciation rules, and evaluation
+  on unseen words.
+- Vincent Pagel, Kevin Lenzo, and Alan W. Black (1998).
+  [“Letter to Sound Rules for Accented Lexicon Compression.”](https://www.isca-archive.org/icslp_1998/pagel98_icslp.html)
+  *5th International Conference on Spoken Language Processing (ICSLP 1998)*,
+  paper 0561. [doi:10.21437/ICSLP.1998-39](https://doi.org/10.21437/ICSLP.1998-39).
+  Examines decision trees for joint phone/stress prediction and lexicon compression.
 
 ## Credits and license
 

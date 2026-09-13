@@ -10,7 +10,7 @@
     {
       "models": [
         {
-          "artifact_bytes": 391024,
+          "artifact_bytes": 391045,
           "empty_predictions": 0,
           "model": "G2PDecisionTree",
           "n_test": 10000,
@@ -24,7 +24,7 @@
           "pos_acc_pct": 81.33196559614929,
           "prediction_errors": 0,
           "reference_phones": 62694,
-          "train_seconds": 275.8080698749982,
+          "train_seconds": 272.09765587490983,
           "train_time_scope": "load, cook, align, and fit",
           "wer_pct": 54.230000000000004,
           "wer_relaxed_pct": 52.62
@@ -44,7 +44,7 @@
           "pos_acc_pct": 73.4776915162286,
           "prediction_errors": 0,
           "reference_phones": 62694,
-          "train_seconds": 244.70174524979666,
+          "train_seconds": 271.95725545776077,
           "train_time_scope": "cook, deduplicate, align, and fit",
           "wer_pct": 65.61,
           "wer_relaxed_pct": 64.32
@@ -72,7 +72,7 @@
     {
       "models": [
         {
-          "artifact_bytes": 312941,
+          "artifact_bytes": 312962,
           "empty_predictions": 0,
           "model": "G2PDecisionTree",
           "n_test": 10000,
@@ -86,7 +86,7 @@
           "pos_acc_pct": 82.18532049153106,
           "prediction_errors": 0,
           "reference_phones": 59307,
-          "train_seconds": 295.21032387483865,
+          "train_seconds": 279.63265258283354,
           "train_time_scope": "load, cook, align, and fit",
           "wer_pct": 43.720000000000006,
           "wer_relaxed_pct": 41.66
@@ -106,7 +106,7 @@
           "pos_acc_pct": 65.4645304628094,
           "prediction_errors": 0,
           "reference_phones": 59307,
-          "train_seconds": 225.03992104087956,
+          "train_seconds": 243.0956274571363,
           "train_time_scope": "cook, deduplicate, align, and fit",
           "wer_pct": 67.57,
           "wer_relaxed_pct": 66.41
@@ -142,13 +142,13 @@
     "test_fraction": 0.1
   },
   "phonebox": {
-    "code_sha256": "df8c52ccfb2a17c4f12da8b4d3d0a07be90417a45861ddb6b77dbb996c9827b4",
+    "code_sha256": "d4da4e7322cb1daf36223e84476504adf4b67eedf01cb3da965a717e244798d2",
     "dirty": false,
-    "revision": "ded26bf3632ae53876fdfe7e6f50f288b092ec85"
+    "revision": "489097f15c2596b1ae8f958ec8d81336697316ed"
   },
   "runtime": {
     "dependencies": {
-      "cartlet": "0.5.0",
+      "cartlet": "0.6.0",
       "icukit": "0.4.0"
     },
     "implementation": "CPython",

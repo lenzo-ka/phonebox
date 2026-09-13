@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "phonebox"
-version = "0.2.0"
+version = "0.3.0"
 description = "Train G2P models, generate pronunciations, and review pronunciation lexicons"
 readme = "README.md"
 authors = [
@@ -27,7 +27,7 @@ classifiers = [
 keywords = ["g2p", "grapheme-to-phoneme", "pronunciation", "phonetics", "speech", "nlp", "phonebox"]
 requires-python = ">=3.11"
 dependencies = [
-    "cartlet>=0.5.0",
+    "cartlet>=0.6.0,<0.7.0",
     # icukit supplies the icu module through its binary backend. The pinned
     # 78.3.0 backend has macOS arm64 and Linux x86_64/aarch64 wheels, but no
     # Windows/Intel macOS wheels or sdist; full installation needs a wheel
@@ -43,7 +43,7 @@ config = [
     "PyYAML>=6.0",
 ]
 sklearn = [
-    "cartlet[sklearn]>=0.5.0",
+    "cartlet[sklearn]>=0.6.0,<0.7.0",
 ]
 dev = [
     "pytest>=7.0",
