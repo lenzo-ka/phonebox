@@ -118,9 +118,15 @@ class MultigramLM:
         self, unit: tuple[tuple[str, ...], tuple[str, ...]], history: list[str]
     ) -> float:
         """``log P(unit | last units in history)`` with backoff."""
+        return self._log_prob_with_history(unit_id(unit), history)
+
+    def log_end_prob(self, history: list[str]) -> float:
+        """Log probability of ending a complete unit sequence."""
+        return self._log_prob_with_history(EOS, history)
+
+    def _log_prob_with_history(self, uid: str, history: list[str]) -> float:
         if not self._trained:
             return 0.0
-        uid = unit_id(unit)
         ctx = [SOS, *history][-(self.order - 1) :]
         return self._log_prob_id(uid, tuple(ctx))
 
