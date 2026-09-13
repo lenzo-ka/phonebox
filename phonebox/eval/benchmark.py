@@ -44,13 +44,14 @@ from phonebox.core.multigram_g2p import MultigramG2P
 from phonebox.core.multigram_lm import MultigramLM
 from phonebox.core.vectorizer import Vectorizer
 from phonebox.eval.benchmark_data import _split_digest
+from phonebox.eval.benchmark_systems import SYSTEMS
 from phonebox.eval.cmudict_compare import _code_fingerprint, _git_revision, sha256_file
 from phonebox.eval.g2p_compare import evaluate
 
 if TYPE_CHECKING:
     from phonebox.eval.benchmark_data import PreparedDataset
+    from phonebox.eval.benchmark_neural import NeuralSettings
 
-SYSTEMS = ("cart", "multigram", "sequitur", "phonetisaurus")
 _THREAD_VARIABLES = (
     "BLIS_NUM_THREADS",
     "OMP_NUM_THREADS",
@@ -684,6 +685,9 @@ def run_benchmark(
     sequitur_max_iterations: int = 100,
     sequitur_extension_iterations: int = 200,
     phonetisaurus_prefix: str | Path | None = None,
+    neural_python: str | Path | None = None,
+    neural_device: str = "cpu",
+    neural_settings: NeuralSettings | None = None,
     progress: Callable[[str], None] | None = None,
 ) -> dict[str, Any]:
     """Train one fixed system and score every unique held-out spelling.
@@ -743,6 +747,34 @@ def run_benchmark(
         fitted = _phonetisaurus(
             dataset, directory, Path(phonetisaurus_prefix).resolve()
         )
+    elif system == "deepphonemizer":
+        if neural_python is None:
+            raise ValueError("DeepPhonemizer requires an isolated Python executable")
+        from phonebox.eval.benchmark_neural import run_neural_training
+
+        neural = run_neural_training(
+            dataset,
+            directory,
+            python_executable=neural_python,
+            device=neural_device,
+            settings=neural_settings,
+        )
+        neural_predictions = json.loads(
+            (directory / "neural-predictions.json").read_text(encoding="utf-8")
+        )
+        fitted = (
+            neural_predictions.__getitem__,
+            neural["settings"],
+            neural["training"],
+            [directory / "neural-model.pt"],
+            neural["training_seconds"],
+            neural["export_seconds"],
+            {
+                "neural_toolchain": neural["provenance"],
+                "neural_test_diagnostics": neural["test_diagnostics"],
+                "external_prediction_seconds": neural["prediction_seconds"],
+            },
+        )
     else:
         fitted = _native(dataset, system, directory)
     (
@@ -785,7 +817,7 @@ def run_benchmark(
         "system": system,
         "settings": {
             **settings,
-            "threads": 1,
+            "threads": settings.get("threads", 1),
             "letter_preprocessing": deepcopy(_IDENTITY),
             "phone_mapping": None,
             "dictionary_lookup": False,
@@ -804,6 +836,8 @@ def run_benchmark(
             "export_seconds": export_seconds,
             "training_scope": "fit and declared development selection; external export included"
             if system in ("sequitur", "phonetisaurus")
+            else "fit and full shared dev selection; export excluded"
+            if system == "deepphonemizer"
             else "load/align/fit; export excluded",
         },
         "provenance": {

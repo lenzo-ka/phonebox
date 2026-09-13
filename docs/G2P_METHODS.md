@@ -198,6 +198,34 @@ use the same held-out metrics. Development selection and accelerator/software
 provenance must be reported. Architecture citations alone cannot substitute
 for that experiment.
 
+### Runnable neural protocol: DeepPhonemizer
+
+The optional [DeepPhonemizer author implementation](https://github.com/axelspringer/DeepPhonemizer/tree/5dce7e27556aef4426f5623baf6351d266a30a73)
+uses an autoregressive Transformer: character encoder, phoneme-token decoder,
+and teacher-forced cross-entropy training, without a separately extracted joint
+alignment. The accepted configuration has four encoder and four decoder layers,
+width512, feed-forward1024, four heads and dropout0.1; greedy decoding stops on
+the end token or the upstream100-step cap. Train-only symbol vocabularies retain
+atomic phones and original spelling case. Whole words with unseen text symbols
+are explicit prediction failures; unknown dev phone targets fail preflight.
+
+From-scratch Adam training uses learning rate0.0001, warmup10000 updates, batch32
+and max500 epochs. Full shared dev PER, then WER, selects the earliest best
+checkpoint each epoch. Plateau learning rate halves with patience10; dev early
+stopping requires30 nonimproving observations after warmup. The author CTC
+alternative is not the selected protocol because fixed character repetition
+cannot represent some supplied training targets. No gold target is shortened
+or discarded to satisfy that constraint.
+
+The [isolated toolchain, patch, dependency lock and receipt recipe](BENCHMARK_TOOLCHAINS.md#optional-neural-toolchain-deepphonemizer)
+identify the external MIT code and narrow training/device corrections. Dictionary
+lookup and optimizer payload are absent from the measured inference artifact.
+MPS is seeded but not bit deterministic; platform/device and complete training
+and development costs are reported. A tiny compatibility test or resource
+profile supplies no neural accuracy result. Published performance reproduction,
+exhaustive neural tuning, and superiority over the classical methods are not
+claimed by this protocol.
+
 ## Sources, citations, and reproducibility
 
 * Bisani, M., and Ney, H. (2008). *Joint-sequence models for grapheme-to-phoneme

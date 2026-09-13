@@ -11,9 +11,17 @@ from ._common import expected_input_errors, require_distinct_output
 
 
 def setup_benchmark_commands(subparsers) -> None:
+    from phonebox.eval.benchmark_systems import SYSTEMS
+
     from .benchmark_receipt import setup_benchmark_receipt_command
 
     setup_benchmark_receipt_command(subparsers)
+    patch = subparsers.add_parser(
+        "benchmark-neural-patch",
+        help="Export the credited patch for pinned DeepPhonemizer0.0.19",
+    )
+    patch.add_argument("--output", required=True, type=Path)
+    patch.set_defaults(func=handle_neural_patch)
     parser = subparsers.add_parser(
         "benchmark",
         help="Run one pinned dataset/system experiment (developer toolchains)",
@@ -29,7 +37,7 @@ def setup_benchmark_commands(subparsers) -> None:
     parser.add_argument(
         "--system",
         required=True,
-        choices=("cart", "multigram", "sequitur", "phonetisaurus"),
+        choices=SYSTEMS,
     )
     parser.add_argument(
         "--remove-stress",
@@ -70,6 +78,22 @@ def setup_benchmark_commands(subparsers) -> None:
         help="Developer prefix containing Phonetisaurus and MITLM binaries",
     )
     parser.add_argument(
+        "--neural-python",
+        type=Path,
+        help="Python in the pinned isolated DeepPhonemizer toolchain",
+    )
+    parser.add_argument(
+        "--neural-device",
+        choices=("cpu", "mps"),
+        default="cpu",
+        help="Neural device; MPS is seeded but not bit deterministic",
+    )
+    parser.add_argument(
+        "--neural-profile-only",
+        action="store_true",
+        help="One full training epoch and dev evaluation; no test references or benchmark score",
+    )
+    parser.add_argument(
         "--output",
         required=True,
         type=Path,
@@ -100,9 +124,38 @@ def handle_benchmark(args: argparse.Namespace) -> int:
         raise ValueError("Sequitur requires --sequitur-executable")
     if args.system == "phonetisaurus" and args.phonetisaurus_prefix is None:
         raise ValueError("Phonetisaurus requires --phonetisaurus-prefix")
+    if args.system == "deepphonemizer" and args.neural_python is None:
+        raise ValueError("DeepPhonemizer requires --neural-python")
+    if args.neural_profile_only and args.system != "deepphonemizer":
+        raise ValueError("--neural-profile-only requires --system deepphonemizer")
+    if args.system == "deepphonemizer":
+        if not args.neural_python.is_file():
+            raise ValueError(
+                "--neural-python must name an existing isolated interpreter"
+            )
+        for source in (
+            args.neural_python,
+            Path(str(args.neural_python) + ".provenance.json"),
+            args.work_dir / "neural-model.pt",
+        ):
+            rejected = require_distinct_output(source, args.output)
+            if rejected is not None:
+                return rejected
     dataset = load_dataset(
         args.dataset, args.cache_dir, remove_stress=args.remove_stress
     )
+    if args.neural_profile_only:
+        from phonebox.eval.benchmark_neural import run_neural_training
+
+        result = run_neural_training(
+            dataset,
+            args.work_dir,
+            python_executable=args.neural_python,
+            device=args.neural_device,
+            profile_only=True,
+        )
+        write_results(args.output, result)
+        return 0
     result = run_benchmark(
         dataset,
         args.system,
@@ -112,6 +165,8 @@ def handle_benchmark(args: argparse.Namespace) -> int:
         sequitur_max_iterations=args.sequitur_max_iterations,
         sequitur_extension_iterations=args.sequitur_extension_iterations,
         phonetisaurus_prefix=args.phonetisaurus_prefix,
+        neural_python=args.neural_python,
+        neural_device=args.neural_device,
         progress=lambda message: print(message, file=sys.stderr, flush=True),
     )
     write_results(args.output, result)
@@ -129,4 +184,13 @@ def handle_benchmark_report(args: argparse.Namespace) -> int:
     rendered = render_benchmark_report(results)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(rendered, encoding="utf-8")
+    return 0
+
+
+@expected_input_errors
+def handle_neural_patch(args: argparse.Namespace) -> int:
+    from phonebox.eval.benchmark_neural import write_neural_patch
+
+    digest = write_neural_patch(args.output)
+    print(json.dumps({"patch_sha256": digest}))
     return 0

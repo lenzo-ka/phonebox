@@ -78,7 +78,10 @@ def test_valid_report_keeps_missing_predictions_and_missing_systems_explicit():
     rendered = render_benchmark_report([result("phonetisaurus"), result()])
     assert "| Phonebox CART | 50.00 | 25.00 | 1 |" in rendered
     assert "| Phonetisaurus | 50.00 | 25.00 | 1 |" in rendered
-    assert "Not measured in this artifact: Phonebox n:m, Sequitur." in rendered
+    assert (
+        "Not measured in this artifact: Phonebox n:m, Sequitur, DeepPhonemizer autoregressive."
+        in rendered
+    )
     assert "Missing predictions remain errors." in rendered
     assert (
         "Timings across different shared machines are descriptive, not a speed ranking."

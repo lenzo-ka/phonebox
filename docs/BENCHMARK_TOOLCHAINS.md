@@ -200,3 +200,110 @@ Create one receipt beside each resolved executable. `estimate-ngram` must use
 MITLM's own source revision/version; the other three native executables use
 Phonetisaurus's. Source and binary identities must not be conflated with the
 whole toolchain's identity. The runner verifies each receipt's binary binding.
+
+## Optional neural toolchain: DeepPhonemizer
+
+DeepPhonemizer is Axel Springer's MIT-licensed author implementation, pinned to
+[0.0.19 source revision 5dce7e2](https://github.com/axelspringer/DeepPhonemizer/tree/5dce7e27556aef4426f5623baf6351d266a30a73).
+Its [license notice](patches/DeepPhonemizer-LICENSE) accompanies the
+[reproducible training patch](patches/deepphonemizer-0.0.19.patch). Model,
+Adam optimizer and greedy decoder remain upstream implementations. The patch
+adds an epoch callback, retains partial batches, rejects nonfinite loss or
+gradients, fixes best-checkpoint bookkeeping, supports a smaller-than-bin
+population, and moves Predictor inputs to the actual model device.
+
+Torch is not an ordinary Phonebox runtime, `[dev]` or CI dependency. Use a
+separate environment. The [exact dependency lock](locks/deepphonemizer-python312.txt)
+was exercised with Python 3.12.12 on macOS arm64, Torch 2.5.1 and NumPy 1.26.4,
+with CPU and MPS synthetic train/save/reload tests. This is compatibility
+evidence, not measured neural accuracy or an assertion of other platform support.
+The custom upstream checkpoint uses unrestricted `torch.load`; load only your
+own trusted checkpoints. Newer Torch checkpoint defaults are not verified.
+
+From the Phonebox checkout, create the toolchain and export its patch using the
+installed public command. Keep download/build logs and the pip artifact report:
+
+```bash
+PHONEBOX_NEURAL_ROOT="$PWD/.cache/benchmarks/neural-toolchain"
+python3.12 -m venv "$PHONEBOX_NEURAL_ROOT/venv"
+"$PHONEBOX_NEURAL_ROOT/venv/bin/python" -m pip install \
+  --report "$PHONEBOX_NEURAL_ROOT/pip-artifacts.json" \
+  -r docs/locks/deepphonemizer-python312.txt
+"$PHONEBOX_NEURAL_ROOT/venv/bin/python" -m pip install --no-deps --no-build-isolation .
+"$PHONEBOX_NEURAL_ROOT/venv/bin/phonebox" compare benchmark-neural-patch \
+  --output "$PHONEBOX_NEURAL_ROOT/training.patch"
+git clone https://github.com/axelspringer/DeepPhonemizer.git "$PHONEBOX_NEURAL_ROOT/source"
+git -C "$PHONEBOX_NEURAL_ROOT/source" checkout --detach \
+  5dce7e27556aef4426f5623baf6351d266a30a73
+git -C "$PHONEBOX_NEURAL_ROOT/source" apply "$PHONEBOX_NEURAL_ROOT/training.patch"
+"$PHONEBOX_NEURAL_ROOT/venv/bin/python" -m pip install --no-deps --no-build-isolation \
+  "$PHONEBOX_NEURAL_ROOT/source"
+```
+
+Inspect and ignore only generated source build products (for example `build/`
+and `deep_phonemizer.egg-info/`) before creating the source receipt. The Python
+interpreter is the executable; installed DeepPhonemizer module hashes are checked
+separately by the worker. Exporting the patch is also available through
+`phonebox.eval.benchmark_neural.write_neural_patch(output)`. Create the receipt
+with the public API, explicitly beside the environment's Python symlink rather
+than beside its potentially shared resolved interpreter:
+
+```python
+from phonebox.eval.benchmark_neural import PATCH_SHA256, SOURCE_REVISION
+from phonebox.eval.benchmark_provenance import write_tool_receipt
+
+write_tool_receipt(
+    ".cache/benchmarks/neural-toolchain/venv/bin/python",
+    ".cache/benchmarks/neural-toolchain/source",
+    declared_version="0.0.19", expected_revision=SOURCE_REVISION,
+    build={"patch_sha256": PATCH_SHA256},
+    output=".cache/benchmarks/neural-toolchain/venv/bin/python.provenance.json",
+)
+```
+
+The runner verifies the interpreter's observed binary hash, source revision,
+patch hash, every installed upstream Python module and critical dependency
+versions. Retain the complete pip report, source licenses and dependency lock;
+no pretrained model, raw data or external author model code is vendored.
+
+Before any full run, profile one complete training epoch and full dev evaluation:
+
+```bash
+phonebox compare benchmark --dataset italian --system deepphonemizer \
+  --neural-python .cache/benchmarks/neural-toolchain/venv/bin/python \
+  --neural-device mps --neural-profile-only \
+  --work-dir .cache/benchmarks/italian-neural-profile \
+  --output italian-neural-profile.json
+```
+
+A profile returns accounting and resource observations, never a test score. It
+neither writes nor reads test references. Remove `--neural-profile-only` and use
+a new empty work directory for the full experiment. CPU is the default device;
+MPS uses the author's lower-level `Trainer(device=...)` API, is seeded but not
+bit deterministic, and is available only when Torch reports it usable. The
+ordinary public upstream `train` entrypoint selects CPU/CUDA only. Record actual
+device/platform, not a presumed speed advantage. Peak process RSS includes the
+entire worker; MPS allocation fields are epoch-boundary observations, not GPU
+peak measurements. Training time includes full dev selection; artifact size is
+the weights/config/tokenizer checkpoint without optimizer or dictionary payload.
+
+The accepted substantial configuration is the author's autoregressive model:
+four encoder and four decoder layers, width512, feed-forward1024, four heads,
+dropout0.1, batch32, Adam learning rate0.0001, warmup10000 updates and max500
+epochs. Every epoch is selected with the same whole-population best-variant PER
+and WER evaluator as the other systems; exact ties keep the earliest checkpoint.
+Plateau learning rate halves after patience10; training stops after30 consecutive
+nonimproving dev evaluations after warmup, or reports that the epoch cap did not
+establish convergence. Greedy generation uses the upstream maximum100 steps,
+with unterminated predictions counted. This bounded protocol is not exhaustive
+neural tuning or a claim of reproducing published scores.
+
+Training-only symbol vocabularies retain atomic phone tokens, case and NFC
+spelling. Unknown inputs fail as whole words and remain in the evaluation
+population; unknown dev target tokens fail preflight. Dev words with unknown
+input symbols are omitted only from the unused upstream loss-loader subset,
+and remain in full shared dev selection with explicit counts. The sampler's
+upstream seed42 is recorded separately from the model seed1729. All supplied
+training variants and partial batches are retained; nonfinite training aborts
+with failed accounting rather than silently dropping a target. Model-only
+held-out evaluation has dictionary lookup disabled.

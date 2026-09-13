@@ -126,6 +126,10 @@ module = [
     "matplotlib.*",
     "cartlet",
     "tomli_w",
+    "dp",
+    "dp.*",
+    "torch",
+    "numpy",
 ]
 ignore_missing_imports = true
 

@@ -5,6 +5,18 @@ patch releases within a minor line are intended to remain compatible.
 
 ## 0.3.0 — Unreleased
 
+### Optional neural benchmark toolchain
+
+- Add isolated, from-scratch DeepPhonemizer autoregressive training with the
+  author's substantial configuration, shared whole-dev checkpoint selection,
+  explicit convergence accounting, and model-only held-out metrics.
+- Export the credited reproducible source patch through API/CLI; verify source,
+  patch, dependency versions and interpreter receipts without adding Torch to
+  ordinary runtime, development or CI installations.
+- Provide a one-epoch resource profile that never reads test references, atomic
+  phone inference, complete partial-batch admission, unknown-input failures and
+  truncation counts. These tools alone do not claim measured neural accuracy.
+
 ### Cartlet 0.6 integration
 
 - Require `cartlet>=0.6.0,<0.7.0` for base and sklearn installations, keeping the

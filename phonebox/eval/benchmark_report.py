@@ -7,12 +7,7 @@ import math
 from collections.abc import Mapping, Sequence
 from typing import Any
 
-SYSTEM_LABELS = {
-    "cart": "Phonebox CART",
-    "multigram": "Phonebox n:m",
-    "sequitur": "Sequitur",
-    "phonetisaurus": "Phonetisaurus",
-}
+from phonebox.eval.benchmark_systems import SYSTEM_LABELS
 
 
 def _number(value: object, label: str) -> float:
