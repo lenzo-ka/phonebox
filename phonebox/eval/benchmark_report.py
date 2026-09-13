@@ -131,8 +131,8 @@ def render_benchmark_report(results: Sequence[Mapping[str, Any]]) -> str:
             stress = "removed" if data["preparation"]["remove_stress"] else "preserved"
             title = {
                 "cmudict": f"CMUdict, stress {stress}",
-                "french": "French, medium resource",
-                "italian": "Italian, low resource",
+                "french": "French",
+                "italian": "Italian",
             }[data["name"]]
             lines += [f"## {title}", ""]
             counts = data["counts"]
@@ -192,7 +192,7 @@ def render_benchmark_report(results: Sequence[Mapping[str, Any]]) -> str:
             "Train + export includes the recorded training procedure (including "
             "development selection where used) and export; external training "
             "already includes export. Shared-machine timing is descriptive. "
-            "The 100-word Italian test is a small witness, not a precise ranking.",
+            "These are lexicon-type evaluations, not running-text accuracy measurements.",
             "",
         ]
         return "\n".join(lines)

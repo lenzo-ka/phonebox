@@ -15,19 +15,34 @@ conditions; duplicate pronunciations are removed after the stress mapping.
 The new comparison reserves development data as well as test data, so its
 scores need not match the earlier two-way [CMUdict comparison](CMUDICT_COMPARISON.md).
 
-The additional witnesses use the official SIGMORPHON 2021 French medium-resource
-and Italian low-resource splits. Italian has only 100 test entries: small
-changes in its word error rate should not be interpreted as a reliable system
-ranking. We report each dataset separately, without averaging across resource
-levels.
+The additional witnesses use substantial filtered WikiPron pronunciation
+lexica, identified by immutable source revisions and file hashes. Whole NFC-casefold spelling
+groups remain together during deterministic train/dev/test splitting, while
+model inputs preserve their original case. This prevents differently cased
+versions of a spelling from leaking between splits. We report
+each language separately, without averaging unrelated phone inventories into a
+single headline. Small task slices are diagnostic material, not the release
+comparison.
+
+French requires a further distinction: these are dictionary-entry pronunciations,
+not contextual speech. A single spelling provides no following-word context for
+liaison selection. The comparison excludes entire French pronunciation variants containing the
+explicit linking marker `‿`, retaining other unmarked variants. The upstream
+phone-inventory notes identify this as a boundary/liaison annotation rather
+than a phoneme. We record the exclusion counts rather than silently delete
+the marker from the phone sequence. The comparison neither invents liaison
+annotations nor enables Phonebox's French input sentinel. Its score therefore does not measure contextual liaison accuracy.
+A separate liaison-aware experiment would need explicitly annotated training
+phones and appropriate contextual test material; see
+[French liaison annotations](DATA.md#french-liaison-annotations).
 
 Shared preparation preserves NFC spelling and the supplied phone token
-boundaries. CMUdict spellings are lowercased. The task data retain case and
+boundaries. CMUdict spellings are lowercased. The IPA lexica retain case and
 accents, with no additional stress stripping. These experiments deliberately
 use identity letter processing, rather than the shipped locale rewriting rules.
-For example, Italian `si` and `sì` would otherwise collapse across the published
-train/test boundary. The loader checks the prepared split intersections before
-training. It does not silently repair a contaminated split.
+The loader checks the prepared split intersections before training. It does not
+silently repair a contaminated split or merge accented spellings through a
+model-specific locale rule.
 
 CART uses epsilon scattering and local context decision trees; the multigram
 model learns variable-length letter-to-phone units and their sequence model.
@@ -47,6 +62,22 @@ uses edit distance divided by reference phones; for multiple references it
 selects the minimum-edit reference, breaking ties deterministically. Missing
 and empty predictions remain in the test denominator. Training admission
 counts distinguish supplied examples from examples a model can align.
+
+## Dataset quality checks
+
+The selected WikiPron files have roughly 89,000 Italian and 97,000 French
+pronunciations before preparation. Both pass strict two-column parsing, NFC
+spelling checks, and upstream phone-inventory validation, with no malformed
+rows or duplicate spelling/pronunciation pairs in the pinned source.
+The loader verifies the exact file hashes and reports subsequent exclusions,
+variant deduplication, spelling-group membership, and split counts.
+
+Upstream "filtered" means phone tokens passed an inventory whitelist; it is
+not a guarantee that every dictionary transcription is correct. The source
+includes inflected forms, proper names, loanwords, and pronunciation variants.
+We retain phonetic distinctions and do not clean the test references according
+to model errors. Entries with more phones than letters remain in the shared
+data: each trainer's actual admission or alignment failures are reported.
 
 ## Held-out accuracy and dictionary-backed pronunciation
 
@@ -167,11 +198,14 @@ Phonebox's software license.
 - [CMUdict](https://github.com/cmusphinx/cmudict) provides its own
   [license](https://github.com/cmusphinx/cmudict/blob/74790861f652b15e4ac49015a90074ad62a27690/LICENSE).
   The loader records the exact revision and digest.
-- The [SIGMORPHON 2021 task snapshot](https://github.com/sigmorphon/2021-task1/tree/821bcdece5a47820872215969f275004b0abe80c)
-  declares its data CC BY-SA 3.0 and its code Apache 2.0. Cite
-  [Ashby et al. (2021)](https://aclanthology.org/2021.sigmorphon-1.13/) and
-  [Lee et al. (2020), WikiPron](https://aclanthology.org/2020.lrec-1.521/).
-  Preserve these attributions and the data license when sharing prepared data.
+- [WikiPron](https://github.com/CUNY-CL/wikipron/tree/d282e848a211ea31cfd730f0ced8bc8cdab9e83d)
+  provides filtered Italian and French pronunciation lexica. Cite
+  [Lee et al. (2020), *Massively multilingual pronunciation mining with
+  WikiPron*](https://aclanthology.org/2020.lrec-1.521/).
+  Its software is Apache 2.0, but the pronunciation data have
+  [Wiktionary's separate licensing terms](https://en.wiktionary.org/wiki/Wiktionary:Copyrights),
+  including CC BY-SA 4.0. Preserve source attribution and the applicable data
+  license when sharing prepared data; do not apply the software license to it.
 - [Sequitur](https://github.com/sequitur-g2p/sequitur-g2p) is GPL-2.0-only.
   Cite Bisani and Ney (2008), *Joint-sequence models for grapheme-to-phoneme
   conversion*, Speech Communication 50(5), 434–451,

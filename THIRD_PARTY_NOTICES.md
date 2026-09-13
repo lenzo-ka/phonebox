@@ -22,11 +22,11 @@ code is distributed under the BSD 2-Clause License in `LICENSE`.
 ## Developer benchmark sources
 
 The optional [benchmark workflow](docs/REPRODUCIBLE_BENCHMARKS.md) fetches
-CMUdict and SIGMORPHON 2021 pronunciation data into caller-owned caches and
+CMUdict and WikiPron pronunciation data into caller-owned caches and
 can invoke separately installed Sequitur and Phonetisaurus training tools.
 These datasets and executables are not bundled with Phonebox. Their licenses
-are distinct from this package: CMUdict BSD-2-Clause; SIGMORPHON task data
-CC-BY-SA-3.0; Sequitur GPL-2.0-only; Phonetisaurus and MITLM BSD-3-Clause;
+are distinct from this package: CMUdict BSD-2-Clause; WikiPron/Wiktionary data
+under its separate CC-BY-SA-4.0 terms; Sequitur GPL-2.0-only; Phonetisaurus and MITLM BSD-3-Clause;
 OpenFst Apache-2.0. The benchmark manifests and protocol provide immutable
 source references, attribution, and license links. Retain upstream notices
 when sharing copies or prepared data.
