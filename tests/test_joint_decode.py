@@ -57,3 +57,14 @@ def test_unigram_end_transition_does_not_change_path_order():
     lm = MultigramLM(order=1)
     lm.train([[a]] * 3 + [[b]])
     assert joint_decode(["x"], {a: 0.5, b: 0.5}, lm, 1) == ["A"]
+
+
+@pytest.mark.parametrize("a_prior", [0.001, 0.999])
+def test_alignment_prior_does_not_reweight_the_trained_sequence_lm(a_prior):
+    a: Unit = (("x",), ("A",))
+    b: Unit = (("x",), ("B",))
+    lm = MultigramLM(order=2)
+    lm.train([[a]] * 3 + [[b]])
+    assert joint_decode(["x"], {a: a_prior, b: 1 - a_prior}, lm, 1) == ["A"]
+    lm.train([[b]] * 3 + [[a]])
+    assert joint_decode(["x"], {a: a_prior, b: 1 - a_prior}, lm, 1) == ["B"]
