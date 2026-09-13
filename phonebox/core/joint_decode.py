@@ -52,6 +52,7 @@ def joint_decode(
     last ``lm.order - 1`` unit ids (the n-gram history), so the LM's full order
     is used rather than silently backing off. Each transition consumes a
     multigram unit from ``q`` whose letter side matches the next span.
+    Complete paths also score the LM end-of-sequence transition.
 
     Args:
         beam: If > 0, keep only the top-``beam`` hypotheses per position.
@@ -93,7 +94,7 @@ def joint_decode(
 
     if not best[n]:
         return None
-    end_state = max(best[n], key=lambda s: best[n][s][0])
+    end_state = max(best[n], key=lambda s: best[n][s][0] + lm.log_end_prob(list(s)))
 
     phones: list[str] = []
     i, state = n, end_state
