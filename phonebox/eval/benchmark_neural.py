@@ -12,8 +12,9 @@ import json
 import math
 import os
 import subprocess
+from collections.abc import Mapping
 from copy import deepcopy
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, fields
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -66,7 +67,7 @@ class NeuralSettings:
                 raise ValueError(f"{name} must be a positive integer")
         if self.threads > 2 or self.d_model % self.heads or self.d_model % 2:
             raise ValueError(
-                "threads must be <=2; d_model must be even and divide by heads"
+                "threads must be <=2; d_model must be even and divisible by heads"
             )
         if type(self.seed) is not int or self.seed < 0:
             raise ValueError("seed must be a nonnegative integer")
@@ -81,6 +82,21 @@ class NeuralSettings:
             raise ValueError(
                 "dropout must be in [0,1); learning_rate must be finite and positive"
             )
+
+    @classmethod
+    def from_dict(cls, value: Mapping[str, Any]) -> NeuralSettings:
+        """Validate a JSON settings object; omitted fields retain defaults."""
+        if not isinstance(value, Mapping):
+            raise ValueError("neural settings must be a JSON object")
+        allowed = {field.name for field in fields(cls)}
+        if set(value) - allowed:
+            raise ValueError("unknown neural settings fields")
+        try:
+            return cls(**dict(value))
+        except (TypeError, OverflowError) as error:
+            raise ValueError(
+                "invalid neural settings field type or magnitude"
+            ) from error
 
     def to_dict(self) -> dict[str, Any]:
         """Return JSON-serializable declared settings."""
@@ -99,8 +115,9 @@ def run_neural_training(
     """Train in a pinned optional environment and return measured accounting.
 
     ``profile_only=True`` completes exactly one train epoch plus full shared dev
-    evaluation and never writes or reads test references. It is not a benchmark
-    result. The work directory must be empty; subprocess diagnostics stay there.
+    evaluation. The training subprocess receives no test references and performs
+    no test decoding; parent dataset validation still checks all splits. This
+    profile is not a benchmark result. The work directory must be empty; subprocess diagnostics stay there.
     The external installation is checked against every pinned Python source file
     plus the recorded patch. No package is installed by this function.
     """
@@ -109,6 +126,8 @@ def run_neural_training(
         raise ValueError("neural device must be cpu or mps")
     if type(profile_only) is not bool:
         raise ValueError("profile_only must be boolean")
+    if settings is not None and not isinstance(settings, NeuralSettings):
+        raise ValueError("settings must be validated NeuralSettings")
     declared = settings or NeuralSettings()
     python = Path(python_executable).absolute()
     if not python.is_file() or not os.access(python, os.X_OK):

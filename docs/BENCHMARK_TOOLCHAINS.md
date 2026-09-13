@@ -277,7 +277,8 @@ phonebox compare benchmark --dataset italian --system deepphonemizer \
 ```
 
 A profile returns accounting and resource observations, never a test score. It
-neither writes nor reads test references. Remove `--neural-profile-only` and use
+gives the training subprocess no test references and performs no test decoding.
+Parent dataset validation still checks every split for consistency and leakage. Remove `--neural-profile-only` and use
 a new empty work directory for the full experiment. CPU is the default device;
 MPS uses the author's lower-level `Trainer(device=...)` API, is seeded but not
 bit deterministic, and is available only when Torch reports it usable. The
@@ -307,3 +308,13 @@ upstream seed42 is recorded separately from the model seed1729. All supplied
 training variants and partial batches are retained; nonfinite training aborts
 with failed accounting rather than silently dropping a target. Model-only
 held-out evaluation has dictionary lookup disabled.
+
+
+Custom settings are a separate experiment, not the default neural row. Supply
+one JSON object with `--neural-settings settings.json`; fields omitted from the
+object retain `NeuralSettings` defaults. Unknown fields, invalid types and ranges
+are rejected by `NeuralSettings.from_dict(...)`, shared with the Python API.
+The same file controls profile and full training. For example, a CPU experiment
+may set `{"threads": 1}`; altering architecture or stopping settings must be
+disclosed with its own result. The public API accepts the validated settings
+object through `settings=` or `run_benchmark(..., neural_settings=...)`.

@@ -13,7 +13,8 @@ patch releases within a minor line are intended to remain compatible.
 - Export the credited reproducible source patch through API/CLI; verify source,
   patch, dependency versions and interpreter receipts without adding Torch to
   ordinary runtime, development or CI installations.
-- Provide a one-epoch resource profile that never reads test references, atomic
+- Provide a one-epoch resource profile whose training worker receives no test
+  references, atomic
   phone inference, complete partial-batch admission, unknown-input failures and
   truncation counts. These tools alone do not claim measured neural accuracy.
 

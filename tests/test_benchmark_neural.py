@@ -334,3 +334,121 @@ def test_actual_shared_benchmark_neural_result(tmp_path):
     assert report["provenance"]["neural_toolchain"]["interpreter_receipt"][
         "receipt_binary_binding_verified"
     ]
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        [],
+        None,
+        3,
+        {"unknown": 1},
+        {"layers": "four"},
+        {"dropout": None},
+        {"batch_size": True},
+        {"learning_rate": float("nan")},
+    ],
+)
+def test_settings_json_contract(value):
+    with pytest.raises(ValueError):
+        NeuralSettings.from_dict(value)
+    assert NeuralSettings.from_dict({"threads": 1}).threads == 1
+
+
+def test_cli_settings_alias_and_wrong_shapes_preserve_outputs(tmp_path, capsys):
+    from phonebox.cli.main import main
+
+    settings = tmp_path / "settings.json"
+    settings.write_text('{"threads":1}')
+    common = [
+        "compare",
+        "benchmark",
+        "--dataset",
+        "italian",
+        "--system",
+        "deepphonemizer",
+        "--neural-python",
+        sys.executable,
+        "--neural-settings",
+        str(settings),
+        "--work-dir",
+        str(tmp_path / "work"),
+    ]
+    assert main(common + ["--output", str(settings)]) == 2
+    assert settings.read_text() == '{"threads":1}'
+    output = tmp_path / "result.json"
+    output.write_text("preserve")
+    for value in ([1], {"layers": "four"}, {"unexpected": 1}):
+        settings.write_text(json.dumps(value))
+        assert main(common + ["--output", str(output)]) == 2
+        assert output.read_text() == "preserve"
+        assert not (tmp_path / "work").exists()
+    assert "Traceback" not in capsys.readouterr().err
+
+
+@pytest.mark.skipif(
+    not os.environ.get("PHONEBOX_NEURAL_TEST_PYTHON"),
+    reason="optional pinned neural toolchain",
+)
+def test_actual_cli_same_settings_profile_and_full_run(tmp_path, monkeypatch):
+    from phonebox.cli.main import main
+    from phonebox.eval import benchmark_data
+
+    def synthetic_fetch(name, cache, *, remove_stress=False):
+        return tiny_dataset()
+
+    monkeypatch.setattr(benchmark_data, "load_dataset", synthetic_fetch)
+    settings = tmp_path / "settings.json"
+    declared = NeuralSettings(
+        d_model=16,
+        d_fft=32,
+        layers=1,
+        heads=2,
+        dropout=0,
+        batch_size=32,
+        warmup_steps=2,
+        max_epochs=1,
+    )
+    settings.write_text(json.dumps(declared.to_dict()))
+    common = [
+        "compare",
+        "benchmark",
+        "--dataset",
+        "italian",
+        "--system",
+        "deepphonemizer",
+        "--neural-python",
+        os.environ["PHONEBOX_NEURAL_TEST_PYTHON"],
+        "--neural-settings",
+        str(settings),
+    ]
+    profile = tmp_path / "profile.json"
+    assert (
+        main(
+            common
+            + [
+                "--neural-profile-only",
+                "--work-dir",
+                str(tmp_path / "profile"),
+                "--output",
+                str(profile),
+            ]
+        )
+        == 0
+    )
+    profiled = json.loads(profile.read_text())
+    assert profiled["settings"]["d_model"] == 16
+    assert profiled["profile_only"] is True and "metrics" not in profiled
+    complete = tmp_path / "complete.json"
+    assert (
+        main(
+            common
+            + ["--work-dir", str(tmp_path / "complete"), "--output", str(complete)]
+        )
+        == 0
+    )
+    measured = json.loads(complete.read_text())
+    assert measured["settings"]["d_model"] == 16
+    assert measured["settings"]["threads"] == 2
+    assert measured["metrics"]["n_test"] == 1
+    assert measured["training"]["optimizer_updates"] == 1

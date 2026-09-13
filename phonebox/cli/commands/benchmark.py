@@ -83,6 +83,11 @@ def setup_benchmark_commands(subparsers) -> None:
         help="Python in the pinned isolated DeepPhonemizer toolchain",
     )
     parser.add_argument(
+        "--neural-settings",
+        type=Path,
+        help="Validated JSON settings file; modified settings define a separate experiment",
+    )
+    parser.add_argument(
         "--neural-device",
         choices=("cpu", "mps"),
         default="cpu",
@@ -91,7 +96,7 @@ def setup_benchmark_commands(subparsers) -> None:
     parser.add_argument(
         "--neural-profile-only",
         action="store_true",
-        help="One full training epoch and dev evaluation; no test references or benchmark score",
+        help="One full training epoch and dev evaluation; training worker receives no test references",
     )
     parser.add_argument(
         "--output",
@@ -128,6 +133,18 @@ def handle_benchmark(args: argparse.Namespace) -> int:
         raise ValueError("DeepPhonemizer requires --neural-python")
     if args.neural_profile_only and args.system != "deepphonemizer":
         raise ValueError("--neural-profile-only requires --system deepphonemizer")
+    neural_settings = None
+    if args.neural_settings is not None:
+        if args.system != "deepphonemizer":
+            raise ValueError("--neural-settings requires --system deepphonemizer")
+        rejected = require_distinct_output(args.neural_settings, args.output)
+        if rejected is not None:
+            return rejected
+        from phonebox.eval.benchmark_neural import NeuralSettings
+
+        neural_settings = NeuralSettings.from_dict(
+            json.loads(args.neural_settings.read_text(encoding="utf-8"))
+        )
     if args.system == "deepphonemizer":
         if not args.neural_python.is_file():
             raise ValueError(
@@ -153,6 +170,7 @@ def handle_benchmark(args: argparse.Namespace) -> int:
             python_executable=args.neural_python,
             device=args.neural_device,
             profile_only=True,
+            settings=neural_settings,
         )
         write_results(args.output, result)
         return 0
@@ -167,6 +185,7 @@ def handle_benchmark(args: argparse.Namespace) -> int:
         phonetisaurus_prefix=args.phonetisaurus_prefix,
         neural_python=args.neural_python,
         neural_device=args.neural_device,
+        neural_settings=neural_settings,
         progress=lambda message: print(message, file=sys.stderr, flush=True),
     )
     write_results(args.output, result)
