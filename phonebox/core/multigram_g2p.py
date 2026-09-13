@@ -240,8 +240,8 @@ class MultigramG2P:
         The returned predictor owns its language model, candidates, preprocessing,
         exceptions, and beam. Later mutation or retraining of this model does not
         change it; call this method again to prepare a refreshed snapshot.
-        Preparation takes time and memory proportional to the model, once per
-        predictor, rather than once per word.
+        Preparation takes additional time and memory that grow with model size,
+        once per predictor, rather than once per word.
         """
         if not self.lm.is_trained:
             raise RuntimeError("MultigramG2P not trained / loaded")

@@ -72,8 +72,8 @@ Later changes or retraining of `model` do not change existing predictors; call
 without changing the snapshot.
 
 Preparation copies the model's inference state once and builds the candidate
-index and encoded unit IDs once. It costs additional time and memory proportional
-to the model, which can be amortized over a batch; single-word model methods
+index and encoded unit IDs once. It costs additional time and memory that grow
+with model size, which can be amortized over a batch; single-word model methods
 continue to use current model state. The pronunciation CLI and the two-way
 comparison evaluator prepare once and reuse the result for their input stream.
 Preparation and prediction should be measured separately when reporting speed.
