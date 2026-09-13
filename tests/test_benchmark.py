@@ -1,6 +1,7 @@
 """Adapters preserve the declared population and reject ambiguous tool output."""
 
 import json
+from pathlib import Path
 
 import pytest
 
@@ -197,6 +198,24 @@ else:
         executable = binaries / name
         executable.write_text(script)
         executable.chmod(0o755)
+        receipt = {
+            "version": "mitlm-version"
+            if name == "estimate-ngram"
+            else "phonetisaurus-version",
+            "source_revision": "mitlm-revision"
+            if name == "estimate-ngram"
+            else "phonetisaurus-revision",
+            "build": {"compiler": "test compiler"},
+        }
+        Path(str(executable) + ".provenance.json").write_text(json.dumps(receipt))
+    (prefix / "provenance.json").write_text(
+        json.dumps(
+            {
+                "version": "wrong-shared-version",
+                "source_revision": "wrong-shared-revision",
+            }
+        )
+    )
     report = run_benchmark(
         dataset(), "phonetisaurus", tmp_path / "run", phonetisaurus_prefix=prefix
     )
@@ -204,4 +223,11 @@ else:
     assert report["training"]["retained_entries"] is None
     assert report["training"]["model_bytes"] == 3
     assert len(report["provenance"]["tools"]) == 4
+    tools = report["provenance"]["tools"]
+    assert tools["estimate-ngram"]["version"] == "mitlm-version"
+    assert tools["estimate-ngram"]["source_revision"] == "mitlm-revision"
+    for name in tools:
+        if name != "estimate-ngram":
+            assert tools[name]["version"] == "phonetisaurus-version"
+            assert tools[name]["source_revision"] == "phonetisaurus-revision"
     assert str(tmp_path) not in json.dumps(report, allow_nan=False)

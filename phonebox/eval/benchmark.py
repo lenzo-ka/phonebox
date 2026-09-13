@@ -482,7 +482,7 @@ def _phonetisaurus(dataset: PreparedDataset, directory: Path, prefix: Path):
     )
     executables = {name: _executable(prefix / "bin" / name) for name in names}
     identities = {
-        name: _tool_identity(executable, prefix / "provenance.json")
+        name: _tool_identity(executable, Path(str(executable) + ".provenance.json"))
         for name, executable in executables.items()
     }
     train, corpus, arpa, model = (
