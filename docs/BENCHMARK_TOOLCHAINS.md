@@ -15,11 +15,14 @@ checkout and its license with the developer environment.
 
 Start in a fresh `.cache/toolchains/sequitur` directory. Run builds at low
 priority and bound build and numerical-library threads when sharing a machine.
-The commands below build the actual authors' source, without patches.
+Set `PHONEBOX_CHECKOUT` to the Phonebox checkout before entering this build
+directory. The commands build the authors' pinned source with the small NumPy
+compatibility patch described below.
 
 ```sh
 git clone https://github.com/sequitur-g2p/sequitur-g2p.git source
 git -C source checkout 7bd56d5d502325e0be3f14b7d898720a39db3338
+git -C source apply "$PHONEBOX_CHECKOUT/docs/patches/sequitur-numpy2.patch"
 python3.12 -m venv venv
 export PATH="$PWD/venv/bin:$PATH"
 export MAKEFLAGS=-j2 CMAKE_BUILD_PARALLEL_LEVEL=2
@@ -32,6 +35,17 @@ python -m pip install --no-deps wheels/*.whl
 python -c 'import importlib.metadata; print(importlib.metadata.version("sequitur-g2p"))'
 venv/bin/g2p.py --help
 ```
+
+The [compatibility patch](patches/sequitur-numpy2.patch) replaces the removed
+NumPy `sometrue` alias with `any`, preserving the reduction's semantics.
+The pinned upstream package requires NumPy 2 but still calls the removed name
+in higher-order discount adjustment. This path failed during the full-budget
+synthetic smoke; the patched build passed the same fixture. The patch SHA-256
+is `72c6d06d170d37c80f33187ea9da7bf51003fcca9784e7f3bcea62285f47b985`.
+It includes upstream code context and is distributed under the accompanying
+[Sequitur GPL-2.0 license](patches/SEQUITUR_LICENSE.txt); it does not change
+Phonebox's runtime dependencies or license. Preserve the applied source diff
+and rebuilt wheel hash with the binary receipt.
 
 The resulting package version is 1.0.1668.30. Its `--version` text embeds an older
 SVN revision, so retain the Git commit and distribution version as provenance.
@@ -146,3 +160,43 @@ sequences; it verifies execution and token transport, not scientific accuracy.
 A real experiment failure must be recorded rather than silently retried at a
 different order. Preserve complete build logs, upstream licenses, compiler
 settings, and the per-executable receipts with the experiment.
+
+
+## Source and binary receipts
+
+Use Phonebox's public `phonebox.eval.benchmark_provenance.write_tool_receipt`
+API, also exposed as `phonebox compare benchmark-receipt`, to bind metadata to
+the actual executable and observed source tree. This API was exercised for
+Sequitur's launcher and all four native pipeline executables before the final
+smoke. It records the pinned source revision, tracked diff hash, dirty status
+and executable hash. The Sequitur compatibility patch is an intentional tracked
+diff; do not conceal it by ignoring or reverting the source file.
+
+Generated build products may need explicit entries in the source checkout's
+`.git/info/exclude`; inspect them first. For example, Sequitur produces
+`/sequitur_g2p.egg-info/`. Ignore only generated products, not source edits.
+Run receipt generation from an environment containing Phonebox's `[dev]` tools:
+
+```python
+from phonebox.eval.benchmark_provenance import write_tool_receipt
+
+write_tool_receipt(
+    "venv/bin/g2p.py", "source",
+    declared_version="1.0.1668.30",
+    expected_revision="7bd56d5d502325e0be3f14b7d898720a39db3338",
+    build={
+        "numpy": "2.5.3",
+        "compatibility_patch_sha256":
+            "72c6d06d170d37c80f33187ea9da7bf51003fcca9784e7f3bcea62285f47b985",
+    },
+)
+```
+
+Supply additional observed compiler, wheel, installed-module and shared-library
+hashes through `build`; the generated binding fields cannot be overridden.
+When invoking a launcher, pass the launcher as `executable` and preserve the
+underlying program hash separately as `underlying_executable_sha256`.
+Create one receipt beside each resolved executable. `estimate-ngram` must use
+MITLM's own source revision/version; the other three native executables use
+Phonetisaurus's. Source and binary identities must not be conflated with the
+whole toolchain's identity. The runner verifies each receipt's binary binding.
