@@ -172,6 +172,21 @@ See the [release checks](https://github.com/lenzo-ka/phonebox/blob/main/docs/REL
 for validation. Contributions should include tests for behavior changes and
 keep Python APIs, CLI help, and documentation consistent.
 
+## References
+
+Background on letter–phone alignment, decision-tree G2P, and lexicon compression:
+
+- Alan W. Black, Kevin Lenzo, and Vincent Pagel (1998).
+  [“Issues in Building General Letter to Sound Rules.”](https://www.isca-archive.org/ssw_1998/black98_ssw.html)
+  *Third ESCA Workshop on Speech Synthesis*, pp. 77–80.
+  Describes lexicon-derived alignments, CART pronunciation rules, and evaluation
+  on unseen words.
+- Vincent Pagel, Kevin Lenzo, and Alan W. Black (1998).
+  [“Letter to Sound Rules for Accented Lexicon Compression.”](https://www.isca-archive.org/icslp_1998/pagel98_icslp.html)
+  *5th International Conference on Spoken Language Processing (ICSLP 1998)*,
+  paper 0561. [doi:10.21437/ICSLP.1998-39](https://doi.org/10.21437/ICSLP.1998-39).
+  Examines decision trees for joint phone/stress prediction and lexicon compression.
+
 ## Credits and license
 
 Phonebox is by [Kevin Lenzo](https://github.com/lenzo-ka), building on
