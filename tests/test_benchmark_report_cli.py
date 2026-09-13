@@ -80,6 +80,10 @@ def test_valid_report_keeps_missing_predictions_and_missing_systems_explicit():
     assert "| Phonetisaurus | 50.00 | 25.00 | 1 |" in rendered
     assert "Not measured in this artifact: Phonebox n:m, Sequitur." in rendered
     assert "Missing predictions remain errors." in rendered
+    assert (
+        "Timings across different shared machines are descriptive, not a speed ranking."
+        in rendered
+    )
     assert "Held-out WER (%) | Held-out PER (%)" in rendered
     assert "dictionary lookup disabled" in rendered
     assert "a" * 64 in rendered

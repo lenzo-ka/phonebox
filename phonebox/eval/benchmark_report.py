@@ -191,7 +191,8 @@ def render_benchmark_report(results: Sequence[Mapping[str, Any]]) -> str:
             "counts, and error accounting are retained in the accompanying JSON. "
             "Train + export includes the recorded training procedure (including "
             "development selection where used) and export; external training "
-            "already includes export. Shared-machine timing is descriptive. "
+            "already includes export. Timings across different shared machines are "
+            "descriptive, not a speed ranking. "
             "These are lexicon-type evaluations, not running-text accuracy measurements.",
             "",
         ]
