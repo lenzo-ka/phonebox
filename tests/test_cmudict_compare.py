@@ -170,6 +170,7 @@ def test_renderer_reads_metrics_from_json_snapshot():
     markdown = render_markdown(result)
     assert "| preserved | G2PDecisionTree | 90 | 10 | 1.25 | 42 |" in markdown
     assert "snapshot, not a promise" in markdown
+    assert "--markdown .cache/benchmarks/locale-cmudict.md" in markdown
 
 
 def test_cli_invalid_input_is_status_two_without_traceback(tmp_path, capsys):
@@ -189,3 +190,59 @@ def test_cli_invalid_input_is_status_two_without_traceback(tmp_path, capsys):
     captured = capsys.readouterr()
     assert "CMUdict comparison failed" in captured.err
     assert "Traceback" not in captured.err
+
+
+@pytest.mark.parametrize("explicit", [False, True])
+def test_refresh_markdown_stays_beside_json_unless_overridden(
+    tmp_path, monkeypatch, explicit
+):
+    from phonebox.cli.commands import cmudict_compare as command
+
+    monkeypatch.chdir(tmp_path)
+    wrapper = tmp_path / "docs/CMUDICT_COMPARISON.md"
+    wrapper.parent.mkdir()
+    wrapper.write_text("keep current workflow guide")
+    lexicon = tmp_path / "input.dict"
+    lexicon.write_text("fixture")
+    result = tmp_path / "results/report.json"
+    markdown = tmp_path / "chosen.md" if explicit else result.with_suffix(".md")
+    monkeypatch.setattr(
+        command, "run_cmudict_comparison", lambda *args, **kwargs: {"snapshot": True}
+    )
+    monkeypatch.setattr(command, "render_markdown", lambda report: "rendered\n")
+    args = ["compare", "cmudict", "--refresh", str(result), "--lexicon", str(lexicon)]
+    if explicit:
+        args += ["--markdown", str(markdown)]
+    assert main(args) == 0
+    assert json.loads(result.read_text()) == {"snapshot": True}
+    assert markdown.read_text() == "rendered\n"
+    assert wrapper.read_text() == "keep current workflow guide"
+
+
+def test_derived_markdown_alias_is_rejected_before_training(tmp_path, monkeypatch):
+    from phonebox.cli.commands import cmudict_compare as command
+
+    lexicon = tmp_path / "input.dict"
+    lexicon.write_text("preserve input")
+    result = tmp_path / "result.json"
+    result.with_suffix(".md").symlink_to(lexicon)
+
+    def forbidden(*args, **kwargs):
+        raise AssertionError("training must not start for aliased output")
+
+    monkeypatch.setattr(command, "run_cmudict_comparison", forbidden)
+    assert (
+        main(
+            ["compare", "cmudict", "--refresh", str(result), "--lexicon", str(lexicon)]
+        )
+        == 2
+    )
+    assert not result.exists()
+    assert lexicon.read_text() == "preserve input"
+
+
+def test_refresh_json_markdown_same_derived_path_rejected(tmp_path):
+    output = tmp_path / "result.md"
+    output.write_text("preserve output")
+    assert main(["compare", "cmudict", "--refresh", str(output)]) == 2
+    assert output.read_text() == "preserve output"

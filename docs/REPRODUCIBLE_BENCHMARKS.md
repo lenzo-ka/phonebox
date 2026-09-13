@@ -27,8 +27,11 @@ are therefore stress-free IPA observations, not a claimed stress-preserved
 Italian/French condition. Missing source stress cannot be reconstructed by
 renaming an experimental setting or inferring it from spelling.
 
-The new comparison reserves development data as well as test data, so its
-scores need not match the earlier two-way [CMUdict comparison](CMUDICT_COMPARISON.md).
+This comparison reserves development data as well as test data and preserves
+unjoined target phone tokens. The [archived two-way CMUdict snapshot](archive/cmudict-489097f/README.md)
+used locale-aware joins and a train/test-only split. Its cooked target atoms and
+model scoring differ, so the two reports are not a controlled before/after
+comparison. See [CMUdict workflows](CMUDICT_COMPARISON.md).
 
 The additional witnesses use substantial filtered WikiPron pronunciation
 lexica, identified by immutable source revisions and file hashes. Whole NFC-casefold spelling

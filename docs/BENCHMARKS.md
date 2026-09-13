@@ -1,7 +1,7 @@
 # G2P Benchmarks
 
 For the release preparation measurement with recorded source and data provenance,
-see [the reproducible CMUdict comparison](CMUDICT_COMPARISON.md). The older
+see [the shared-data G2P comparisons](G2P_BENCHMARKS.md). The older
 results below use a different split and are retained as historical context;
 they are not measurements of the current release.
 

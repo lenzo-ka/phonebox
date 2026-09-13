@@ -167,8 +167,8 @@ for phones, score in g2p.pronounce_nbest(word, n=5):
 
 ## Measuring performance
 
-See [the reproducible CMUdict comparison](CMUDICT_COMPARISON.md) for measured
-training accuracy, timing, and complete export sizes at its recorded source and
+See [the shared-data G2P comparisons](G2P_BENCHMARKS.md) for measured
+held-out accuracy, timing, and complete export sizes at its recorded source and
 dependency versions. That report does not benchmark confidence or n-best latency.
 Measure those operations on your own saved model and representative word list;
 record the model configuration, fallback setting, alternative count, dependency

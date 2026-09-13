@@ -1,0 +1,10 @@
+{
+  "cmudict_commit": "74790861f652b15e4ac49015a90074ad62a27690",
+  "cmudict_sha256": "81917843c7f44ce2b094ac63873c2c7a4cf802040792c455ba3ca406891c3d22",
+  "files": {
+    "CMUDICT_COMPARISON.md": "693b49bcc7e565c6d685c4404005c001046cd60b0e3dc416ecc706aaadc24188",
+    "cmudict-comparison.json": "65fa51a019b677551f97bcb74079bb8f9a62d30689cf6c527dee798dcd2042fa"
+  },
+  "multigram_em_iterations": 10,
+  "source_revision": "489097f15c2596b1ae8f958ec8d81336697316ed"
+}

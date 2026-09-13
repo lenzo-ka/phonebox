@@ -1,68 +1,45 @@
-# CART and multigram G2P on CMUdict
+# CMUdict comparison workflows
 
-> These measurements are a reproducible snapshot, not a promise about future releases. Run the refresh command below after implementation changes.
+The [current measured comparisons](G2P_BENCHMARKS.md) evaluate Phonebox CART,
+Phonebox multigram and independent implementations on shared prepared data,
+including CMUdict with stress preserved and removed. See the
+[protocol and reproduction commands](REPRODUCIBLE_BENCHMARKS.md) for source
+pins, training settings, development selection and error accounting.
 
-Phonebox exposes two trainable grapheme-to-phoneme models. `G2PDecisionTree` aligns one cooked grapheme position to one target position and learns CART decisions from spelling context. `MultigramG2P` learns joint n:m grapheme/phone units and decodes unit sequences with a language model. Both use `Vectorizer` for the same locale normalization, stress policy, and configured joins in this benchmark.
+The earlier [locale-aware two-way snapshot](archive/cmudict-489097f/README.md)
+is retained as a historical record of revision `489097f`. Its multigram
+scoring predates the current corrections; its conclusions are not current
+model-selection advice.
 
-## Reproduce
+## Different preprocessing, different experiments
 
-To reproduce this exact snapshot, check out the recorded revision and install the recorded dependencies. Running `--refresh` from newer source creates a new snapshot rather than reproducing this one.
+The shared-data comparison uses identity grapheme/phone processing after the
+declared normalization and stress mapping, and reserves separate train, dev
+and test groups. The locale-aware workflow uses `Vectorizer(locale="en_US")`,
+configured grapheme and phone joins, and a train/test split without a dev set.
+For example, it joins `ch` into one grapheme unit and `K S` into one phone
+unit. These joins change alignment admission and the units counted by phone
+error rate. Scores from the two workflows are not controlled before/after
+measurements of an implementation change.
+
+## Run a separate locale-aware experiment
+
+The library entry point is `phonebox.eval.cmudict_compare.run_cmudict_comparison`.
+The CLI downloads and verifies the pinned public CMUdict source when no
+`--lexicon` is supplied. Markdown defaults to the JSON's directory and basename
+with a `.md` suffix; `--markdown` overrides it. Choose explicit output files for
+a new experiment:
 
 ```console
-git checkout 489097f15c2596b1ae8f958ec8d81336697316ed
-python -m pip install -e '.[dev]' 'cartlet==0.6.0'
-phonebox compare cmudict --refresh docs/cmudict-comparison.json
-phonebox compare cmudict --check docs/cmudict-comparison.json docs/CMUDICT_COMPARISON.md
+phonebox compare cmudict --em-iterations 100 \
+  --refresh .cache/benchmarks/locale-cmudict.json \
+  --markdown .cache/benchmarks/locale-cmudict.md
+phonebox compare cmudict --check \
+  .cache/benchmarks/locale-cmudict.json .cache/benchmarks/locale-cmudict.md
 ```
 
-Data: [CMUdict](https://github.com/cmusphinx/cmudict) commit `74790861f652b15e4ac49015a90074ad62a27690`, `cmudict.dict` SHA-256 `81917843c7f44ce2b094ac63873c2c7a4cf802040792c455ba3ca406891c3d22`. Its [license](https://github.com/cmusphinx/cmudict/blob/74790861f652b15e4ac49015a90074ad62a27690/LICENSE) permits research and commercial use. CMUdict is Copyright Carnegie Mellon University, which requests acknowledgement of its origin.
-
-Split: seed 1729, 10% held out, capped at 10000 normalized word identities. All variants of a cooked spelling remain on one side. Identical pronunciations after the selected phone mapping are deduplicated. Exceptions are disabled.
-The CART row uses the shared native, serial, unpruned benchmark helper. This is an explicit evaluation setting; the primary training workflow currently prunes by default. Exact helper behavior belongs to the recorded Phonebox source revision.
-
-WER is error against the first deterministic gold variant; WERv accepts any gold variant. PER uses the first variant and divides edits by its phone count. PERv selects the gold variant with the fewest phone edits for each word (ties use lexical phone order), then divides total edits by total phones in those references. It may exceed 100% when insertions outnumber reference phones. The policy is identical for both models. Artifact size includes every file required to reload the exported model.
-Training time includes each model's phone cooking, alignment, and fit. The CART export is gzip-compressed while multigram uses JSON sidecars, so size is the current complete export footprint rather than normalized complexity. Prediction errors and empty outputs are counted explicitly.
-
-## Results
-
-| Stress | Model | Source train words | Test words | Train s | Size bytes | WER% | WERv% | PER% | PERv% | Errors | Empty |
-|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| preserved | G2PDecisionTree | 116052 | 10000 | 272.10 | 391045 | 54.23 | 52.62 | 13.77 | 13.23 | 0 | 0 |
-| preserved | MultigramG2P | 116052 | 10000 | 271.96 | 17116009 | 65.61 | 64.32 | 20.75 | 20.27 | 0 | 0 |
-| removed | G2PDecisionTree | 116052 | 10000 | 279.63 | 312962 | 43.72 | 41.66 | 11.50 | 10.86 | 0 | 0 |
-| removed | MultigramG2P | 116052 | 10000 | 243.10 | 14382955 | 67.57 | 66.41 | 26.30 | 25.71 | 0 | 0 |
-
-## Interpretation
-
-- With stress preserved, G2PDecisionTree has the lower variant-aware phone error (13.23%).
-- With stress removed, G2PDecisionTree has the lower variant-aware phone error (10.86%).
-- Variant-aware WER/PER credit alternate held-out pronunciations; compare them within the same stress condition.
-- Stress-preserved and stress-removed rows are different prediction tasks; their error rates are not direct measures of one task improving.
-- Training times are one observed run on the recorded environment, not a throughput guarantee.
-- Export byte totals reflect the current gzip CART and JSON-sidecar multigram formats, not normalized algorithm complexity.
-
-## Training accounting
-
-### Stress preserved
-
-Both training pipelines started from 124494 raw entries from the same word-group split.
-
-- CART saw 124492 distinct cooked candidates, retained 122027, and skipped 2465 after deduplication because its 1:1 alignment or combination cap could not admit them.
-- Multigram saw 124492 distinct cooked candidates, aligned 124442, and skipped 50 during n:m training.
-
-### Stress removed
-
-Both training pipelines started from 124494 raw entries from the same word-group split.
-
-- CART saw 124210 distinct cooked candidates, retained 123239, and skipped 971 after deduplication because its 1:1 alignment or combination cap could not admit them.
-- Multigram saw 124210 distinct cooked candidates, aligned 124169, and skipped 41 during n:m training.
-
-
-## Snapshot provenance
-
-- Phonebox revision: `489097f15c2596b1ae8f958ec8d81336697316ed` (clean)
-- Workload code SHA-256: `d4da4e7322cb1daf36223e84476504adf4b67eedf01cb3da965a717e244798d2`
-- Python: CPython 3.12.12
-- Platform: macOS-27.0-arm64-arm-64bit
-- Dependencies: {'cartlet': '0.6.0', 'icukit': '0.4.0'}
-- Multigram EM iterations: 10; spans 2:2
+The iteration argument is a maximum, not evidence of convergence. This workflow
+records its own source and settings; it does not inherit the shared-data
+benchmark's development-selection protocol. `--check` verifies that Markdown
+matches JSON without rerunning training. It cannot establish that an older
+snapshot measures the current implementation.

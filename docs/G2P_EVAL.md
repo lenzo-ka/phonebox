@@ -1,7 +1,9 @@
 # G2P evaluation (1:1 vs MultigramG2P)
 
-For the reproducible public CMUdict snapshot, including stress-controlled CART
-and multigram results, see [`CMUDICT_COMPARISON.md`](CMUDICT_COMPARISON.md).
+For current public-data measurements, including CMUdict stress conditions and
+independent baselines, see [the shared-data comparisons](G2P_BENCHMARKS.md).
+[CMUdict workflows](CMUDICT_COMPARISON.md) distinguishes their preprocessing
+from the historical locale-aware two-way snapshot.
 
 Compare **G2PDecisionTree** (1:1, cart tree) and **MultigramG2P** (n:m, joint EM
 + unit n-gram Viterbi) on held-out IPA lexicon slices. Use the **`phonebox compare`**
