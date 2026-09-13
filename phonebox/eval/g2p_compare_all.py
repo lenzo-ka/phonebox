@@ -19,6 +19,7 @@ from phonebox.constants import (
     DEFAULT_SPLIT_SEED,
     FILE_ENCODING,
 )
+from phonebox.core.multigram_g2p import MultigramG2P
 from phonebox.eval.g2p_compare import run_compare
 from phonebox.eval.locale_registry import select_locale_paths
 from phonebox.experiments.equiv import equiv_for_locale
@@ -110,7 +111,7 @@ def write_compare_all(
             f"- Seed: {config.seed}",
             f"- Test cap: {config.max_test} entries (10% split, shuffled)",
             one_one_line,
-            f"- n:m: MultigramG2P v3 joint decode + LM, EM iterations={config.em_iterations}",
+            f"- n:m: MultigramG2P v{MultigramG2P.VERSION} joint decode + LM, EM iterations={config.em_iterations}",
             joins_line,
             f"- Parallel align: {config.parallel_align}",
             f"- Exceptions / lexicon lookup: {'train split only' if config.use_exceptions else 'off (pure G2P)'}",

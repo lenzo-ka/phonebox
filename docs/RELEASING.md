@@ -22,6 +22,22 @@ Locale exemplar data and historical benchmark provenance are unchanged by this
 integration; a recorded report remains a measurement of its named source and
 dependencies until it is rerun.
 
+### Multigram scoring artifacts
+
+New multigram exports use model version 5 and LM scoring version 2. The LM
+prediction events are all retained alignment units, all units observed on
+Viterbi paths, and the end-of-sequence event. The start marker is context-only.
+Add-k probabilities use that fixed event set; unknown units raise `ValueError`
+instead of receiving probability outside the declared support. Silent-phone
+units remain supported. Complete decoding includes the final LM transition.
+
+Older multigram artifacts are rejected with a retraining instruction, including
+version 4 exports with the previous unnormalized LM. Retrain and export both
+sidecars together. This is a Phonebox multigram scoring change, independent of
+Cartlet's tree format; it does not change CART artifacts. Historical benchmark
+reports retain their exact source/scoring behavior and must not be relabeled as
+new-model results. Fresh comparisons must record the new source and model versions.
+
 ## Upgrading from 0.1.0
 
 The 0.2.0 line introduced the following changes. Review these when upgrading
