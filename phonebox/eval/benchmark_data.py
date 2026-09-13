@@ -1,8 +1,8 @@
 """Pinned public benchmark data with shared, model-independent preparation.
 
-SIGMORPHON 2021 data is CC BY-SA 3.0, separately from this module's license.
-See its source README and Ashby et al. (2021), DOI 10.18653/v1/2021.sigmorphon-1.13,
-and Lee et al. (2020), https://aclanthology.org/2020.lrec-1.521/.
+WikiPron data has its own Wiktionary terms (CC BY-SA 4.0 and GFDL), not
+WikiPron software's Apache license or this module's license. See the pinned
+WikiPron README and Lee et al. (2020), https://aclanthology.org/2020.lrec-1.521/.
 Raw datasets are fetched into caller-owned caches, never bundled here.
 """
 
@@ -31,16 +31,13 @@ from phonebox.experiments.split import split_lexicon_by_key
 from phonebox.lexicon import parse_dict_line, strip_phone_stress
 
 Pair = tuple[str, list[str]]
-SIGMORPHON_COMMIT = "821bcdece5a47820872215969f275004b0abe80c"
-SIGMORPHON_ROOT = (
-    f"https://raw.githubusercontent.com/sigmorphon/2021-task1/{SIGMORPHON_COMMIT}"
-)
-SIGMORPHON_LICENSE_URL = f"https://github.com/sigmorphon/2021-task1/blob/{SIGMORPHON_COMMIT}/README.md#licensing"
-TASK_CITATIONS = (
-    "Ashby et al. (2021), Results of the Second SIGMORPHON Shared Task on "
-    "Multilingual Grapheme-to-Phoneme Conversion, https://aclanthology.org/2021.sigmorphon-1.13/",
+WIKIPRON_COMMIT = "d282e848a211ea31cfd730f0ced8bc8cdab9e83d"
+WIKIPRON_ROOT = f"https://raw.githubusercontent.com/CUNY-CL/wikipron/{WIKIPRON_COMMIT}"
+WIKIPRON_LICENSE_URL = "https://en.wiktionary.org/wiki/Wiktionary:Copyrights"
+WIKIPRON_CITATIONS = (
     "Lee et al. (2020), Massively multilingual pronunciation mining with WikiPron, "
     "https://aclanthology.org/2020.lrec-1.521/",
+    "Wiktionary contributors, https://en.wiktionary.org/",
 )
 
 
@@ -95,60 +92,41 @@ class PreparedDataset:
         }
 
 
-def _task_source(language: str, level: str, split: str, digest: str) -> SourceFile:
-    filename = f"{language}_{split}.tsv"
+def _wikipron_source(filename: str, directory: str, digest: str) -> SourceFile:
     return SourceFile(
         filename,
-        f"{SIGMORPHON_ROOT}/data/{level}/{filename}",
+        f"{WIKIPRON_ROOT}/data/{directory}/{filename}",
         digest,
-        SIGMORPHON_COMMIT,
-        "CC-BY-SA-3.0",
-        SIGMORPHON_LICENSE_URL,
-        TASK_CITATIONS,
+        WIKIPRON_COMMIT,
+        "CC-BY-SA-4.0 (Wiktionary terms; GFDL alternative)",
+        WIKIPRON_LICENSE_URL,
+        WIKIPRON_CITATIONS,
     )
 
 
-_TASK_FILES = {
-    "italian": {
-        "train": _task_source(
-            "ita",
-            "low",
-            "train",
-            "e12573b2f640aa799b5f87ba265a61f62a6212217170aa915875d651a3e0ea1b",
-        ),
-        "dev": _task_source(
-            "ita",
-            "low",
-            "dev",
-            "de30becaa09b9121730a07faa80feb08c864405556ab34938d9aaf89f678d521",
-        ),
-        "test": _task_source(
-            "ita",
-            "low",
-            "test",
-            "66f7049496757be938615dddbfd6fd5c846728c477888900fc20bfcc9084bd0c",
-        ),
-    },
-    "french": {
-        "train": _task_source(
-            "fre",
-            "medium",
-            "train",
-            "e9de4f5125d2478e50506c5ed278f69d5fb17d8d213f99f845305c24e28a55c2",
-        ),
-        "dev": _task_source(
-            "fre",
-            "medium",
-            "dev",
-            "3b42f14f318367dd94faa6d59e8fafabd845a3998800b6ce71a7c67e999490da",
-        ),
-        "test": _task_source(
-            "fre",
-            "medium",
-            "test",
-            "6202c2b7b8d5fbd76a4d40373f9564a9946671dab617438b534bd47c64071c92",
-        ),
-    },
+_WIKIPRON_FILES = {
+    "italian": _wikipron_source(
+        "ita_latn_broad_filtered.tsv",
+        "scrape/tsv",
+        "231c78d1fb89f1f03ad7420b69003023b84863d877ce82ee72d2590fa470b78a",
+    ),
+    "french": _wikipron_source(
+        "fra_latn_broad_filtered.tsv",
+        "scrape/tsv",
+        "6f0fe8d7a50f4eb494eb478e5673cb72542484dccd048f46f3b12f75f4d51628",
+    ),
+}
+_WIKIPRON_WHITELISTS = {
+    "italian": _wikipron_source(
+        "ita_broad.phones",
+        "phones/phones",
+        "d05afac80a5873a329d3e314f5c3c2fb780e211e68bd65a2f4b1e3268b60f71b",
+    ),
+    "french": _wikipron_source(
+        "fra_broad.phones",
+        "phones/phones",
+        "2795d312b417e2181b5c38cdf0541e8af0d5bb00209e2328acdf95c23fb5e66e",
+    ),
 }
 _CMUDICT_SOURCE = SourceFile(
     "cmudict.dict",
@@ -198,7 +176,7 @@ def _verify_hash(path: Path, source: SourceFile) -> None:
         )
 
 
-def _parse_task_tsv(path: Path) -> list[Pair]:
+def _parse_tsv(path: Path) -> list[Pair]:
     """Read exactly two TSV fields; phones are whitespace-delimited tokens."""
     pairs: list[Pair] = []
     with path.open(encoding="utf-8") as stream:
@@ -215,7 +193,7 @@ def _parse_task_tsv(path: Path) -> list[Pair]:
                 )
             pairs.append((columns[0], columns[1].split()))
     if not pairs:
-        raise ValueError(f"{path.name}: empty task split")
+        raise ValueError(f"{path.name}: empty TSV lexicon")
     return pairs
 
 
@@ -282,55 +260,122 @@ def _assemble(
     )
 
 
+def _spelling_group(word: str) -> str:
+    """Keep NFC-casefold aliases together without altering model input."""
+    return unicodedata.normalize("NFC", unicodedata.normalize("NFC", word).casefold())
+
+
+def _load_wikipron(name: str, cache: Path) -> PreparedDataset:
+    source = _WIKIPRON_FILES[name]
+    whitelist = _WIKIPRON_WHITELISTS[name]
+    raw = _parse_tsv(_fetch(source, cache))
+    allowed = {
+        token
+        for line in _fetch(whitelist, cache).read_text(encoding="utf-8").splitlines()
+        if (token := line.split("#", 1)[0].strip())
+    }
+    if not allowed:
+        raise ValueError("WikiPron phone whitelist is empty")
+    unknown = {phone for _, phones in raw for phone in phones} - allowed
+    if unknown:
+        raise ValueError(f"WikiPron phones outside pinned whitelist: {sorted(unknown)}")
+    pairs = [
+        (unicodedata.normalize("NFC", word), phones)
+        for word, phones in raw
+        if name != "french" or "‿" not in phones
+    ]
+    original_words = {unicodedata.normalize("NFC", word) for word, _ in raw}
+    retained_words = {word for word, _ in pairs}
+    test, remaining = split_lexicon_by_key(
+        pairs, key=_spelling_group, seed=1729, test_fraction=0.1, max_test=10000
+    )
+    dev, train = split_lexicon_by_key(
+        remaining,
+        key=_spelling_group,
+        seed=1729,
+        test_fraction=0.1,
+        max_test=len(remaining),
+    )
+    splits = {"train": train, "dev": dev, "test": test}
+    groups = {
+        split: {_spelling_group(word) for word, _ in rows}
+        for split, rows in splits.items()
+    }
+    if any(
+        groups[a] & groups[b]
+        for a, b in (("train", "dev"), ("train", "test"), ("dev", "test"))
+    ):
+        raise ValueError("WikiPron casefold spelling overlap between splits")
+    return _assemble(
+        name,
+        splits,
+        {
+            "locale": "fr_FR" if name == "french" else "it_IT",
+            "phoneset": "ipa",
+            "sources": {
+                "lexicon": source.to_dict(),
+                "phone_whitelist": whitelist.to_dict(),
+            },
+            "preparation": {
+                "spelling": "NFC; case preserved",
+                "phones": "original tokens",
+                "remove_stress": False,
+                "excluded_variant_tokens": ["‿"] if name == "french" else [],
+            },
+            "quality": {
+                "upstream_filter": "phone-token whitelist; not a correctness guarantee",
+                "upstream_settings_url": f"{WIKIPRON_ROOT}/data/scrape/lib/scrape.py",
+                "upstream_settings": {"stress": False, "syllable_boundaries": False},
+                "raw_entries": len(raw),
+                "raw_words": len(original_words),
+                "excluded_annotated_entries": len(raw) - len(pairs),
+                "excluded_only_annotated_words": len(original_words - retained_words),
+                "retained_entries_before_dedup": len(pairs),
+                "retained_words_before_dedup": len(retained_words),
+                "exclusion_reason": "whole linking-annotated variants excluded from segment-only target"
+                if name == "french"
+                else "none",
+            },
+            "split": {
+                "method": "complete NFC-casefold spelling groups; original case retained",
+                "seed": 1729,
+                "test_fraction": 0.1,
+                "max_test_words": 10000,
+                "dev_fraction_of_remaining_groups": 0.1,
+                "rounding": "floor; minimum one held-out group per split; reject empty train",
+                "groups": {split: len(keys) for split, keys in groups.items()},
+                "casefold_overlap": {"train_dev": 0, "train_test": 0, "dev_test": 0},
+            },
+        },
+    )
+
+
 def load_dataset(
     name: str, cache_dir: str | Path, remove_stress: bool = False
 ) -> PreparedDataset:
-    """Load cmudict/french/italian with verified bytes and shared preparation.
+    """Load verified CMUdict or full filtered WikiPron French/Italian lexicons.
 
-    French/Italian retain published SIGMORPHON 2021 splits and phone tokens;
-    remove_stress=True is rejected for these already-prepared IPA task datasets.
-    CMUdict lowercases NFC spellings, optionally applies the shared CMU stress
-    transform, and splits complete spelling groups with seed1729: test10% capped
-    at10000 words, then dev10% of remaining groups. Duplicate pairs are removed
-    only after transformations and splitting; all pronunciation variants remain
-    in the same split. An invalid existing cache fails closed without replacing
-    it. Data license notices/citations are included in metadata, not relicensed.
+    WikiPron preserves NFC spelling/case and original segmented IPA tokens.
+    Entire French variants bearing the linking annotation ``‿`` are excluded;
+    clean alternatives remain. NFC-casefold aliases share a split while retaining
+    their original spelling. Its upstream phone whitelist is checked, but does
+    not establish lexicon correctness. Additional stress stripping is CMU-only.
+    All datasets use seed1729: test10% capped at10000 spelling groups, then
+    dev10% of remaining groups. CMUdict retains its existing lowercase grouping.
+    Stable pair dedup follows transformations; no model-specific cooking applies.
+    Invalid cached bytes fail closed. Raw data is not bundled or relicensed.
     """
-    if name not in {"cmudict", *_TASK_FILES}:
+    if name not in {"cmudict", *_WIKIPRON_FILES}:
         raise ValueError("Unknown dataset; choose cmudict, french or italian")
     if not isinstance(remove_stress, bool):
         raise ValueError("remove_stress must be a boolean")
     cache = Path(cache_dir) / name
-    if name in _TASK_FILES:
+    if name in _WIKIPRON_FILES:
         if remove_stress:
             raise ValueError(
-                "Task IPA phone tokens are preserved; remove_stress applies only to cmudict"
+                "IPA phone tokens are preserved; remove_stress applies only to cmudict"
             )
-        sources = _TASK_FILES[name]
-        splits = {
-            split: _parse_task_tsv(_fetch(source, cache))
-            for split, source in sources.items()
-        }
-        return _assemble(
-            name,
-            splits,
-            {
-                "locale": "fr_FR" if name == "french" else "it_IT",
-                "phoneset": "ipa",
-                "sources": {
-                    split: source.to_dict() for split, source in sources.items()
-                },
-                "preparation": {
-                    "spelling": "NFC; case preserved",
-                    "phones": "original tokens",
-                    "remove_stress": False,
-                },
-                "split": {
-                    "method": "published SIGMORPHON2021",
-                    "revision": SIGMORPHON_COMMIT,
-                },
-            },
-        )
+        return _load_wikipron(name, cache)
     source = _CMUDICT_SOURCE
     pairs: list[Pair] = []
     with _fetch(source, cache).open(encoding="utf-8") as stream:

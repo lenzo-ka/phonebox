@@ -21,49 +21,95 @@ def source(filename: str, content: bytes) -> data.SourceFile:
     )
 
 
-def install_task(tmp_path, monkeypatch, splits):
-    cache = tmp_path / "italian"
+def install_wikipron(tmp_path, monkeypatch, text, name="italian"):
+    cache = tmp_path / name
     cache.mkdir()
-    sources = {}
-    for split, content in splits.items():
-        raw = content.encode()
-        spec = source(f"ita_{split}.tsv", raw)
-        (cache / spec.filename).write_bytes(raw)
-        sources[split] = spec
-    monkeypatch.setitem(data._TASK_FILES, "italian", sources)
-
-
-def task_splits(train="si\ts i\nsì\ts i\ne\u0301\te\né\te\n"):
-    return {"train": train, "dev": "casa\tk a z a\n", "test": "Città\tt͡ʃ i t a\n"}
-
-
-def test_task_identity_tokens_dedup_provenance_and_digest(tmp_path, monkeypatch):
-    install_task(tmp_path, monkeypatch, task_splits())
-    result = data.load_dataset("italian", tmp_path)
-    assert result.train == [("si", ["s", "i"]), ("sì", ["s", "i"]), ("é", ["e"])]
-    assert result.test == [("Città", ["t͡ʃ", "i", "t", "a"])]
-    assert result.metadata["counts"]["train"] == {
-        "source_entries": 4,
-        "prepared_entries": 3,
-        "words": 3,
-        "duplicates_removed": 1,
-    }
-    assert result.metadata["locale"] == "it_IT"
-    serialized = json.dumps(
-        result.train, ensure_ascii=False, separators=(",", ":")
-    ).encode()
-    assert (
-        result.metadata["prepared_sha256"]["train"]
-        == hashlib.sha256(serialized).hexdigest()
+    spec = source("lexicon.tsv", text.encode())
+    phones = sorted(
+        {
+            p
+            for line in text.splitlines()
+            if "\t" in line
+            for p in line.split("\t")[1].split()
+        }
     )
+    whitelist = source("phones.txt", ("\n".join(phones) + "\n").encode())
+    (cache / spec.filename).write_bytes(text.encode())
+    (cache / whitelist.filename).write_bytes(("\n".join(phones) + "\n").encode())
+    monkeypatch.setitem(data._WIKIPRON_FILES, name, spec)
+    monkeypatch.setitem(data._WIKIPRON_WHITELISTS, name, whitelist)
+
+
+def lexicon(extra=""):
+    return "".join(f"word{i}\tA B\n" for i in range(100)) + extra
+
+
+def test_wikipron_identity_alias_groups_tokens_dedup_and_digest(tmp_path, monkeypatch):
+    install_wikipron(
+        tmp_path,
+        monkeypatch,
+        lexicon("si\ts i\nsì\ts i\ne\u0301\te\né\te\nCase\tK\ncase\tk\n"),
+    )
+    result = data.load_dataset("italian", tmp_path)
+    all_pairs = result.train + result.dev + result.test
+    assert ("si", ["s", "i"]) in all_pairs
+    assert ("sì", ["s", "i"]) in all_pairs
+    assert sum(w == "é" for w, _ in all_pairs) == 1
+    assert ("Case", ["K"]) in all_pairs and ("case", ["k"]) in all_pairs
+    assert (
+        sum(
+            any(w == "Case" for w, _ in rows) and any(w == "case" for w, _ in rows)
+            for rows in [result.train, result.dev, result.test]
+        )
+        == 1
+    )
+    assert sum(c["duplicates_removed"] for c in result.metadata["counts"].values()) == 1
+    assert result.metadata["split"]["casefold_overlap"] == {
+        "train_dev": 0,
+        "train_test": 0,
+        "dev_test": 0,
+    }
+    groups = [
+        {data._spelling_group(w) for w, _ in rows}
+        for rows in [result.train, result.dev, result.test]
+    ]
+    assert (
+        not groups[0] & groups[1]
+        and not groups[0] & groups[2]
+        and not groups[1] & groups[2]
+    )
+    for split in ["train", "dev", "test"]:
+        assert result.metadata["prepared_sha256"][split] == data._split_digest(
+            getattr(result, split)
+        )
+    assert result.metadata["quality"]["raw_entries"] == 106
     assert str(tmp_path) not in json.dumps(
         result.to_dict(), ensure_ascii=False, allow_nan=False
     )
     assert result.to_dict() == data.load_dataset("italian", tmp_path).to_dict()
 
 
+def test_french_excludes_whole_linking_variants_retains_clean_alternatives(
+    tmp_path, monkeypatch
+):
+    install_wikipron(
+        tmp_path,
+        monkeypatch,
+        lexicon("both\tb ‿ o\nboth\tb o\nonly\to ‿ n\nlong\tl o n ɡ ɡ\n"),
+        name="french",
+    )
+    result = data.load_dataset("french", tmp_path)
+    pairs = result.train + result.dev + result.test
+    assert ("both", ["b", "o"]) in pairs
+    assert all("‿" not in p for _, p in pairs)
+    assert all(w != "only" for w, _ in pairs)
+    assert ("long", ["l", "o", "n", "ɡ", "ɡ"]) in pairs
+    assert result.metadata["quality"]["excluded_annotated_entries"] == 2
+    assert result.metadata["quality"]["excluded_only_annotated_words"] == 1
+
+
 @pytest.mark.parametrize(
-    "train",
+    "text",
     [
         "",
         "word AA\n",
@@ -74,25 +120,38 @@ def test_task_identity_tokens_dedup_provenance_and_digest(tmp_path, monkeypatch)
         "\n",
     ],
 )
-def test_task_strict_tsv_rejects_malformed_splits(tmp_path, monkeypatch, train):
-    install_task(tmp_path, monkeypatch, task_splits(train))
+def test_strict_tsv_rejects_malformed_lexicons(tmp_path, text):
+    path = tmp_path / "tiny.tsv"
+    path.write_text(text)
     with pytest.raises(ValueError):
+        data._parse_tsv(path)
+
+
+def test_phone_whitelist_is_verified_and_enforced(tmp_path, monkeypatch):
+    install_wikipron(tmp_path, monkeypatch, lexicon("unknown\tZ\n"))
+    spec = source("phones.txt", b"A\nB\n")
+    monkeypatch.setitem(data._WIKIPRON_WHITELISTS, "italian", spec)
+    (tmp_path / "italian" / spec.filename).write_bytes(b"A\nB\n")
+    with pytest.raises(ValueError, match="outside pinned whitelist"):
         data.load_dataset("italian", tmp_path)
 
 
-def test_nfc_cross_split_leakage_rejected_even_with_distinct_phones(
-    tmp_path, monkeypatch
-):
-    splits = task_splits("e\u0301\tA\n")
-    splits["test"] = "é\tB\n"
-    install_task(tmp_path, monkeypatch, splits)
+def test_nfc_cross_split_leakage_rejected_even_with_distinct_phones():
     with pytest.raises(ValueError, match="NFC spelling overlap"):
-        data.load_dataset("italian", tmp_path)
+        data._assemble(
+            "fixture",
+            {
+                "train": [("e\u0301", ["A"])],
+                "dev": [("word", ["C"])],
+                "test": [("é", ["B"])],
+            },
+            {},
+        )
 
 
 def test_invalid_cache_fails_without_network_or_replacement(tmp_path, monkeypatch):
-    install_task(tmp_path, monkeypatch, task_splits())
-    target = tmp_path / "italian" / "ita_train.tsv"
+    install_wikipron(tmp_path, monkeypatch, lexicon())
+    target = tmp_path / "italian" / "lexicon.tsv"
     target.write_text("CHANGED")
 
     def forbidden(*args, **kwargs):
