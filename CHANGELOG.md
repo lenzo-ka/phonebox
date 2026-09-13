@@ -22,7 +22,12 @@ unversioned JSON/JSONL/pickle artifacts are not automatically migrated. Retrain
 or explicitly convert with the original writer release; regenerate standalone
 bundles together with their models. See [migration notes](docs/RELEASING.md#upgrading-from-020).
 
-Release preparation does not authorize a tag or publication.
+### Documentation and evaluation
+
+- Refresh the pinned CMUdict CART/multigram comparison with Cartlet 0.6.0,
+  retaining the exact source, dependency, data, and split provenance.
+- Explain the CART alignment workflow and epsilon scattering in the README,
+  and cite the Black/Lenzo/Pagel and Pagel/Lenzo/Black letter-to-sound papers.
 
 ## 0.2.0 — 2026-09-12
 
