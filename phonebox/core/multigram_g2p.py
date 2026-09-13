@@ -7,7 +7,8 @@ Training:
     3. N-gram LM over units for inference.
 
 Inference:
-    Joint Viterbi over ``q`` + LM (global segmentation and phones).
+    Joint Viterbi maximizes the complete unit-LM sequence probability.
+    Alignment ``q`` supplies candidate units without another probability factor.
 
 References:
     Bisani, M. & Ney, H. (2008). "Joint-sequence models for
@@ -59,7 +60,8 @@ def decode_phones(target: str) -> list[str]:
 class MultigramG2P:
     """n:m G2P: EM unit model + unit n-gram LM + joint Viterbi decode."""
 
-    VERSION = "5"
+    VERSION = "6"
+    SCORING = "unit-lm-with-eos"
 
     def __init__(
         self,
@@ -248,6 +250,7 @@ class MultigramG2P:
         ]
         meta = {
             "version": self.VERSION,
+            "scoring": self.SCORING,
             "max_letter_span": self._max_l,
             "max_phone_span": self.aligner.max_p,
             "min_phone_span": self.aligner.min_p,
@@ -285,6 +288,10 @@ class MultigramG2P:
             raise ValueError(
                 "unsupported multigram model version; retrain and export "
                 f"with MultigramG2P v{cls.VERSION}"
+            )
+        if meta.get("scoring") != cls.SCORING:
+            raise ValueError(
+                "unsupported multigram decoding objective; retrain and export"
             )
         inst = cls(
             max_letter_span=meta["max_letter_span"],

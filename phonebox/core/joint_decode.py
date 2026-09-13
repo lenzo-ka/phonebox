@@ -1,33 +1,29 @@
 """
-Joint Viterbi decode: letters in, phones out, using ``q`` + unit n-gram LM.
+Joint Viterbi decode: letters in, phones out, using the unit n-gram LM.
 
-Pure Python — no FST. Scores full paths (segmentation + units + LM) in
+Pure Python — no FST. Scores complete unit sequences, including their end transition, in
 one pass instead of greedy ``segment_letters`` + per-unit prediction.
 """
 
 from __future__ import annotations
 
-import math
-
 from .multigram_align import EPS, Unit
 from .multigram_lm import SOS, MultigramLM, decode_unit_id, unit_id
 
 
-def _index_units(
-    q: dict[Unit, float], max_l: int
-) -> dict[str, list[tuple[Unit, float]]]:
+def _index_units(q: dict[Unit, float], max_l: int) -> dict[str, list[Unit]]:
     """Index scorable units by their first letter.
 
     Each decode position then inspects only the handful of units that could
     start there, instead of scanning the whole ``q`` table once per position.
-    Units with non-positive probability or a letter span outside ``1..max_l``
+    Units with probability at or below EPS or a letter span outside ``1..max_l``
     are dropped up front.
     """
-    index: dict[str, list[tuple[Unit, float]]] = {}
+    index: dict[str, list[Unit]] = {}
     for (L, P), prob in q.items():
         if prob <= EPS or not 1 <= len(L) <= max_l:
             continue
-        index.setdefault(L[0], []).append(((L, P), prob))
+        index.setdefault(L[0], []).append((L, P))
     return index
 
 
@@ -52,7 +48,8 @@ def joint_decode(
     last ``lm.order - 1`` unit ids (the n-gram history), so the LM's full order
     is used rather than silently backing off. Each transition consumes a
     multigram unit from ``q`` whose letter side matches the next span.
-    Complete paths also score the LM end-of-sequence transition.
+    Complete paths also score the LM end-of-sequence transition. Alignment
+    probabilities determine candidate support, not an additional path weight.
 
     Args:
         beam: If > 0, keep only the top-``beam`` hypotheses per position.
@@ -78,16 +75,14 @@ def joint_decode(
             )
         for state, (score, _prev_i, _prev_state, _uid) in layer.items():
             history = list(state)
-            for unit, prob in index.get(letters[i], ()):
+            for unit in index.get(letters[i], ()):
                 (L, P) = unit
                 j = i + len(L)
                 if j > n or list(L) != letters[i : i + len(L)]:
                     continue
                 uid = unit_id(unit)
                 new_state = (state + (uid,))[-ctx_width:] if ctx_width else ()
-                new_score = (
-                    score + math.log(max(prob, EPS)) + lm.log_prob(unit, history)
-                )
+                new_score = score + lm.log_prob(unit, history)
                 prev = best[j].get(new_state)
                 if prev is None or new_score > prev[0]:
                     best[j][new_state] = (new_score, i, state, uid)
