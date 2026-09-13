@@ -87,3 +87,15 @@ all source origins after effective-phone deduplication, and assigns full-populat
 ranks before filtering. JSONL candidate scoring is a separate input adapter.
 
 For French CART training, see [liaison annotation requirements](DATA.md#french-liaison-annotations): input padding does not supply pronunciation-side markers missing from the lexicon.
+
+### Alignment convergence evidence
+
+After CART alignment, `EMAlign.alignment_history` returns JSON-serializable
+records containing `iteration`, `changed`, and `ratio` for each actual update.
+A `G2PDecisionTree` exposes this through `model.em.alignment_history` after
+`model.align()`. The records reset for each run and are returned as copies.
+Reaching the iteration cap is not proof of convergence: inspect the final
+changed count/ratio against the aligner's configured stopping criterion.
+Multigram alignment separately exposes `model.aligner.loglik_history`; these
+likelihoods are observed before each EM update. Record the actual trace and
+stopping settings with comparisons rather than assuming a fixed cap converged.
