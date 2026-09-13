@@ -65,10 +65,8 @@ class NeuralSettings:
             value = getattr(self, name)
             if type(value) is not int or value < 1:
                 raise ValueError(f"{name} must be a positive integer")
-        if self.threads > 2 or self.d_model % self.heads or self.d_model % 2:
-            raise ValueError(
-                "threads must be <=2; d_model must be even and divisible by heads"
-            )
+        if self.d_model % self.heads or self.d_model % 2:
+            raise ValueError("d_model must be even and divisible by heads")
         if type(self.seed) is not int or self.seed < 0:
             raise ValueError("seed must be a nonnegative integer")
         if (

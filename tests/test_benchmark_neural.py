@@ -31,7 +31,7 @@ def tiny_dataset():
 @pytest.mark.parametrize(
     "settings",
     [
-        {"threads": 3},
+        {"threads": 0},
         {"layers": 0},
         {"warmup_steps": -1},
         {"dropout": float("nan")},
@@ -452,3 +452,11 @@ def test_actual_cli_same_settings_profile_and_full_run(tmp_path, monkeypatch):
     assert measured["settings"]["threads"] == 2
     assert measured["metrics"]["n_test"] == 1
     assert measured["training"]["optimizer_updates"] == 1
+
+
+def test_threads_are_positive_caller_control_not_session_limit():
+    assert NeuralSettings(threads=8).threads == 8
+    assert NeuralSettings.from_dict({"threads": 8}).threads == 8
+    assert NeuralSettings().threads == 2
+    with pytest.raises(ValueError):
+        NeuralSettings(threads=True)
