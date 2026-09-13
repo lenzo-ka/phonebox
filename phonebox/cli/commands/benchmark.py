@@ -11,6 +11,9 @@ from ._common import expected_input_errors, require_distinct_output
 
 
 def setup_benchmark_commands(subparsers) -> None:
+    from .benchmark_receipt import setup_benchmark_receipt_command
+
+    setup_benchmark_receipt_command(subparsers)
     parser = subparsers.add_parser(
         "benchmark",
         help="Run one pinned dataset/system experiment (developer toolchains)",

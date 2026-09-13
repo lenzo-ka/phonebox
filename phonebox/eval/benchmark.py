@@ -181,10 +181,19 @@ def _tool_identity(executable: Path, receipt: Path) -> dict[str, Any]:
                 )
         if "build" in data and not isinstance(data["build"], dict):
             raise ValueError("benchmark tool receipt build must be an object")
+        has_binding = "executable_sha256" in data.get("build", {})
+        binding = data.get("build", {}).get("executable_sha256")
+        if has_binding and binding != result["sha256"]:
+            raise ValueError(
+                "benchmark tool receipt executable hash differs from the binary"
+            )
         for field in ("version", "source_revision", "build"):
             if field in data:
                 result[field] = data[field]
         _validate_receipt(result)
+        result["receipt_binary_binding_verified"] = has_binding
+    else:
+        result["receipt_binary_binding_verified"] = False
     return result
 
 
