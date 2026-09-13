@@ -135,12 +135,16 @@ def handle_pronounce(args):
                 file=sys.stderr,
             )
 
+        predictor = mg.prepare_predictor()
+
         def pronounce_word(w: str) -> list[str]:
             if mg.preprocessor is not None:
-                return mg.pronounce(w)
+                return predictor.pronounce(w)
             if vec is not None:
-                return mg.pronounce_letters(vec.cook_letters(w, g2p=True), word=w)
-            return mg.pronounce(w)
+                return predictor.pronounce_letters(
+                    vec.cook_letters(w, g2p=True), word=w
+                )
+            return predictor.pronounce(w)
 
         tree_g2p = None
     else:
