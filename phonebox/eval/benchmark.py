@@ -395,17 +395,52 @@ def _native(dataset: PreparedDataset, system: str, directory: Path):
     )
 
 
-def _sequitur(dataset: PreparedDataset, directory: Path, executable: Path):
+def _sequitur_stop(output: Path) -> dict[str, Any]:
+    """Read upstream stopping evidence; never infer convergence from exit status."""
+    log = output.read_text(encoding="utf-8")
+    if "iteration failed." in log:
+        raise ValueError("Sequitur reported a failed training iteration")
+    if "iteration converged." in log:
+        reason = "converged"
+    elif "maximum number of iterations reached." in log:
+        reason = "iteration_limit"
+    else:
+        raise ValueError("Sequitur did not report its training stop reason")
+    iterations = re.findall(r"^iteration: (\d+)$", log, re.MULTILINE)
+    likelihoods = [
+        float(value)
+        for value in re.findall(r"^LL devel: ([-+\d.eE]+)$", log, re.MULTILINE)
+    ]
+    if not iterations or not likelihoods or not all(map(math.isfinite, likelihoods)):
+        raise ValueError("Sequitur training log lacks finite development evidence")
+    return {
+        "stop_reason": reason,
+        "iterations": len(iterations),
+        "last_dev_log_likelihoods": likelihoods[-2:],
+    }
+
+
+def _sequitur(
+    dataset: PreparedDataset,
+    directory: Path,
+    executable: Path,
+    min_iterations: int,
+    max_iterations: int,
+    extension_iterations: int,
+):
     identity = _tool_identity(executable, Path(str(executable) + ".provenance.json"))
     train, dev = directory / "train.lex", directory / "dev.lex"
     _write_pairs(train, dataset.train)
     _write_pairs(dev, dataset.dev)
     dev_words = _write_words(directory / "dev.words", dataset.dev)
     inventory = {phone for _, phones in dataset.train for phone in phones}
-    settings = {
+    settings: dict[str, Any] = {
         "orders": [1, 2, 3],
-        "min_iterations": 1,
-        "max_iterations": 10,
+        "min_iterations": min_iterations,
+        "max_iterations": max_iterations,
+        "extension_iterations": extension_iterations,
+        "extension_policy": "fresh order restart if upstream iteration limit reached",
+        "training_attempts": [],
         "selection": ["dev per_variant_pct", "dev wer_relaxed_pct", "lower order"],
     }
     candidates = []
@@ -422,17 +457,28 @@ def _sequitur(dataset: PreparedDataset, directory: Path, executable: Path):
             "--devel",
             str(dev),
             "--min-iterations",
-            "1",
+            str(min_iterations),
             "--max-iterations",
-            "10",
+            str(max_iterations),
             "--write-model",
             str(model),
         ]
         if previous is not None:
             command.extend(["--model", str(previous), "--ramp-up"])
-        _run(command, directory, f"train-{order}")
-        if not model.is_file():
-            raise ValueError("Sequitur did not create its requested model")
+        for cap in dict.fromkeys((max_iterations, extension_iterations)):
+            if cap != max_iterations:
+                model = directory / f"model-{order}-extended"
+                command[command.index("--max-iterations") + 1] = str(cap)
+                command[command.index("--write-model") + 1] = str(model)
+            output = _run(command, directory, f"train-{order}-max-{cap}")
+            evidence = _sequitur_stop(output)
+            settings["training_attempts"].append(
+                {"order": order, "max_iterations": cap, **evidence}
+            )
+            if not model.is_file():
+                raise ValueError("Sequitur did not create its requested model")
+            if evidence["stop_reason"] == "converged":
+                break
         output = _run(
             [
                 str(executable),
@@ -461,6 +507,16 @@ def _sequitur(dataset: PreparedDataset, directory: Path, executable: Path):
     _, _, selected, model, _ = min(candidates, key=lambda item: item[:3])
     training_seconds = time.perf_counter() - started
     settings["selected_order"] = selected
+    settings["iteration_limited_orders"] = [
+        order
+        for order in (1, 2, 3)
+        if [
+            attempt
+            for attempt in settings["training_attempts"]
+            if attempt["order"] == order
+        ][-1]["stop_reason"]
+        == "iteration_limit"
+    ]
     settings["development_results"] = [
         {"order": candidate[2], "metrics": candidate[4]} for candidate in candidates
     ]
@@ -621,6 +677,9 @@ def run_benchmark(
     work_dir: str | Path,
     *,
     sequitur_executable: str | Path | None = None,
+    sequitur_min_iterations: int = 20,
+    sequitur_max_iterations: int = 100,
+    sequitur_extension_iterations: int = 200,
     phonetisaurus_prefix: str | Path | None = None,
     progress: Callable[[str], None] | None = None,
 ) -> dict[str, Any]:
@@ -628,12 +687,29 @@ def run_benchmark(
 
     ``work_dir`` must be empty or absent. Results are JSON serializable and omit
     deployment paths; model files and detailed subprocess logs stay on disk.
+    Sequitur uses explicit min/max/extension iteration budgets (20/100/200).
+    A capped order restarts from its original initialization at the extension
+    cap; equal maximum and extension disables this diagnostic restart.
+    Upstream stopping evidence is retained before any test decoding.
     External missing predictions count as errors and empty predictions through
     the same evaluator used by the native systems. Development data is used only
     for declared model selection; held-out test references never select settings.
     """
     if system not in SYSTEMS:
         raise ValueError(f"unknown benchmark system: {system}")
+    budgets = (
+        sequitur_min_iterations,
+        sequitur_max_iterations,
+        sequitur_extension_iterations,
+    )
+    if any(type(value) is not int or value < 1 for value in budgets) or not (
+        sequitur_min_iterations
+        < sequitur_max_iterations
+        <= sequitur_extension_iterations
+    ):
+        raise ValueError(
+            "Sequitur iteration budgets require 0 < min < max <= extension"
+        )
     _validate_dataset(dataset)
     metadata = deepcopy(dataset.metadata)
     json.dumps(metadata, allow_nan=False)
@@ -650,7 +726,14 @@ def run_benchmark(
     if system == "sequitur":
         if sequitur_executable is None:
             raise ValueError("Sequitur requires an executable")
-        fitted = _sequitur(dataset, directory, _executable(sequitur_executable))
+        fitted = _sequitur(
+            dataset,
+            directory,
+            _executable(sequitur_executable),
+            sequitur_min_iterations,
+            sequitur_max_iterations,
+            sequitur_extension_iterations,
+        )
     elif system == "phonetisaurus":
         if phonetisaurus_prefix is None:
             raise ValueError("Phonetisaurus requires an installation prefix")

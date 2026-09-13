@@ -39,9 +39,24 @@ Build against the same NumPy major version used at runtime: a NumPy 1.x build
 cannot be reused with the pinned NumPy 2.x environment.
 
 The runner invokes `g2p.py` with UTF-8 input and an explicit development file.
-It trains orders 1–3 with minimum one and maximum ten iterations per order,
-then selects using development predictions. Explicit minimum iterations matter:
-the upstream default minimum of twenty conflicts with a maximum of ten.
+It trains orders 1–3 with the upstream minimum twenty and initial maximum one
+hundred iterations per order, then selects using development predictions.
+The upstream convergence test uses the recent development likelihood trend.
+If an order reaches its initial cap, the runner restarts that order from the
+same preceding-order initialization with a maximum of two hundred iterations.
+The initial model and logs are preserved; exported models are not treated as
+training checkpoints. An order still capped at two hundred is explicitly
+reported in `iteration_limited_orders`, without a claim of convergence.
+Test decoding begins only after all orders complete this declared policy.
+
+The Python API exposes `sequitur_min_iterations`, `sequitur_max_iterations`
+and `sequitur_extension_iterations`; the CLI exposes matching hyphenated
+options, with defaults 20/100/200. Setting the extension equal to the initial
+maximum disables the restart for diagnostic runs. All budgets, attempts,
+stop reasons and final development likelihoods appear in result JSON.
+Malformed stopping evidence or upstream iteration failure aborts evaluation.
+The earlier maximum-ten runs were private budget pilots: development
+likelihood was still improving, so they are not the final comparison.
 A small accented-grapheme and multi-codepoint-IPA smoke test verified token
 transport before corpus evaluation.
 

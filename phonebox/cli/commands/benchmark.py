@@ -53,6 +53,17 @@ def setup_benchmark_commands(subparsers) -> None:
         type=Path,
         help="Pinned Sequitur executable or isolated-environment launcher",
     )
+    for name, default, description in (
+        ("min", 20, "Minimum upstream EM iterations"),
+        ("max", 100, "Initial upstream EM iteration cap"),
+        ("extension", 200, "Fresh restart cap when the initial cap is reached"),
+    ):
+        parser.add_argument(
+            f"--sequitur-{name}-iterations",
+            type=int,
+            default=default,
+            help=f"{description} (default: {default})",
+        )
     parser.add_argument(
         "--phonetisaurus-prefix",
         type=Path,
@@ -97,6 +108,9 @@ def handle_benchmark(args: argparse.Namespace) -> int:
         args.system,
         args.work_dir,
         sequitur_executable=args.sequitur_executable,
+        sequitur_min_iterations=args.sequitur_min_iterations,
+        sequitur_max_iterations=args.sequitur_max_iterations,
+        sequitur_extension_iterations=args.sequitur_extension_iterations,
         phonetisaurus_prefix=args.phonetisaurus_prefix,
         progress=lambda message: print(message, file=sys.stderr, flush=True),
     )

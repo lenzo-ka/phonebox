@@ -79,9 +79,12 @@ assert os.environ['OMP_NUM_THREADS'] == '1'
 args = sys.argv[1:]
 if '--write-model' in args:
     path = pathlib.Path(args[args.index('--write-model')+1])
-    order = int(path.name.rsplit('-',1)[1])
+    order = int(path.name.split('-')[1])
     assert ('--ramp-up' in args) == (order > 1)
     path.write_text(str(order))
+    print('iteration: 20')
+    print('LL devel: -12.0')
+    print('iteration converged.')
 else:
     order = int(pathlib.Path(args[args.index('--model')+1]).read_text())
     words = pathlib.Path(args[args.index('--apply')+1]).read_text().splitlines()
@@ -231,3 +234,83 @@ else:
             assert tools[name]["version"] == "phonetisaurus-version"
             assert tools[name]["source_revision"] == "phonetisaurus-revision"
     assert str(tmp_path) not in json.dumps(report, allow_nan=False)
+
+
+@pytest.mark.parametrize(
+    "final_stop", ["iteration converged.", "maximum number of iterations reached."]
+)
+def test_sequitur_restarts_capped_order_before_test(tmp_path, final_stop):
+    executable = tmp_path / "sequitur"
+    executable.write_text(
+        """#!/usr/bin/env python3
+import pathlib, sys
+args = sys.argv[1:]
+if '--write-model' in args:
+    path = pathlib.Path(args[args.index('--write-model')+1])
+    order = int(path.name.split('-')[1])
+    cap = int(args[args.index('--max-iterations')+1])
+    assert int(args[args.index('--min-iterations')+1]) == 20
+    if order > 1:
+        previous = pathlib.Path(args[args.index('--model')+1])
+        assert int(previous.read_text()) == order - 1
+        assert previous.name.endswith('-extended')
+    else:
+        assert '--model' not in args
+    path.write_text(str(order))
+    print('iteration: '+str(cap-1))
+    print('LL devel: -12.0')
+    print('maximum number of iterations reached.' if cap == 100 else FINAL_STOP)
+else:
+    words = pathlib.Path(args[args.index('--apply')+1])
+    if words.name == 'test.words':
+        assert (words.parent/'model-3-extended').exists()
+    for word in words.read_text().splitlines():
+        print(word+'\\t'+('B A' if word == 'ba' else 'C A'))
+""".replace("FINAL_STOP", repr(final_stop))
+    )
+    executable.chmod(0o755)
+    report = run_benchmark(
+        dataset(), "sequitur", tmp_path / "run", sequitur_executable=executable
+    )
+    settings = report["settings"]
+    assert [
+        (row["order"], row["max_iterations"]) for row in settings["training_attempts"]
+    ] == [(1, 100), (1, 200), (2, 100), (2, 200), (3, 100), (3, 200)]
+    assert settings["iteration_limited_orders"] == (
+        [1, 2, 3] if final_stop.startswith("maximum") else []
+    )
+    assert len(list((tmp_path / "run").glob("model-*"))) == 6
+
+
+@pytest.mark.parametrize(
+    "log",
+    [
+        "",
+        "iteration failed.",
+        "iteration converged.",
+        "iteration: 0\nLL devel: 1e999\niteration converged.",
+    ],
+)
+def test_sequitur_stop_evidence_fails_closed(tmp_path, log):
+    from phonebox.eval.benchmark import _sequitur_stop
+
+    output = tmp_path / "log"
+    output.write_text(log)
+    with pytest.raises(ValueError, match="Sequitur"):
+        _sequitur_stop(output)
+
+
+@pytest.mark.parametrize(
+    "budgets", [(20, 10, 200), (20, 100, 50), (0, 100, 200), (True, 100, 200)]
+)
+def test_sequitur_invalid_budgets_before_side_effects(tmp_path, budgets):
+    with pytest.raises(ValueError, match="iteration budgets"):
+        run_benchmark(
+            dataset(),
+            "sequitur",
+            tmp_path / "run",
+            sequitur_min_iterations=budgets[0],
+            sequitur_max_iterations=budgets[1],
+            sequitur_extension_iterations=budgets[2],
+        )
+    assert not (tmp_path / "run").exists()

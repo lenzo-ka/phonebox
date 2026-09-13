@@ -13,6 +13,20 @@ CMUdict is identified by a Git commit and file digest, rather than a package
 release number. Its pronunciation variants remain in the same spelling group
 when splitting. Stress-preserved and stress-removed experiments are separate
 conditions; duplicate pronunciations are removed after the stress mapping.
+The primary matrix has two stress conditions where the source supplies stress:
+original labels preserved, and all stress removed. For CMUdict, preserved means
+keeping its `0`, `1`, and `2` labels distinctly; stripped removes all three from
+phone labels. This covers stress-sensitive output, such as TTS, and stress-free
+output often used for ASR without multiplying the comparison into a factorial
+study. Secondary-to-unstressed or secondary-to-primary mappings can be explored
+separately through dictionary phone mapping, with the exact transform recorded
+and duplicate variants removed afterward. They are not extra default rows.
+
+The selected WikiPron snapshots already remove stress upstream. Their results
+are therefore stress-free IPA observations, not a claimed stress-preserved
+Italian/French condition. Missing source stress cannot be reconstructed by
+renaming an experimental setting or inferring it from spelling.
+
 The new comparison reserves development data as well as test data, so its
 scores need not match the earlier two-way [CMUdict comparison](CMUDICT_COMPARISON.md).
 
@@ -54,7 +68,12 @@ reference-pronunciation substitution are disabled.
 
 The benchmark fixes model settings before testing. Sequitur's order is selected
 from orders 1–3 using development phone error rate, then word error rate, then
-the smaller order. Phonetisaurus uses its upstream example order of eight.
+the smaller order. Each order uses the upstream convergence test with minimum
+20 and initial maximum 100 iterations; hitting the cap triggers a fresh restart
+of that order with maximum 200, before test decoding. Results record remaining
+iteration limits rather than asserting convergence. See the
+[toolchain protocol](BENCHMARK_TOOLCHAINS.md) for controls and stopping evidence.
+Phonetisaurus uses its upstream example order of eight.
 These choices are bounded baseline configurations, not an exhaustive tuning
 study. Test results do not determine hyperparameters.
 
