@@ -19,6 +19,24 @@ The generated artifact is distributed under the Unicode License v3. The
 complete applicable notice is reproduced in `LICENSE-UNICODE`. Phonebox source
 code is distributed under the BSD 2-Clause License in `LICENSE`.
 
+## DeepPhonemizer training patch
+
+`phonebox/eval/benchmark_neural_sources.py` embeds a unified diff against
+[DeepPhonemizer](https://github.com/axelspringer/DeepPhonemizer) 0.0.19
+(source revision `5dce7e27556aef4426f5623baf6351d266a30a73`), which the optional
+neural benchmark applies to a separately installed copy. The diff reproduces
+modified fragments of DeepPhonemizer's `dp/training/trainer.py`,
+`dp/training/dataset.py` and `dp/model/predictor.py`, so it is a modification
+of MIT-licensed code redistributed with this package. The same diff is tracked
+as `docs/patches/deepphonemizer-0.0.19.patch`.
+
+DeepPhonemizer is Copyright (c) 2021 Axel Springer News Media & Tech GmbH & Co.
+KG - Ideas Engineering, under the MIT License. The complete license text is
+reproduced in `LICENSE-DEEPPHONEMIZER` (also `docs/patches/DeepPhonemizer-LICENSE`).
+DeepPhonemizer itself, PyTorch and the other neural toolchain dependencies are
+not bundled; the pinned installation recipe is in
+`docs/BENCHMARK_TOOLCHAINS.md` and `docs/locks/deepphonemizer-python312.txt`.
+
 ## Developer benchmark sources
 
 The optional [benchmark workflow](docs/REPRODUCIBLE_BENCHMARKS.md) fetches

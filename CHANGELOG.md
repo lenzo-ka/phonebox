@@ -43,14 +43,9 @@ bundles together with their models. See [migration notes](docs/RELEASING.md#upgr
 - Separate training, model loading, predictor preparation and evaluation timing
   in locale comparisons and multigram sweeps; historical `train_s` incorrectly
   included evaluation. Report monotonic durations and label metric work explicitly.
-
 - Add reusable multigram predictor snapshots that prepare candidate indexes and
   unit IDs once for repeated inference. CLI pronunciation and comparison reuse
   snapshots; later source-model mutation cannot alter an existing predictor.
-
-- Keep finite positive add-k values scorable at floating-point extremes using
-  log-domain arithmetic when needed, without changing ordinary-range scores,
-  smoothing defaults, or the saved model format.
 - Support joint-unit LM orders 1–8 through sparse count tables shared by the
   library, training API and CLI. Keep order 2/add-k smoothing/exact search as
   defaults; document explicit approximate beam controls and higher-order costs.
@@ -94,6 +89,17 @@ bundles together with their models. See [migration notes](docs/RELEASING.md#upgr
 - Expose defensive, JSON-serializable CART alignment iteration history through
   `EMAlign.alignment_history`, recording actual changed counts and ratios per
   run so callers can distinguish convergence from reaching an iteration cap.
+
+### Packaging and notices
+
+- Ship the DeepPhonemizer MIT notice as `LICENSE-DEEPPHONEMIZER` in the wheel
+  and source distribution, declare it in the license expression, and record in
+  the third-party notices that the packaged neural benchmark module embeds a
+  modification of that code. Include the tracked third-party patches, license
+  texts and dependency locks in the source distribution; the packaging test
+  now checks all of them.
+- Clarify that the runtime requires only `icukit>=0.1.2`; the ICU backend pin
+  that generated the exemplar data belongs to the `dev` extra.
 
 ### Documentation and evaluation
 

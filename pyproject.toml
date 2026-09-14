@@ -10,8 +10,13 @@ readme = "README.md"
 authors = [
     {name = "Kevin Lenzo (lenzo-ka)"},
 ]
-license = "BSD-2-Clause AND Unicode-3.0"
-license-files = ["LICENSE", "LICENSE-UNICODE", "THIRD_PARTY_NOTICES.md"]
+license = "BSD-2-Clause AND Unicode-3.0 AND MIT"
+license-files = [
+    "LICENSE",
+    "LICENSE-UNICODE",
+    "LICENSE-DEEPPHONEMIZER",
+    "THIRD_PARTY_NOTICES.md",
+]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -28,8 +33,11 @@ keywords = ["g2p", "grapheme-to-phoneme", "pronunciation", "phonetics", "speech"
 requires-python = ">=3.11"
 dependencies = [
     "cartlet>=0.6.0,<0.7.0",
-    # icukit supplies the icu module through its binary backend. The pinned
-    # 78.3.0 backend has macOS arm64 and Linux x86_64/aarch64 wheels, but no
+    # icukit supplies the icu module through its binary backend. The runtime
+    # constraint below accepts any icukit release from 0.1.2 with whatever
+    # backend it resolves; only the [dev] extra pins icukit 0.4.0 and the
+    # icukit-pyicu 78.3.0 backend that generated the shipped exemplar data.
+    # That backend has macOS arm64 and Linux x86_64/aarch64 wheels, but no
     # Windows/Intel macOS wheels or sdist; full installation needs a wheel
     # compatible with the chosen platform and Python version.
     # The full runtime uses ICU to execute locale transliteration rules during

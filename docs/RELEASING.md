@@ -151,7 +151,8 @@ result, published artifact hashes, and URLs. These steps remain pending during
 release preparation.
 
 Phonebox code is BSD 2-Clause. Packaged ICU/CLDR-derived exemplar data carries
-Unicode-3.0; ship `LICENSE`, `LICENSE-UNICODE`, and `THIRD_PARTY_NOTICES.md`
+Unicode-3.0, and the embedded DeepPhonemizer training patch is MIT; ship `LICENSE`,
+`LICENSE-UNICODE`, `LICENSE-DEEPPHONEMIZER`, and `THIRD_PARTY_NOTICES.md`
 with distributions. See [third-party notices](../THIRD_PARTY_NOTICES.md).
 
 See [lexicon review and variant ordering](LEXICON_REVIEW.md) for the shared

@@ -4,7 +4,12 @@ include CHANGELOG.md
 include QUICKSTART.md
 include config.example.yaml
 recursive-include docs *.md *.json
+recursive-include docs/patches *
+recursive-include docs/locks *.txt
 include LICENSE
+include LICENSE-UNICODE
+include LICENSE-DEEPPHONEMIZER
+include THIRD_PARTY_NOTICES.md
 include requirements.txt
 include requirements-dev.txt
 
