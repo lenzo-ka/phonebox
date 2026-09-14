@@ -91,10 +91,17 @@ class CartDecompositionLattice:
                     raise ValueError("invalid CART target probability")
                 if probability:
                     values[target] = math.log(probability)
-            if not math.isclose(
-                math.fsum(distribution.values()), 1.0, abs_tol=1e-9, rel_tol=1e-9
-            ):
+            total = math.fsum(distribution.values())
+            if not math.isclose(total, 1.0, abs_tol=1e-6, rel_tol=1e-6):
                 raise ValueError("CART target probabilities must sum to one")
+            # Fractional leaf-count accumulation can drift by a few parts in
+            # 1e8. Normalizing contributes one constant per letter position to
+            # every complete path, so its ranking is unchanged.
+            if total != 1.0:
+                normalization = math.log(total)
+                values = {
+                    target: score - normalization for target, score in values.items()
+                }
             logs.append(values)
 
         def score(position: int, unit: Unit) -> float:

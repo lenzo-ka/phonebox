@@ -54,6 +54,14 @@ def test_lattice_prevents_incoherent_greedy_combination():
     assert lattice().decode(list("ab"), distributions) == ["A", "B"]
 
 
+def test_fractional_leaf_roundoff_preserves_complete_path_ranking():
+    distributions = [
+        {"X": 0.6 * (1 - 5e-9), "A": 0.4 * (1 - 5e-9)},
+        {"B": 0.8 * (1 - 2e-8), "∅": 0.2 * (1 - 2e-8)},
+    ]
+    assert lattice().decode(list("ab"), distributions) == ["A", "B"]
+
+
 def test_empty_silent_unsupported_and_zero_probability():
     assert lattice().decode([], []) == []
     assert lattice().decode(["z"], ["∅"]) is None
