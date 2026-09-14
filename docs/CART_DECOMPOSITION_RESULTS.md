@@ -39,7 +39,21 @@ co-occurred in one complete alignment. That is one plausible failure mechanism,
 not yet a demonstrated cause. Teacher quality, projection policy and model
 complexity remain other possible explanations.
 
-Italian and both CMU conditions remain in progress. Their outcomes, including
+Both CMU conditions and the Italian epsilon reference remain in progress. Their outcomes, including
 losses and null results, will be appended without tuning on these measurements.
 The separate lattice extension will compare coherent supported path decoding
 against the existing independent-position prediction objective.
+
+## Italian projected-target result
+
+Italian also shows a loss from posterior training. This indicates that the
+observed regression is not confined to the French condition; it does not
+identify its cause. Both projected models admit the same 72,448 pairs and
+skip 20. Metrics were recomputed exactly on all 7,397 development spellings.
+
+| Italian supervision | Development WER % | Development PER % |
+| --- | ---: | ---: |
+| hard-q | 25.9970 | 4.0224 |
+| posterior-q | 29.5796 | 4.6151 |
+
+Posterior-minus-hard PER: +0.5927 percentage points. No significance claim or test tuning.
