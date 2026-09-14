@@ -126,6 +126,21 @@ else:
     assert str(tmp_path) not in json.dumps(report)
 
 
+def test_split_overlap_guard_fires_even_when_recorded_counts_still_match():
+    from phonebox.eval.benchmark import _validate_dataset
+    from phonebox.eval.benchmark_data import _split_digest
+
+    prepared = dataset()
+    _validate_dataset(prepared)
+    # Replace the single dev entry with a train entry and re-record the dev
+    # digest: every recorded count and hash still matches, so only the
+    # population-overlap guard can refuse this.
+    prepared.dev[:] = prepared.train[:1]
+    prepared.metadata["prepared_sha256"]["dev"] = _split_digest(prepared.dev)
+    with pytest.raises(ValueError, match="leaked"):
+        _validate_dataset(prepared)
+
+
 def test_split_leakage_and_reused_work_directory_refused(tmp_path):
     prepared = dataset()
     prepared.dev[:] = prepared.train[:1]

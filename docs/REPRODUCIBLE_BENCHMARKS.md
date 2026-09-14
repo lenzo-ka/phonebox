@@ -223,7 +223,11 @@ phonebox compare benchmark-report docs/benchmarks/*.json --output docs/G2P_BENCH
 Native rows record Phonebox source revision `de8fbc3`; external rows record
 adapter revision `a7bfbeb` and each tool's build receipt. Within a condition all
 rows share the prepared split digests, disable dictionary lookup, and carry full
-error and admission accounting. No row cites a local path.
+error and admission accounting. The artifact test applies the benchmark receipt
+validator to every whole row, refusing absolute POSIX or Windows paths and the
+validator's identity keys, and additionally refuses the names of the machines
+that produced these rows. That is a shape check plus an enumerated denylist; an
+identity written under some other key would not be caught by it.
 
 The DeepPhonemizer autoregressive comparison is deferred. Its optional toolchain
 and adapter are included, but no neural row is in this snapshot, and the report
