@@ -14,6 +14,7 @@ configuration; compare alternatives with reproducible held-out evaluation.
 from __future__ import annotations
 
 import math
+import sys
 from collections import defaultdict
 from collections.abc import Iterable
 
@@ -64,6 +65,26 @@ def decode_unit_id(uid: str) -> tuple[tuple[str, ...], tuple[str, ...]]:
 
 
 SUPPORTED_LM_ORDERS = range(1, 9)
+
+
+def _log_smoothed_probability(count: int, total: int, k: float, size: int) -> float:
+    """Preserve ordinary arithmetic; use log space beyond its safe range."""
+    try:
+        probability = (count + k) / (total + k * size)
+        if sys.float_info.min <= probability <= 1.0:
+            return math.log(probability)
+    except OverflowError:
+        # Serialized counts are Python integers and can exceed float range.
+        pass
+
+    def log_add(left: float, right: float) -> float:
+        larger, smaller = max(left, right), min(left, right)
+        return larger + math.log1p(math.exp(smaller - larger))
+
+    log_k = math.log(k)
+    numerator = log_add(math.log(count), log_k) if count else log_k
+    denominator = log_add(math.log(total), log_k + math.log(size))
+    return numerator - denominator
 
 
 def validate_lm_order(order: int) -> int:
@@ -176,8 +197,8 @@ class MultigramLM:
             total = self._context_totals[width].get(suffix, 0)
             if total:
                 count = self._counts[width].get((*suffix, uid), 0)
-                return math.log(
-                    (count + self.add_k) / (total + self.add_k * vocabulary_size)
+                return _log_smoothed_probability(
+                    count, total, self.add_k, vocabulary_size
                 )
         return 0.0  # No observations: neutral score, as for log_end_prob.
 

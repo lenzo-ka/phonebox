@@ -24,6 +24,9 @@ bundles together with their models. See [migration notes](docs/RELEASING.md#upgr
 
 ### Multigram scoring
 
+- Keep finite positive add-k values scorable at floating-point extremes using
+  log-domain arithmetic when needed, without changing ordinary-range scores,
+  smoothing defaults, or the saved model format.
 - Separate training, model loading, predictor preparation and evaluation timing
   in locale comparisons and multigram sweeps; historical `train_s` incorrectly
   included evaluation. Report monotonic durations and label metric work explicitly.
