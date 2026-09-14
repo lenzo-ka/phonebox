@@ -71,8 +71,9 @@ statistical overfitting.
 
 ## Next controlled experiments
 
-1. Retain uncertain leaf distributions (`min_confidence=1`,
-   `min_dist_entropy=0`), and compare explicit backoff on identical trees.
+1. The [leaf-retention ablation](CART_LEAF_RETENTION_RESULTS.md) now demonstrates
+   better no-backoff lattice PER/coverage with unchanged point predictions.
+   Added gains over explicit backoff are small and mixed; retain that limit.
 2. Test a simpler teacher/projection. Unrestricted 2:2 q creates arbitrary
    two-letter/two-phone fusions, expanding anchored target labels and ambiguity.
    A single-letter/multiple-phone teacher is a useful first ablation; a restricted

@@ -41,3 +41,7 @@ French citation-form evaluation remains separate from context-aware liaison.
 
 See [the development diagnosis](CART_DECOMPOSITION_DIAGNOSIS.md) for measured
 projection failures, coverage losses and an explicit backoff experiment.
+
+The [complete four-condition development comparison](CART_LATTICE_RESULTS.md)
+and [leaf-retention ablation](CART_LEAF_RETENTION_RESULTS.md) report the measured
+benefits and remaining gaps.
