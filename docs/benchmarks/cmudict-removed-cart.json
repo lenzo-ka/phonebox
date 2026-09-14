@@ -1,0 +1,185 @@
+{
+  "dataset": {
+    "counts": {
+      "dev": {
+        "duplicates_removed": 27,
+        "prepared_entries": 12399,
+        "source_entries": 12426,
+        "words": 11605
+      },
+      "test": {
+        "duplicates_removed": 20,
+        "prepared_entries": 10644,
+        "source_entries": 10664,
+        "words": 10000
+      },
+      "train": {
+        "duplicates_removed": 259,
+        "prepared_entries": 111817,
+        "source_entries": 112076,
+        "words": 104447
+      }
+    },
+    "deduplication": "NFC spelling and full transformed phone sequence; stable first occurrence within each split",
+    "locale": "en_US",
+    "name": "cmudict",
+    "phoneset": "cmu",
+    "preparation": {
+      "phones": "shared CMU stress transform",
+      "remove_stress": true,
+      "spelling": "NFC; lowercase"
+    },
+    "prepared_hash_encoding": "UTF-8 compact JSON ordered [spelling, phone-token-list] pairs; no newline",
+    "prepared_sha256": {
+      "dev": "12832f603f88bd3a2e9f617d31903bba8c95823e4075f5973866d1ed4cce420f",
+      "test": "f51ca936430c9dd430fb7b62d73ee793a6b243b99e2b9f4b1ee6204cb5ed8636",
+      "train": "46f838a971dc02f9218655f3a49c47157baf726f6104e59ebfcfcdef7d64b372"
+    },
+    "schema_version": 1,
+    "sources": {
+      "lexicon": {
+        "citations": [
+          "CMU Pronouncing Dictionary, Carnegie Mellon University and contributors, https://github.com/cmusphinx/cmudict"
+        ],
+        "filename": "cmudict.dict",
+        "license": "BSD-2-Clause",
+        "license_url": "https://github.com/cmusphinx/cmudict/blob/74790861f652b15e4ac49015a90074ad62a27690/LICENSE",
+        "revision": "74790861f652b15e4ac49015a90074ad62a27690",
+        "sha256": "81917843c7f44ce2b094ac63873c2c7a4cf802040792c455ba3ca406891c3d22",
+        "url": "https://raw.githubusercontent.com/cmusphinx/cmudict/74790861f652b15e4ac49015a90074ad62a27690/cmudict.dict"
+      }
+    },
+    "spelling_overlap": {
+      "dev_test": 0,
+      "train_dev": 0,
+      "train_test": 0
+    },
+    "split": {
+      "dev_fraction_of_remaining_groups": 0.1,
+      "max_test_words": 10000,
+      "method": "complete NFC lowercase spelling groups",
+      "rounding": "floor; minimum one held-out group per split; reject empty train",
+      "seed": 1729,
+      "test_fraction": 0.1
+    }
+  },
+  "metrics": {
+    "empty_predictions": 0,
+    "n_test": 10000,
+    "per_equiv_pct": 10.14495022227788,
+    "per_pct": 10.14495022227788,
+    "per_reference_edits": 6481,
+    "per_reference_pct": 10.254260082591017,
+    "per_variant_edits": 6171,
+    "per_variant_pct": 9.75991649269311,
+    "per_variant_reference_phones": 63228,
+    "pos_acc_pct": 84.30749483438733,
+    "prediction_errors": 0,
+    "reference_phones": 63203,
+    "wer_pct": 44.24,
+    "wer_relaxed_pct": 42.48
+  },
+  "provenance": {
+    "code_sha256": "00d268858cdbe18807eeaccac4df6bad670a17551615214ee3b7f170cc23d93b",
+    "dependencies": {
+      "cartlet": "0.6.0",
+      "icukit": "0.4.0",
+      "phonebox": "0.3.0"
+    },
+    "dirty": false,
+    "machine": "arm64",
+    "python": "3.12.12",
+    "revision": "de8fbc3f966c191eee59ff48d3f0347c65ee55ef",
+    "system": "Darwin"
+  },
+  "schema_version": 1,
+  "settings": {
+    "dictionary_lookup": false,
+    "evaluation_scope": "held-out spellings; model only; dictionary lookup disabled",
+    "letter_preprocessing": {
+      "cased": true,
+      "filter_non_letters": false,
+      "join_char": "\u208a",
+      "letter_joins": [],
+      "remove_accents": false,
+      "source": {
+        "g2p_rules": null,
+        "norm_rules": null
+      },
+      "spelling_rewrites": {},
+      "version": 1
+    },
+    "max_combinations": 5000,
+    "max_iterations": 100,
+    "min_change_ratio": 0.0,
+    "parallel_align": false,
+    "phone_mapping": null,
+    "prune": false,
+    "remove_stress": false,
+    "threads": 1,
+    "trainer": "native",
+    "use_dict_fallback": false,
+    "width": 7
+  },
+  "system": "cart",
+  "timings": {
+    "export_seconds": 0.6701634170021862,
+    "prediction_seconds": 0.5657815421000123,
+    "training_scope": "load/align/fit; export excluded",
+    "training_seconds": 187.37809341703542
+  },
+  "training": {
+    "candidate_entries": 111817,
+    "convergence": {
+      "cap_censored": false,
+      "converged": true,
+      "criterion": "changed == 0 or changed-entry ratio < threshold",
+      "history": [
+        {
+          "changed": 80972,
+          "iteration": 1,
+          "ratio": 0.7382904034647824
+        },
+        {
+          "changed": 76987,
+          "iteration": 2,
+          "ratio": 0.7019557784362891
+        },
+        {
+          "changed": 11200,
+          "iteration": 3,
+          "ratio": 0.10211989970366993
+        },
+        {
+          "changed": 6380,
+          "iteration": 4,
+          "ratio": 0.05817187143834055
+        },
+        {
+          "changed": 5389,
+          "iteration": 5,
+          "ratio": 0.049136083884203326
+        },
+        {
+          "changed": 4475,
+          "iteration": 6,
+          "ratio": 0.040802370640528836
+        },
+        {
+          "changed": 0,
+          "iteration": 7,
+          "ratio": 0.0
+        }
+      ],
+      "iterations": 7,
+      "max_iterations": 100,
+      "stop_reason": "converged",
+      "threshold": 0.0
+    },
+    "dictionary_entries": 0,
+    "model_bytes": 277800,
+    "retained_entries": 109675,
+    "skipped_entries": 2142,
+    "supplied_entries": 111817
+  }
+}

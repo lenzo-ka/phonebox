@@ -1,0 +1,426 @@
+{
+  "dataset": {
+    "counts": {
+      "dev": {
+        "duplicates_removed": 0,
+        "prepared_entries": 8017,
+        "source_entries": 8017,
+        "words": 7397
+      },
+      "test": {
+        "duplicates_removed": 0,
+        "prepared_entries": 8918,
+        "source_entries": 8918,
+        "words": 8222
+      },
+      "train": {
+        "duplicates_removed": 0,
+        "prepared_entries": 72468,
+        "source_entries": 72468,
+        "words": 66573
+      }
+    },
+    "deduplication": "NFC spelling and full transformed phone sequence; stable first occurrence within each split",
+    "locale": "it_IT",
+    "name": "italian",
+    "phoneset": "ipa",
+    "preparation": {
+      "excluded_variant_tokens": [],
+      "phones": "original tokens",
+      "remove_stress": false,
+      "spelling": "NFC; case preserved"
+    },
+    "prepared_hash_encoding": "UTF-8 compact JSON ordered [spelling, phone-token-list] pairs; no newline",
+    "prepared_sha256": {
+      "dev": "568af51511d5b59b995fc9643121eb958799defd9336a2ac2d589c5623cec13c",
+      "test": "e4ca4ed19aaa2ab408199a6fb7acb5d87f5142cb104601e08630ba448d632f40",
+      "train": "b16886176309e1712570fd7a7fdbcfb9d2eae602043a0a14611a6225373e0055"
+    },
+    "quality": {
+      "excluded_annotated_entries": 0,
+      "excluded_only_annotated_words": 0,
+      "exclusion_reason": "none",
+      "raw_entries": 89403,
+      "raw_words": 82192,
+      "retained_entries_before_dedup": 89403,
+      "retained_words_before_dedup": 82192,
+      "upstream_filter": "phone-token whitelist; not a correctness guarantee",
+      "upstream_settings": {
+        "stress": false,
+        "syllable_boundaries": false
+      },
+      "upstream_settings_url": "https://raw.githubusercontent.com/CUNY-CL/wikipron/d282e848a211ea31cfd730f0ced8bc8cdab9e83d/data/scrape/lib/scrape.py"
+    },
+    "schema_version": 1,
+    "sources": {
+      "lexicon": {
+        "citations": [
+          "Lee et al. (2020), Massively multilingual pronunciation mining with WikiPron, https://aclanthology.org/2020.lrec-1.521/",
+          "Wiktionary contributors, https://en.wiktionary.org/"
+        ],
+        "filename": "ita_latn_broad_filtered.tsv",
+        "license": "CC-BY-SA-4.0 (Wiktionary terms; GFDL alternative)",
+        "license_url": "https://en.wiktionary.org/wiki/Wiktionary:Copyrights",
+        "revision": "d282e848a211ea31cfd730f0ced8bc8cdab9e83d",
+        "sha256": "231c78d1fb89f1f03ad7420b69003023b84863d877ce82ee72d2590fa470b78a",
+        "url": "https://raw.githubusercontent.com/CUNY-CL/wikipron/d282e848a211ea31cfd730f0ced8bc8cdab9e83d/data/scrape/tsv/ita_latn_broad_filtered.tsv"
+      },
+      "phone_whitelist": {
+        "citations": [
+          "Lee et al. (2020), Massively multilingual pronunciation mining with WikiPron, https://aclanthology.org/2020.lrec-1.521/",
+          "Wiktionary contributors, https://en.wiktionary.org/"
+        ],
+        "filename": "ita_broad.phones",
+        "license": "CC-BY-SA-4.0 (Wiktionary terms; GFDL alternative)",
+        "license_url": "https://en.wiktionary.org/wiki/Wiktionary:Copyrights",
+        "revision": "d282e848a211ea31cfd730f0ced8bc8cdab9e83d",
+        "sha256": "d05afac80a5873a329d3e314f5c3c2fb780e211e68bd65a2f4b1e3268b60f71b",
+        "url": "https://raw.githubusercontent.com/CUNY-CL/wikipron/d282e848a211ea31cfd730f0ced8bc8cdab9e83d/data/phones/phones/ita_broad.phones"
+      }
+    },
+    "spelling_overlap": {
+      "dev_test": 0,
+      "train_dev": 0,
+      "train_test": 0
+    },
+    "split": {
+      "casefold_overlap": {
+        "dev_test": 0,
+        "train_dev": 0,
+        "train_test": 0
+      },
+      "dev_fraction_of_remaining_groups": 0.1,
+      "groups": {
+        "dev": 7321,
+        "test": 8135,
+        "train": 65898
+      },
+      "max_test_words": 10000,
+      "method": "complete NFC-casefold spelling groups; original case retained",
+      "rounding": "floor; minimum one held-out group per split; reject empty train",
+      "seed": 1729,
+      "test_fraction": 0.1
+    }
+  },
+  "metrics": {
+    "empty_predictions": 1,
+    "n_test": 8222,
+    "per_equiv_pct": 1.5137167716524627,
+    "per_pct": 1.5137167716524627,
+    "per_reference_edits": 1103,
+    "per_reference_pct": 1.5145481758139152,
+    "per_variant_edits": 774,
+    "per_variant_pct": 1.0628802131253348,
+    "per_variant_reference_phones": 72821,
+    "pos_acc_pct": 98.30513126655413,
+    "prediction_errors": 0,
+    "reference_phones": 72827,
+    "wer_pct": 11.432741425443925,
+    "wer_relaxed_pct": 7.808319143760645
+  },
+  "provenance": {
+    "code_sha256": "ef9f8c29aadc5e213c857044c662dfc9533f6ae28911ef83772ee94368ee458c",
+    "dependencies": {
+      "cartlet": "0.6.0",
+      "icukit": "0.4.0",
+      "phonebox": "0.3.0"
+    },
+    "dirty": false,
+    "machine": "x86_64",
+    "python": "3.12.3",
+    "revision": "a7bfbeb7ae9e84bdd47f5ba8f1c260430148c3ef",
+    "system": "Linux",
+    "tools": {
+      "estimate-ngram": {
+        "build": {
+          "autoconf_archive_deb_sha256": "36b178ef82b4a7fe8c4b7c4992b569b6f61454f2d1ec7b17f28d2570174a95b7",
+          "autoconf_archive_version": "20220903-3",
+          "compiler_flags": "-O2 -std=c++11",
+          "component": "mitlm",
+          "executable_sha256": "00f0a15d5c55c6931a592c11a5ecd7b0bc5c6bf03adae1939aa2501a7f6cf13b",
+          "libraries_sha256": {
+            "libfst.so.16.0.0": "955def901a6964b0e9469fabc3b6833fd29341116d899bf3f69890a0b621d532",
+            "libfstfar.so.16.0.0": "81348967331b0e2f719facf432d4f47da079820bcd76cc22d573e8bb09b88014",
+            "libfstfarscript.so.16.0.0": "0b4f524be3fb38d95e4de1a5b00fd46c2ac1d1ea43c853abfff6dc07c1885ee8",
+            "libfstngram.so.16.0.0": "084d0e3540084149331c991ced1907ea941731512dc4c9e7369c9ec08759d658",
+            "libfstscript.so.16.0.0": "c55ca1febd149491cd21bd051f14707d298f3f82fa2ed5bec54f6461366c8b56",
+            "libmitlm.so.1.0.0": "10e976e8e269520d3288990ecf336d39ae05e7d8564864feba294a532d1f1fbb"
+          },
+          "max_build_jobs": 2,
+          "openfst_version": "1.7.2",
+          "runtime_threads": 1,
+          "source_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "source_dirty": false,
+          "source_head_tree": "6679dfc73c84581e3787d891472e418e17214bc3",
+          "sources": {
+            "mitlm": {
+              "generated_build_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "license": "BSD-3-Clause",
+              "license_sha256": "9b297b49a960581ccbe8a0dc269940c6bf0616335313a2663a8d6b541ec4b61f",
+              "repository": "https://github.com/mitlm/mitlm",
+              "revision": "553edca763a8e142edd8ef6d51404bbf43b79c95"
+            },
+            "openfst": {
+              "generated_build_diff_sha256": "1710e9bb10c5a45eb15d7ff375adc61021e64df937aa31ae76946ab42161396f",
+              "license": "Apache-2.0",
+              "license_sha256": "38662f3e8b8825f72ea9e8e823146c023073d8fa1e0ea84de467c3a5675d4fa2",
+              "repository": "https://github.com/mjansche/openfst",
+              "revision": "e04f9c15fab41a3544355857a8b0c71ee9229825"
+            },
+            "phonetisaurus": {
+              "generated_build_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "license": "BSD-3-Clause",
+              "license_sha256": "3809c7caf01b5806326cf5be53044f82d301772c555ec1f310e15e10e4057395",
+              "repository": "https://github.com/AdolfVonKleist/Phonetisaurus",
+              "revision": "f08d3dfb10b8d619e665a9581d2a327bcc2504f7"
+            }
+          },
+          "tool_versions": {
+            "autoconf": "autoconf (GNU Autoconf) 2.71",
+            "automake": "automake (GNU automake) 1.16.5",
+            "compiler": "13.3.0",
+            "fortran": "13.3.0",
+            "libtool": "libtoolize (GNU libtool) 2.4.7",
+            "make": "GNU Make 4.3"
+          },
+          "version_origin": "caller-declared source version"
+        },
+        "executable": "estimate-ngram",
+        "receipt_binary_binding_verified": true,
+        "sha256": "00f0a15d5c55c6931a592c11a5ecd7b0bc5c6bf03adae1939aa2501a7f6cf13b",
+        "source_revision": "553edca763a8e142edd8ef6d51404bbf43b79c95",
+        "version": "0.4.2"
+      },
+      "phonetisaurus-align": {
+        "build": {
+          "autoconf_archive_deb_sha256": "36b178ef82b4a7fe8c4b7c4992b569b6f61454f2d1ec7b17f28d2570174a95b7",
+          "autoconf_archive_version": "20220903-3",
+          "compiler_flags": "-O2 -std=c++11 -fno-fast-math",
+          "component": "phonetisaurus",
+          "executable_sha256": "c61d11a9c872128d44d154c937ac559a17935bdb87cf393f3bf974f7db8f4d75",
+          "libraries_sha256": {
+            "libfst.so.16.0.0": "955def901a6964b0e9469fabc3b6833fd29341116d899bf3f69890a0b621d532",
+            "libfstfar.so.16.0.0": "81348967331b0e2f719facf432d4f47da079820bcd76cc22d573e8bb09b88014",
+            "libfstfarscript.so.16.0.0": "0b4f524be3fb38d95e4de1a5b00fd46c2ac1d1ea43c853abfff6dc07c1885ee8",
+            "libfstngram.so.16.0.0": "084d0e3540084149331c991ced1907ea941731512dc4c9e7369c9ec08759d658",
+            "libfstscript.so.16.0.0": "c55ca1febd149491cd21bd051f14707d298f3f82fa2ed5bec54f6461366c8b56",
+            "libmitlm.so.1.0.0": "10e976e8e269520d3288990ecf336d39ae05e7d8564864feba294a532d1f1fbb"
+          },
+          "max_build_jobs": 2,
+          "openfst_version": "1.7.2",
+          "runtime_threads": 1,
+          "source_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "source_dirty": false,
+          "source_head_tree": "7cf53891b049b01125826b550aa5dced29d11a4c",
+          "sources": {
+            "mitlm": {
+              "generated_build_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "license": "BSD-3-Clause",
+              "license_sha256": "9b297b49a960581ccbe8a0dc269940c6bf0616335313a2663a8d6b541ec4b61f",
+              "repository": "https://github.com/mitlm/mitlm",
+              "revision": "553edca763a8e142edd8ef6d51404bbf43b79c95"
+            },
+            "openfst": {
+              "generated_build_diff_sha256": "1710e9bb10c5a45eb15d7ff375adc61021e64df937aa31ae76946ab42161396f",
+              "license": "Apache-2.0",
+              "license_sha256": "38662f3e8b8825f72ea9e8e823146c023073d8fa1e0ea84de467c3a5675d4fa2",
+              "repository": "https://github.com/mjansche/openfst",
+              "revision": "e04f9c15fab41a3544355857a8b0c71ee9229825"
+            },
+            "phonetisaurus": {
+              "generated_build_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "license": "BSD-3-Clause",
+              "license_sha256": "3809c7caf01b5806326cf5be53044f82d301772c555ec1f310e15e10e4057395",
+              "repository": "https://github.com/AdolfVonKleist/Phonetisaurus",
+              "revision": "f08d3dfb10b8d619e665a9581d2a327bcc2504f7"
+            }
+          },
+          "tool_versions": {
+            "autoconf": "autoconf (GNU Autoconf) 2.71",
+            "automake": "automake (GNU automake) 1.16.5",
+            "compiler": "13.3.0",
+            "fortran": "13.3.0",
+            "libtool": "libtoolize (GNU libtool) 2.4.7",
+            "make": "GNU Make 4.3"
+          },
+          "version_origin": "caller-declared source version"
+        },
+        "executable": "phonetisaurus-align",
+        "receipt_binary_binding_verified": true,
+        "sha256": "c61d11a9c872128d44d154c937ac559a17935bdb87cf393f3bf974f7db8f4d75",
+        "source_revision": "f08d3dfb10b8d619e665a9581d2a327bcc2504f7",
+        "version": "0.8.1"
+      },
+      "phonetisaurus-arpa2wfst": {
+        "build": {
+          "autoconf_archive_deb_sha256": "36b178ef82b4a7fe8c4b7c4992b569b6f61454f2d1ec7b17f28d2570174a95b7",
+          "autoconf_archive_version": "20220903-3",
+          "compiler_flags": "-O2 -std=c++11 -fno-fast-math",
+          "component": "phonetisaurus",
+          "executable_sha256": "eb20e5e02da5a6abed51120d2935bce0f13930ebfe847ebb4eb1a4657b82cb01",
+          "libraries_sha256": {
+            "libfst.so.16.0.0": "955def901a6964b0e9469fabc3b6833fd29341116d899bf3f69890a0b621d532",
+            "libfstfar.so.16.0.0": "81348967331b0e2f719facf432d4f47da079820bcd76cc22d573e8bb09b88014",
+            "libfstfarscript.so.16.0.0": "0b4f524be3fb38d95e4de1a5b00fd46c2ac1d1ea43c853abfff6dc07c1885ee8",
+            "libfstngram.so.16.0.0": "084d0e3540084149331c991ced1907ea941731512dc4c9e7369c9ec08759d658",
+            "libfstscript.so.16.0.0": "c55ca1febd149491cd21bd051f14707d298f3f82fa2ed5bec54f6461366c8b56",
+            "libmitlm.so.1.0.0": "10e976e8e269520d3288990ecf336d39ae05e7d8564864feba294a532d1f1fbb"
+          },
+          "max_build_jobs": 2,
+          "openfst_version": "1.7.2",
+          "runtime_threads": 1,
+          "source_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "source_dirty": false,
+          "source_head_tree": "7cf53891b049b01125826b550aa5dced29d11a4c",
+          "sources": {
+            "mitlm": {
+              "generated_build_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "license": "BSD-3-Clause",
+              "license_sha256": "9b297b49a960581ccbe8a0dc269940c6bf0616335313a2663a8d6b541ec4b61f",
+              "repository": "https://github.com/mitlm/mitlm",
+              "revision": "553edca763a8e142edd8ef6d51404bbf43b79c95"
+            },
+            "openfst": {
+              "generated_build_diff_sha256": "1710e9bb10c5a45eb15d7ff375adc61021e64df937aa31ae76946ab42161396f",
+              "license": "Apache-2.0",
+              "license_sha256": "38662f3e8b8825f72ea9e8e823146c023073d8fa1e0ea84de467c3a5675d4fa2",
+              "repository": "https://github.com/mjansche/openfst",
+              "revision": "e04f9c15fab41a3544355857a8b0c71ee9229825"
+            },
+            "phonetisaurus": {
+              "generated_build_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "license": "BSD-3-Clause",
+              "license_sha256": "3809c7caf01b5806326cf5be53044f82d301772c555ec1f310e15e10e4057395",
+              "repository": "https://github.com/AdolfVonKleist/Phonetisaurus",
+              "revision": "f08d3dfb10b8d619e665a9581d2a327bcc2504f7"
+            }
+          },
+          "tool_versions": {
+            "autoconf": "autoconf (GNU Autoconf) 2.71",
+            "automake": "automake (GNU automake) 1.16.5",
+            "compiler": "13.3.0",
+            "fortran": "13.3.0",
+            "libtool": "libtoolize (GNU libtool) 2.4.7",
+            "make": "GNU Make 4.3"
+          },
+          "version_origin": "caller-declared source version"
+        },
+        "executable": "phonetisaurus-arpa2wfst",
+        "receipt_binary_binding_verified": true,
+        "sha256": "eb20e5e02da5a6abed51120d2935bce0f13930ebfe847ebb4eb1a4657b82cb01",
+        "source_revision": "f08d3dfb10b8d619e665a9581d2a327bcc2504f7",
+        "version": "0.8.1"
+      },
+      "phonetisaurus-g2pfst": {
+        "build": {
+          "autoconf_archive_deb_sha256": "36b178ef82b4a7fe8c4b7c4992b569b6f61454f2d1ec7b17f28d2570174a95b7",
+          "autoconf_archive_version": "20220903-3",
+          "compiler_flags": "-O2 -std=c++11 -fno-fast-math",
+          "component": "phonetisaurus",
+          "executable_sha256": "29b1f36431c96cb00b2e14812fc6e54041c923b9c104ef8a3c16cea358b32233",
+          "libraries_sha256": {
+            "libfst.so.16.0.0": "955def901a6964b0e9469fabc3b6833fd29341116d899bf3f69890a0b621d532",
+            "libfstfar.so.16.0.0": "81348967331b0e2f719facf432d4f47da079820bcd76cc22d573e8bb09b88014",
+            "libfstfarscript.so.16.0.0": "0b4f524be3fb38d95e4de1a5b00fd46c2ac1d1ea43c853abfff6dc07c1885ee8",
+            "libfstngram.so.16.0.0": "084d0e3540084149331c991ced1907ea941731512dc4c9e7369c9ec08759d658",
+            "libfstscript.so.16.0.0": "c55ca1febd149491cd21bd051f14707d298f3f82fa2ed5bec54f6461366c8b56",
+            "libmitlm.so.1.0.0": "10e976e8e269520d3288990ecf336d39ae05e7d8564864feba294a532d1f1fbb"
+          },
+          "max_build_jobs": 2,
+          "openfst_version": "1.7.2",
+          "runtime_threads": 1,
+          "source_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "source_dirty": false,
+          "source_head_tree": "7cf53891b049b01125826b550aa5dced29d11a4c",
+          "sources": {
+            "mitlm": {
+              "generated_build_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "license": "BSD-3-Clause",
+              "license_sha256": "9b297b49a960581ccbe8a0dc269940c6bf0616335313a2663a8d6b541ec4b61f",
+              "repository": "https://github.com/mitlm/mitlm",
+              "revision": "553edca763a8e142edd8ef6d51404bbf43b79c95"
+            },
+            "openfst": {
+              "generated_build_diff_sha256": "1710e9bb10c5a45eb15d7ff375adc61021e64df937aa31ae76946ab42161396f",
+              "license": "Apache-2.0",
+              "license_sha256": "38662f3e8b8825f72ea9e8e823146c023073d8fa1e0ea84de467c3a5675d4fa2",
+              "repository": "https://github.com/mjansche/openfst",
+              "revision": "e04f9c15fab41a3544355857a8b0c71ee9229825"
+            },
+            "phonetisaurus": {
+              "generated_build_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "license": "BSD-3-Clause",
+              "license_sha256": "3809c7caf01b5806326cf5be53044f82d301772c555ec1f310e15e10e4057395",
+              "repository": "https://github.com/AdolfVonKleist/Phonetisaurus",
+              "revision": "f08d3dfb10b8d619e665a9581d2a327bcc2504f7"
+            }
+          },
+          "tool_versions": {
+            "autoconf": "autoconf (GNU Autoconf) 2.71",
+            "automake": "automake (GNU automake) 1.16.5",
+            "compiler": "13.3.0",
+            "fortran": "13.3.0",
+            "libtool": "libtoolize (GNU libtool) 2.4.7",
+            "make": "GNU Make 4.3"
+          },
+          "version_origin": "caller-declared source version"
+        },
+        "executable": "phonetisaurus-g2pfst",
+        "receipt_binary_binding_verified": true,
+        "sha256": "29b1f36431c96cb00b2e14812fc6e54041c923b9c104ef8a3c16cea358b32233",
+        "source_revision": "f08d3dfb10b8d619e665a9581d2a327bcc2504f7",
+        "version": "0.8.1"
+      }
+    }
+  },
+  "schema_version": 1,
+  "settings": {
+    "alignment_iterations": 11,
+    "beam": 10000,
+    "development_selection": null,
+    "dictionary_lookup": false,
+    "evaluation_scope": "held-out spellings; model only; dictionary lookup disabled",
+    "grow": false,
+    "letter_preprocessing": {
+      "cased": true,
+      "filter_non_letters": false,
+      "join_char": "₊",
+      "letter_joins": [],
+      "remove_accents": false,
+      "source": {
+        "g2p_rules": null,
+        "norm_rules": null
+      },
+      "spelling_rewrites": {},
+      "version": 1
+    },
+    "lm_order": 8,
+    "max_letter_span": 2,
+    "max_phone_span": 2,
+    "nbest": 1,
+    "penalize": true,
+    "penalize_em": false,
+    "phone_mapping": null,
+    "pmass": 0,
+    "remove_stress": false,
+    "restrict": true,
+    "seq1_del": false,
+    "seq2_del": true,
+    "threads": 1,
+    "thresh": 99
+  },
+  "system": "phonetisaurus",
+  "timings": {
+    "export_seconds": 0.0,
+    "prediction_seconds": 4.188677496975288,
+    "training_scope": "fit and declared development selection; external export included",
+    "training_seconds": 215.83672523102723
+  },
+  "training": {
+    "model_bytes": 20333774,
+    "retained_entries": null,
+    "retention_note": "upstream retention is not exposed by this adapter",
+    "skipped_entries": null,
+    "supplied_entries": 72468
+  }
+}

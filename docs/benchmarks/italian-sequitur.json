@@ -1,0 +1,329 @@
+{
+  "dataset": {
+    "counts": {
+      "dev": {
+        "duplicates_removed": 0,
+        "prepared_entries": 8017,
+        "source_entries": 8017,
+        "words": 7397
+      },
+      "test": {
+        "duplicates_removed": 0,
+        "prepared_entries": 8918,
+        "source_entries": 8918,
+        "words": 8222
+      },
+      "train": {
+        "duplicates_removed": 0,
+        "prepared_entries": 72468,
+        "source_entries": 72468,
+        "words": 66573
+      }
+    },
+    "deduplication": "NFC spelling and full transformed phone sequence; stable first occurrence within each split",
+    "locale": "it_IT",
+    "name": "italian",
+    "phoneset": "ipa",
+    "preparation": {
+      "excluded_variant_tokens": [],
+      "phones": "original tokens",
+      "remove_stress": false,
+      "spelling": "NFC; case preserved"
+    },
+    "prepared_hash_encoding": "UTF-8 compact JSON ordered [spelling, phone-token-list] pairs; no newline",
+    "prepared_sha256": {
+      "dev": "568af51511d5b59b995fc9643121eb958799defd9336a2ac2d589c5623cec13c",
+      "test": "e4ca4ed19aaa2ab408199a6fb7acb5d87f5142cb104601e08630ba448d632f40",
+      "train": "b16886176309e1712570fd7a7fdbcfb9d2eae602043a0a14611a6225373e0055"
+    },
+    "quality": {
+      "excluded_annotated_entries": 0,
+      "excluded_only_annotated_words": 0,
+      "exclusion_reason": "none",
+      "raw_entries": 89403,
+      "raw_words": 82192,
+      "retained_entries_before_dedup": 89403,
+      "retained_words_before_dedup": 82192,
+      "upstream_filter": "phone-token whitelist; not a correctness guarantee",
+      "upstream_settings": {
+        "stress": false,
+        "syllable_boundaries": false
+      },
+      "upstream_settings_url": "https://raw.githubusercontent.com/CUNY-CL/wikipron/d282e848a211ea31cfd730f0ced8bc8cdab9e83d/data/scrape/lib/scrape.py"
+    },
+    "schema_version": 1,
+    "sources": {
+      "lexicon": {
+        "citations": [
+          "Lee et al. (2020), Massively multilingual pronunciation mining with WikiPron, https://aclanthology.org/2020.lrec-1.521/",
+          "Wiktionary contributors, https://en.wiktionary.org/"
+        ],
+        "filename": "ita_latn_broad_filtered.tsv",
+        "license": "CC-BY-SA-4.0 (Wiktionary terms; GFDL alternative)",
+        "license_url": "https://en.wiktionary.org/wiki/Wiktionary:Copyrights",
+        "revision": "d282e848a211ea31cfd730f0ced8bc8cdab9e83d",
+        "sha256": "231c78d1fb89f1f03ad7420b69003023b84863d877ce82ee72d2590fa470b78a",
+        "url": "https://raw.githubusercontent.com/CUNY-CL/wikipron/d282e848a211ea31cfd730f0ced8bc8cdab9e83d/data/scrape/tsv/ita_latn_broad_filtered.tsv"
+      },
+      "phone_whitelist": {
+        "citations": [
+          "Lee et al. (2020), Massively multilingual pronunciation mining with WikiPron, https://aclanthology.org/2020.lrec-1.521/",
+          "Wiktionary contributors, https://en.wiktionary.org/"
+        ],
+        "filename": "ita_broad.phones",
+        "license": "CC-BY-SA-4.0 (Wiktionary terms; GFDL alternative)",
+        "license_url": "https://en.wiktionary.org/wiki/Wiktionary:Copyrights",
+        "revision": "d282e848a211ea31cfd730f0ced8bc8cdab9e83d",
+        "sha256": "d05afac80a5873a329d3e314f5c3c2fb780e211e68bd65a2f4b1e3268b60f71b",
+        "url": "https://raw.githubusercontent.com/CUNY-CL/wikipron/d282e848a211ea31cfd730f0ced8bc8cdab9e83d/data/phones/phones/ita_broad.phones"
+      }
+    },
+    "spelling_overlap": {
+      "dev_test": 0,
+      "train_dev": 0,
+      "train_test": 0
+    },
+    "split": {
+      "casefold_overlap": {
+        "dev_test": 0,
+        "train_dev": 0,
+        "train_test": 0
+      },
+      "dev_fraction_of_remaining_groups": 0.1,
+      "groups": {
+        "dev": 7321,
+        "test": 8135,
+        "train": 65898
+      },
+      "max_test_words": 10000,
+      "method": "complete NFC-casefold spelling groups; original case retained",
+      "rounding": "floor; minimum one held-out group per split; reject empty train",
+      "seed": 1729,
+      "test_fraction": 0.1
+    }
+  },
+  "metrics": {
+    "empty_predictions": 1,
+    "n_test": 8222,
+    "per_equiv_pct": 3.2797233505324406,
+    "per_pct": 3.2797233505324406,
+    "per_reference_edits": 2390,
+    "per_reference_pct": 3.281749900449009,
+    "per_variant_edits": 2067,
+    "per_variant_pct": 2.8385059049711616,
+    "per_variant_reference_phones": 72820,
+    "pos_acc_pct": 96.4389614666813,
+    "prediction_errors": 0,
+    "reference_phones": 72827,
+    "wer_pct": 24.787156409632694,
+    "wer_relaxed_pct": 21.600583799562145
+  },
+  "provenance": {
+    "code_sha256": "ef9f8c29aadc5e213c857044c662dfc9533f6ae28911ef83772ee94368ee458c",
+    "dependencies": {
+      "cartlet": "0.6.0",
+      "icukit": "0.4.0",
+      "phonebox": "0.3.0"
+    },
+    "dirty": false,
+    "machine": "x86_64",
+    "python": "3.12.3",
+    "revision": "a7bfbeb7ae9e84bdd47f5ba8f1c260430148c3ef",
+    "system": "Linux",
+    "tool": {
+      "build": {
+        "compatibility_patch": "NumPy 2 API alias: num.sometrue to num.any",
+        "compatibility_patch_sha256": "72c6d06d170d37c80f33187ea9da7bf51003fcca9784e7f3bcea62285f47b985",
+        "compiler": "GCC 13.3.0",
+        "executable_sha256": "a03823e2bbc5038930f0f000fbb228d0f1e507dc39508969d97e26a4cc668f27",
+        "implementation_files_sha256": {
+          "Evaluation.py": "2ff145994f9e84391b3f3a5e0d1deed87880ff432d5fad934cacd72bdd9e1182",
+          "Minimization.py": "00950ff6fcd94870359f6c139438562fa1b2415ee9deef0a482b3d2ff9db7bb8",
+          "SequenceModel.py": "0de8e3c48bfc7c9255f56a98461238feaf795053666d6732546a91da9c9a94a8",
+          "SequiturTool.py": "88d855ced15bb154683df001c3aa19a816400fd17c0a3c7aa533a9a4ea9e4015",
+          "_sequitur_.cpython-312-x86_64-linux-gnu.so": "6cd4aa93ea3c14eae4c8910305b94bdb6255c55621bb0a3d024971a3381ae435",
+          "g2p.py": "9d02df42ccf53dc0c735536175ee2a276977144da6ab5b39615323170446b685",
+          "misc.py": "ea380b9681948e928616292479cc24ed6f8136c742af348838c6e97bb00a7b54",
+          "sequitur.py": "8e24edb3a78095b2e58a3f93142043547df2c0234b72f637d612e1cc9c3cf65f",
+          "sequitur_.py": "451a0d65e83ae5b70e5c23a550addbc1552b34350b02a8ce82bdc2ae7cba34d9",
+          "symbols.py": "aa3e450154d68c511e773e247f89adf7c116aff593b82d7c4e1ad6a00a42b57b",
+          "tool.py": "e62cf2c1bf8fdea41d30998845bcf3eeab7942d4ed09c5bff3e5ceb39f8e4144"
+        },
+        "license": "GPL-2.0-only",
+        "license_sha256": "ab15fd526bd8dd18a9e77ebc139656bf4d33e97fc7238cd11bf60e2b9b8666c6",
+        "max_build_jobs": 2,
+        "numpy": "2.5.3",
+        "python": "3.12.3",
+        "runtime_threads": 1,
+        "setuptools": "80.9.0",
+        "source_diff_sha256": "72c6d06d170d37c80f33187ea9da7bf51003fcca9784e7f3bcea62285f47b985",
+        "source_dirty": true,
+        "source_head_tree": "371f47f4b8c7620eb33b1773a7f2c6d83e2ebaf1",
+        "source_repository": "https://github.com/sequitur-g2p/sequitur-g2p",
+        "swig": "4.3.1",
+        "underlying_executable_sha256": "5bb781e49b67f59367341c8a9e1ab662765fe6406ad095bcfc7ce58568ba03b1",
+        "version_origin": "caller-declared source version",
+        "wheel_sha256": "bb01e89c63afeb97757639330675e626706d9f6dea4d100ebe3645c72dc6818e"
+      },
+      "executable": "run-sequitur",
+      "receipt_binary_binding_verified": true,
+      "sha256": "a03823e2bbc5038930f0f000fbb228d0f1e507dc39508969d97e26a4cc668f27",
+      "source_revision": "7bd56d5d502325e0be3f14b7d898720a39db3338",
+      "version": "1.0.1668.30"
+    }
+  },
+  "schema_version": 1,
+  "settings": {
+    "development_results": [
+      {
+        "metrics": {
+          "empty_predictions": 1,
+          "n_test": 7397,
+          "per_equiv_pct": 11.233294114097808,
+          "per_pct": 11.233294114097808,
+          "per_reference_edits": 7447,
+          "per_reference_pct": 11.342278812617085,
+          "per_variant_edits": 7380,
+          "per_variant_pct": 11.240746946111432,
+          "per_variant_reference_phones": 65654,
+          "pos_acc_pct": 84.50991039913114,
+          "prediction_errors": 1,
+          "reference_phones": 65657,
+          "wer_pct": 57.91537109639042,
+          "wer_relaxed_pct": 57.40164931729079
+        },
+        "order": 1
+      },
+      {
+        "metrics": {
+          "empty_predictions": 1,
+          "n_test": 7397,
+          "per_equiv_pct": 3.9226729583682167,
+          "per_pct": 3.9226729583682167,
+          "per_reference_edits": 2577,
+          "per_reference_pct": 3.9249432657599344,
+          "per_variant_edits": 2431,
+          "per_variant_pct": 3.702801090582304,
+          "per_variant_reference_phones": 65653,
+          "pos_acc_pct": 95.84899916279778,
+          "prediction_errors": 1,
+          "reference_phones": 65657,
+          "wer_pct": 29.02528051912938,
+          "wer_relaxed_pct": 27.632824117885622
+        },
+        "order": 2
+      },
+      {
+        "metrics": {
+          "empty_predictions": 1,
+          "n_test": 7397,
+          "per_equiv_pct": 3.155491285485958,
+          "per_pct": 3.155491285485958,
+          "per_reference_edits": 2073,
+          "per_reference_pct": 3.1573175746683524,
+          "per_variant_edits": 1770,
+          "per_variant_pct": 2.6959925669809452,
+          "per_variant_reference_phones": 65653,
+          "pos_acc_pct": 96.65119111043458,
+          "prediction_errors": 1,
+          "reference_phones": 65657,
+          "wer_pct": 23.861024739759362,
+          "wer_relaxed_pct": 20.386643233743406
+        },
+        "order": 3
+      }
+    ],
+    "dictionary_lookup": false,
+    "evaluation_scope": "held-out spellings; model only; dictionary lookup disabled",
+    "extension_iterations": 200,
+    "extension_policy": "fresh order restart if upstream iteration limit reached",
+    "iteration_limited_orders": [
+      1
+    ],
+    "letter_preprocessing": {
+      "cased": true,
+      "filter_non_letters": false,
+      "join_char": "₊",
+      "letter_joins": [],
+      "remove_accents": false,
+      "source": {
+        "g2p_rules": null,
+        "norm_rules": null
+      },
+      "spelling_rewrites": {},
+      "version": 1
+    },
+    "max_iterations": 100,
+    "min_iterations": 20,
+    "orders": [
+      1,
+      2,
+      3
+    ],
+    "phone_mapping": null,
+    "remove_stress": false,
+    "selected_order": 3,
+    "selection": [
+      "dev per_variant_pct",
+      "dev wer_relaxed_pct",
+      "lower order"
+    ],
+    "threads": 1,
+    "training_attempts": [
+      {
+        "iterations": 100,
+        "last_dev_log_likelihoods": [
+          -254132.43385235404,
+          -254132.43384870366
+        ],
+        "max_iterations": 100,
+        "order": 1,
+        "stop_reason": "iteration_limit"
+      },
+      {
+        "iterations": 200,
+        "last_dev_log_likelihoods": [
+          -254132.36704952092,
+          -254132.3670494968
+        ],
+        "max_iterations": 200,
+        "order": 1,
+        "stop_reason": "iteration_limit"
+      },
+      {
+        "iterations": 32,
+        "last_dev_log_likelihoods": [
+          -189999.86479900175,
+          -189999.86745276235
+        ],
+        "max_iterations": 100,
+        "order": 2,
+        "stop_reason": "converged"
+      },
+      {
+        "iterations": 49,
+        "last_dev_log_likelihoods": [
+          -170069.20238027207,
+          -170069.21605226691
+        ],
+        "max_iterations": 100,
+        "order": 3,
+        "stop_reason": "converged"
+      }
+    ]
+  },
+  "system": "sequitur",
+  "timings": {
+    "export_seconds": 0.0,
+    "prediction_seconds": 9.572432415094227,
+    "training_scope": "fit and declared development selection; external export included",
+    "training_seconds": 8223.611908405088
+  },
+  "training": {
+    "model_bytes": 322640,
+    "retained_entries": null,
+    "retention_note": "upstream retention is not exposed by this adapter",
+    "skipped_entries": null,
+    "supplied_entries": 72468
+  }
+}

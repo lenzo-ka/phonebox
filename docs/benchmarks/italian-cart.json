@@ -1,0 +1,214 @@
+{
+  "dataset": {
+    "counts": {
+      "dev": {
+        "duplicates_removed": 0,
+        "prepared_entries": 8017,
+        "source_entries": 8017,
+        "words": 7397
+      },
+      "test": {
+        "duplicates_removed": 0,
+        "prepared_entries": 8918,
+        "source_entries": 8918,
+        "words": 8222
+      },
+      "train": {
+        "duplicates_removed": 0,
+        "prepared_entries": 72468,
+        "source_entries": 72468,
+        "words": 66573
+      }
+    },
+    "deduplication": "NFC spelling and full transformed phone sequence; stable first occurrence within each split",
+    "locale": "it_IT",
+    "name": "italian",
+    "phoneset": "ipa",
+    "preparation": {
+      "excluded_variant_tokens": [],
+      "phones": "original tokens",
+      "remove_stress": false,
+      "spelling": "NFC; case preserved"
+    },
+    "prepared_hash_encoding": "UTF-8 compact JSON ordered [spelling, phone-token-list] pairs; no newline",
+    "prepared_sha256": {
+      "dev": "568af51511d5b59b995fc9643121eb958799defd9336a2ac2d589c5623cec13c",
+      "test": "e4ca4ed19aaa2ab408199a6fb7acb5d87f5142cb104601e08630ba448d632f40",
+      "train": "b16886176309e1712570fd7a7fdbcfb9d2eae602043a0a14611a6225373e0055"
+    },
+    "quality": {
+      "excluded_annotated_entries": 0,
+      "excluded_only_annotated_words": 0,
+      "exclusion_reason": "none",
+      "raw_entries": 89403,
+      "raw_words": 82192,
+      "retained_entries_before_dedup": 89403,
+      "retained_words_before_dedup": 82192,
+      "upstream_filter": "phone-token whitelist; not a correctness guarantee",
+      "upstream_settings": {
+        "stress": false,
+        "syllable_boundaries": false
+      },
+      "upstream_settings_url": "https://raw.githubusercontent.com/CUNY-CL/wikipron/d282e848a211ea31cfd730f0ced8bc8cdab9e83d/data/scrape/lib/scrape.py"
+    },
+    "schema_version": 1,
+    "sources": {
+      "lexicon": {
+        "citations": [
+          "Lee et al. (2020), Massively multilingual pronunciation mining with WikiPron, https://aclanthology.org/2020.lrec-1.521/",
+          "Wiktionary contributors, https://en.wiktionary.org/"
+        ],
+        "filename": "ita_latn_broad_filtered.tsv",
+        "license": "CC-BY-SA-4.0 (Wiktionary terms; GFDL alternative)",
+        "license_url": "https://en.wiktionary.org/wiki/Wiktionary:Copyrights",
+        "revision": "d282e848a211ea31cfd730f0ced8bc8cdab9e83d",
+        "sha256": "231c78d1fb89f1f03ad7420b69003023b84863d877ce82ee72d2590fa470b78a",
+        "url": "https://raw.githubusercontent.com/CUNY-CL/wikipron/d282e848a211ea31cfd730f0ced8bc8cdab9e83d/data/scrape/tsv/ita_latn_broad_filtered.tsv"
+      },
+      "phone_whitelist": {
+        "citations": [
+          "Lee et al. (2020), Massively multilingual pronunciation mining with WikiPron, https://aclanthology.org/2020.lrec-1.521/",
+          "Wiktionary contributors, https://en.wiktionary.org/"
+        ],
+        "filename": "ita_broad.phones",
+        "license": "CC-BY-SA-4.0 (Wiktionary terms; GFDL alternative)",
+        "license_url": "https://en.wiktionary.org/wiki/Wiktionary:Copyrights",
+        "revision": "d282e848a211ea31cfd730f0ced8bc8cdab9e83d",
+        "sha256": "d05afac80a5873a329d3e314f5c3c2fb780e211e68bd65a2f4b1e3268b60f71b",
+        "url": "https://raw.githubusercontent.com/CUNY-CL/wikipron/d282e848a211ea31cfd730f0ced8bc8cdab9e83d/data/phones/phones/ita_broad.phones"
+      }
+    },
+    "spelling_overlap": {
+      "dev_test": 0,
+      "train_dev": 0,
+      "train_test": 0
+    },
+    "split": {
+      "casefold_overlap": {
+        "dev_test": 0,
+        "train_dev": 0,
+        "train_test": 0
+      },
+      "dev_fraction_of_remaining_groups": 0.1,
+      "groups": {
+        "dev": 7321,
+        "test": 8135,
+        "train": 65898
+      },
+      "max_test_words": 10000,
+      "method": "complete NFC-casefold spelling groups; original case retained",
+      "rounding": "floor; minimum one held-out group per split; reject empty train",
+      "seed": 1729,
+      "test_fraction": 0.1
+    }
+  },
+  "metrics": {
+    "empty_predictions": 0,
+    "n_test": 8222,
+    "per_equiv_pct": 2.606810635787394,
+    "per_pct": 2.606810635787394,
+    "per_reference_edits": 1900,
+    "per_reference_pct": 2.6089225150013045,
+    "per_variant_edits": 1658,
+    "per_variant_pct": 2.2768157536974223,
+    "per_variant_reference_phones": 72821,
+    "pos_acc_pct": 95.13761216145762,
+    "prediction_errors": 0,
+    "reference_phones": 72827,
+    "wer_pct": 19.350522987107755,
+    "wer_relaxed_pct": 16.90586232060326
+  },
+  "provenance": {
+    "code_sha256": "00d268858cdbe18807eeaccac4df6bad670a17551615214ee3b7f170cc23d93b",
+    "dependencies": {
+      "cartlet": "0.6.0",
+      "icukit": "0.4.0",
+      "phonebox": "0.3.0"
+    },
+    "dirty": false,
+    "machine": "arm64",
+    "python": "3.12.12",
+    "revision": "de8fbc3f966c191eee59ff48d3f0347c65ee55ef",
+    "system": "Darwin"
+  },
+  "schema_version": 1,
+  "settings": {
+    "dictionary_lookup": false,
+    "evaluation_scope": "held-out spellings; model only; dictionary lookup disabled",
+    "letter_preprocessing": {
+      "cased": true,
+      "filter_non_letters": false,
+      "join_char": "\u208a",
+      "letter_joins": [],
+      "remove_accents": false,
+      "source": {
+        "g2p_rules": null,
+        "norm_rules": null
+      },
+      "spelling_rewrites": {},
+      "version": 1
+    },
+    "max_combinations": 5000,
+    "max_iterations": 100,
+    "min_change_ratio": 0.0,
+    "parallel_align": false,
+    "phone_mapping": null,
+    "prune": false,
+    "remove_stress": false,
+    "threads": 1,
+    "trainer": "native",
+    "use_dict_fallback": false,
+    "width": 7
+  },
+  "system": "cart",
+  "timings": {
+    "export_seconds": 0.14019341696985066,
+    "prediction_seconds": 0.45709687494672835,
+    "training_scope": "load/align/fit; export excluded",
+    "training_seconds": 114.68049462512136
+  },
+  "training": {
+    "candidate_entries": 72468,
+    "convergence": {
+      "cap_censored": false,
+      "converged": true,
+      "criterion": "changed == 0 or changed-entry ratio < threshold",
+      "history": [
+        {
+          "changed": 9741,
+          "iteration": 1,
+          "ratio": 0.13811731677229996
+        },
+        {
+          "changed": 1612,
+          "iteration": 2,
+          "ratio": 0.022856494675797923
+        },
+        {
+          "changed": 753,
+          "iteration": 3,
+          "ratio": 0.010676762091114041
+        },
+        {
+          "changed": 19,
+          "iteration": 4,
+          "ratio": 0.0002694003714889333
+        },
+        {
+          "changed": 0,
+          "iteration": 5,
+          "ratio": 0.0
+        }
+      ],
+      "iterations": 5,
+      "max_iterations": 100,
+      "stop_reason": "converged",
+      "threshold": 0.0
+    },
+    "dictionary_entries": 0,
+    "model_bytes": 59229,
+    "retained_entries": 70527,
+    "skipped_entries": 1941,
+    "supplied_entries": 72468
+  }
+}

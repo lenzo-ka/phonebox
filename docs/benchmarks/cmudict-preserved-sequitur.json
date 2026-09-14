@@ -1,0 +1,288 @@
+{
+  "dataset": {
+    "counts": {
+      "dev": {
+        "duplicates_removed": 0,
+        "prepared_entries": 12426,
+        "source_entries": 12426,
+        "words": 11605
+      },
+      "test": {
+        "duplicates_removed": 0,
+        "prepared_entries": 10664,
+        "source_entries": 10664,
+        "words": 10000
+      },
+      "train": {
+        "duplicates_removed": 2,
+        "prepared_entries": 112074,
+        "source_entries": 112076,
+        "words": 104447
+      }
+    },
+    "deduplication": "NFC spelling and full transformed phone sequence; stable first occurrence within each split",
+    "locale": "en_US",
+    "name": "cmudict",
+    "phoneset": "cmu",
+    "preparation": {
+      "phones": "original tokens",
+      "remove_stress": false,
+      "spelling": "NFC; lowercase"
+    },
+    "prepared_hash_encoding": "UTF-8 compact JSON ordered [spelling, phone-token-list] pairs; no newline",
+    "prepared_sha256": {
+      "dev": "7e2b6b3e0efde4284806dc7876e3ec52d096ada3cfc5acba8e66ba3906897566",
+      "test": "356328cf3a8b87ce01cc087c0f129f6eff41b2ebddce6351a6fb64f862b86dfc",
+      "train": "1e354b709ae151e8a2ad259e44e212c555531a443f6195a5304ba469c96d6a91"
+    },
+    "schema_version": 1,
+    "sources": {
+      "lexicon": {
+        "citations": [
+          "CMU Pronouncing Dictionary, Carnegie Mellon University and contributors, https://github.com/cmusphinx/cmudict"
+        ],
+        "filename": "cmudict.dict",
+        "license": "BSD-2-Clause",
+        "license_url": "https://github.com/cmusphinx/cmudict/blob/74790861f652b15e4ac49015a90074ad62a27690/LICENSE",
+        "revision": "74790861f652b15e4ac49015a90074ad62a27690",
+        "sha256": "81917843c7f44ce2b094ac63873c2c7a4cf802040792c455ba3ca406891c3d22",
+        "url": "https://raw.githubusercontent.com/cmusphinx/cmudict/74790861f652b15e4ac49015a90074ad62a27690/cmudict.dict"
+      }
+    },
+    "spelling_overlap": {
+      "dev_test": 0,
+      "train_dev": 0,
+      "train_test": 0
+    },
+    "split": {
+      "dev_fraction_of_remaining_groups": 0.1,
+      "max_test_words": 10000,
+      "method": "complete NFC lowercase spelling groups",
+      "rounding": "floor; minimum one held-out group per split; reject empty train",
+      "seed": 1729,
+      "test_fraction": 0.1
+    }
+  },
+  "metrics": {
+    "empty_predictions": 0,
+    "n_test": 10000,
+    "per_equiv_pct": 14.154835673386147,
+    "per_pct": 14.154835673386147,
+    "per_reference_edits": 9023,
+    "per_reference_pct": 14.276221065455754,
+    "per_variant_edits": 8716,
+    "per_variant_pct": 13.786994416235625,
+    "per_variant_reference_phones": 63219,
+    "pos_acc_pct": 81.97035061573457,
+    "prediction_errors": 0,
+    "reference_phones": 63203,
+    "wer_pct": 52.93,
+    "wer_relaxed_pct": 51.56
+  },
+  "provenance": {
+    "code_sha256": "ef9f8c29aadc5e213c857044c662dfc9533f6ae28911ef83772ee94368ee458c",
+    "dependencies": {
+      "cartlet": "0.6.0",
+      "icukit": "0.4.0",
+      "phonebox": "0.3.0"
+    },
+    "dirty": false,
+    "machine": "x86_64",
+    "python": "3.12.3",
+    "revision": "a7bfbeb7ae9e84bdd47f5ba8f1c260430148c3ef",
+    "system": "Linux",
+    "tool": {
+      "build": {
+        "compatibility_patch": "NumPy 2 API alias: num.sometrue to num.any",
+        "compatibility_patch_sha256": "72c6d06d170d37c80f33187ea9da7bf51003fcca9784e7f3bcea62285f47b985",
+        "compiler": "GCC 13.3.0",
+        "executable_sha256": "a03823e2bbc5038930f0f000fbb228d0f1e507dc39508969d97e26a4cc668f27",
+        "implementation_files_sha256": {
+          "Evaluation.py": "2ff145994f9e84391b3f3a5e0d1deed87880ff432d5fad934cacd72bdd9e1182",
+          "Minimization.py": "00950ff6fcd94870359f6c139438562fa1b2415ee9deef0a482b3d2ff9db7bb8",
+          "SequenceModel.py": "0de8e3c48bfc7c9255f56a98461238feaf795053666d6732546a91da9c9a94a8",
+          "SequiturTool.py": "88d855ced15bb154683df001c3aa19a816400fd17c0a3c7aa533a9a4ea9e4015",
+          "_sequitur_.cpython-312-x86_64-linux-gnu.so": "6cd4aa93ea3c14eae4c8910305b94bdb6255c55621bb0a3d024971a3381ae435",
+          "g2p.py": "9d02df42ccf53dc0c735536175ee2a276977144da6ab5b39615323170446b685",
+          "misc.py": "ea380b9681948e928616292479cc24ed6f8136c742af348838c6e97bb00a7b54",
+          "sequitur.py": "8e24edb3a78095b2e58a3f93142043547df2c0234b72f637d612e1cc9c3cf65f",
+          "sequitur_.py": "451a0d65e83ae5b70e5c23a550addbc1552b34350b02a8ce82bdc2ae7cba34d9",
+          "symbols.py": "aa3e450154d68c511e773e247f89adf7c116aff593b82d7c4e1ad6a00a42b57b",
+          "tool.py": "e62cf2c1bf8fdea41d30998845bcf3eeab7942d4ed09c5bff3e5ceb39f8e4144"
+        },
+        "license": "GPL-2.0-only",
+        "license_sha256": "ab15fd526bd8dd18a9e77ebc139656bf4d33e97fc7238cd11bf60e2b9b8666c6",
+        "max_build_jobs": 2,
+        "numpy": "2.5.3",
+        "python": "3.12.3",
+        "runtime_threads": 1,
+        "setuptools": "80.9.0",
+        "source_diff_sha256": "72c6d06d170d37c80f33187ea9da7bf51003fcca9784e7f3bcea62285f47b985",
+        "source_dirty": true,
+        "source_head_tree": "371f47f4b8c7620eb33b1773a7f2c6d83e2ebaf1",
+        "source_repository": "https://github.com/sequitur-g2p/sequitur-g2p",
+        "swig": "4.3.1",
+        "underlying_executable_sha256": "5bb781e49b67f59367341c8a9e1ab662765fe6406ad095bcfc7ce58568ba03b1",
+        "version_origin": "caller-declared source version",
+        "wheel_sha256": "bb01e89c63afeb97757639330675e626706d9f6dea4d100ebe3645c72dc6818e"
+      },
+      "executable": "run-sequitur",
+      "receipt_binary_binding_verified": true,
+      "sha256": "a03823e2bbc5038930f0f000fbb228d0f1e507dc39508969d97e26a4cc668f27",
+      "source_revision": "7bd56d5d502325e0be3f14b7d898720a39db3338",
+      "version": "1.0.1668.30"
+    }
+  },
+  "schema_version": 1,
+  "settings": {
+    "development_results": [
+      {
+        "metrics": {
+          "empty_predictions": 4,
+          "n_test": 11605,
+          "per_equiv_pct": 44.282475326753804,
+          "per_pct": 44.282475326753804,
+          "per_reference_edits": 33203,
+          "per_reference_pct": 45.27146791742794,
+          "per_variant_edits": 32942,
+          "per_variant_pct": 44.95298917864112,
+          "per_variant_reference_phones": 73281,
+          "pos_acc_pct": 31.90984262469992,
+          "prediction_errors": 0,
+          "reference_phones": 73342,
+          "wer_pct": 99.99138302455837,
+          "wer_relaxed_pct": 99.99138302455837
+        },
+        "order": 1
+      },
+      {
+        "metrics": {
+          "empty_predictions": 0,
+          "n_test": 11605,
+          "per_equiv_pct": 23.245324680570327,
+          "per_pct": 23.245324680570327,
+          "per_reference_edits": 17265,
+          "per_reference_pct": 23.540399770936162,
+          "per_variant_edits": 16945,
+          "per_variant_pct": 23.111965846938638,
+          "per_variant_reference_phones": 73317,
+          "pos_acc_pct": 69.58113984893568,
+          "prediction_errors": 0,
+          "reference_phones": 73342,
+          "wer_pct": 76.48427401981904,
+          "wer_relaxed_pct": 75.8638517880224
+        },
+        "order": 2
+      },
+      {
+        "metrics": {
+          "empty_predictions": 0,
+          "n_test": 11605,
+          "per_equiv_pct": 14.514582123221981,
+          "per_pct": 14.514582123221981,
+          "per_reference_edits": 10745,
+          "per_reference_pct": 14.650541299664585,
+          "per_variant_edits": 10327,
+          "per_variant_pct": 14.080416672347736,
+          "per_variant_reference_phones": 73343,
+          "pos_acc_pct": 81.51129962582232,
+          "prediction_errors": 0,
+          "reference_phones": 73342,
+          "wer_pct": 53.70960792761741,
+          "wer_relaxed_pct": 52.012063765618265
+        },
+        "order": 3
+      }
+    ],
+    "dictionary_lookup": false,
+    "evaluation_scope": "held-out spellings; model only; dictionary lookup disabled",
+    "extension_iterations": 200,
+    "extension_policy": "fresh order restart if upstream iteration limit reached",
+    "iteration_limited_orders": [],
+    "letter_preprocessing": {
+      "cased": true,
+      "filter_non_letters": false,
+      "join_char": "₊",
+      "letter_joins": [],
+      "remove_accents": false,
+      "source": {
+        "g2p_rules": null,
+        "norm_rules": null
+      },
+      "spelling_rewrites": {},
+      "version": 1
+    },
+    "max_iterations": 100,
+    "min_iterations": 20,
+    "orders": [
+      1,
+      2,
+      3
+    ],
+    "phone_mapping": null,
+    "remove_stress": false,
+    "selected_order": 3,
+    "selection": [
+      "dev per_variant_pct",
+      "dev wer_relaxed_pct",
+      "lower order"
+    ],
+    "threads": 1,
+    "training_attempts": [
+      {
+        "iterations": 27,
+        "last_dev_log_likelihoods": [
+          -430316.7421384877,
+          -430316.68787062046
+        ],
+        "max_iterations": 100,
+        "order": 1,
+        "stop_reason": "converged"
+      },
+      {
+        "iterations": 100,
+        "last_dev_log_likelihoods": [
+          -314677.3241553368,
+          -314676.3074343132
+        ],
+        "max_iterations": 100,
+        "order": 2,
+        "stop_reason": "iteration_limit"
+      },
+      {
+        "iterations": 162,
+        "last_dev_log_likelihoods": [
+          -314665.6962649537,
+          -314665.723080431
+        ],
+        "max_iterations": 200,
+        "order": 2,
+        "stop_reason": "converged"
+      },
+      {
+        "iterations": 90,
+        "last_dev_log_likelihoods": [
+          -266831.0203812385,
+          -266831.0866996426
+        ],
+        "max_iterations": 100,
+        "order": 3,
+        "stop_reason": "converged"
+      }
+    ]
+  },
+  "system": "sequitur",
+  "timings": {
+    "export_seconds": 0.0,
+    "prediction_seconds": 76.3301243558526,
+    "training_scope": "fit and declared development selection; external export included",
+    "training_seconds": 16307.386955128983
+  },
+  "training": {
+    "model_bytes": 1605862,
+    "retained_entries": null,
+    "retention_note": "upstream retention is not exposed by this adapter",
+    "skipped_entries": null,
+    "supplied_entries": 112074
+  }
+}

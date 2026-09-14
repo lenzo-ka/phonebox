@@ -208,6 +208,28 @@ system rows, and labels unmeasured systems. Models, logs, and raw predictions
 stay in the experiment directory; only aggregate result JSON and its rendering
 belong in the public results snapshot.
 
+## Measured snapshot
+
+The tracked results are the sixteen aggregate rows in [`benchmarks/`](benchmarks/):
+four conditions (CMUdict stress preserved, CMUdict stress removed, French,
+Italian) for Phonebox CART, Phonebox n:m, Sequitur and Phonetisaurus.
+[`G2P_BENCHMARKS.md`](G2P_BENCHMARKS.md) is generated from those rows by the
+renderer, and the artifact test regenerates it exactly:
+
+```sh
+phonebox compare benchmark-report docs/benchmarks/*.json --output docs/G2P_BENCHMARKS.md
+```
+
+Native rows record Phonebox source revision `de8fbc3`; external rows record
+adapter revision `a7bfbeb` and each tool's build receipt. Within a condition all
+rows share the prepared split digests, disable dictionary lookup, and carry full
+error and admission accounting. No row cites a local path.
+
+The DeepPhonemizer autoregressive comparison is deferred. Its optional toolchain
+and adapter are included, but no neural row is in this snapshot, and the report
+labels it as not measured. A later snapshot will add those rows when the full
+four-condition runs complete under the same protocol, without changing these.
+
 ## Interpreting and replicating results
 
 Compare measured systems within the same prepared dataset and split hashes.

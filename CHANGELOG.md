@@ -98,6 +98,11 @@ bundles together with their models. See [migration notes](docs/RELEASING.md#upgr
   validated aggregate reporting for CART, n:m, Sequitur, and Phonetisaurus.
   Pin dataset and toolchain sources, preserve pronunciation groups, and record
   split hashes, licenses, training admission, and prediction failures.
+- Record the measured four-system comparison: sixteen aggregate result rows in
+  `docs/benchmarks/` and the generated `docs/G2P_BENCHMARKS.md`, pinned by an
+  artifact test to exact regeneration, shared split digests, disabled lookup,
+  full accounting and path-free provenance. The DeepPhonemizer comparison is
+  deferred to a later snapshot; the report labels it as not measured.
 
 - Refresh the pinned CMUdict CART/multigram comparison with Cartlet 0.6.0,
   retaining the exact source, dependency, data, and split provenance.
