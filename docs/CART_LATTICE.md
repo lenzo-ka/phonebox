@@ -38,3 +38,6 @@ development population for independent versus lattice prediction. Report path
 coverage, WER/PER, model/support size and preparation/prediction costs, retaining
 missing predictions and negative outcomes. No corpus benefit is claimed yet.
 French citation-form evaluation remains separate from context-aware liaison.
+
+See [the development diagnosis](CART_DECOMPOSITION_DIAGNOSIS.md) for measured
+projection failures, coverage losses and an explicit backoff experiment.

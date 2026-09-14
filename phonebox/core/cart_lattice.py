@@ -94,8 +94,8 @@ class CartDecompositionLattice:
             total = math.fsum(distribution.values())
             if not math.isclose(total, 1.0, abs_tol=1e-6, rel_tol=1e-6):
                 raise ValueError("CART target probabilities must sum to one")
-            # Fractional leaf-count accumulation can drift by a few parts in
-            # 1e8. Normalizing contributes one constant per letter position to
+            # Tiny probabilities omitted by Cartlet, or fractional accumulation,
+            # can leave small mass deficits. Normalization adds one constant to
             # every complete path, so its ranking is unchanged.
             if total != 1.0:
                 normalization = math.log(total)
