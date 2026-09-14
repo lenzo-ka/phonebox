@@ -46,7 +46,15 @@ def test_wheel_and_sdist_versions_resources_and_notices(tmp_path):
         )
     )
     assert runtime_version == version
-    notices = ["LICENSE", "LICENSE-UNICODE", "THIRD_PARTY_NOTICES.md"]
+    notices = [
+        "LICENSE",
+        "LICENSE-UNICODE",
+        "LICENSE-DEEPPHONEMIZER",
+        "THIRD_PARTY_NOTICES.md",
+    ]
+    assert (root / "LICENSE-DEEPPHONEMIZER").read_bytes() == (
+        root / "docs/patches/DeepPhonemizer-LICENSE"
+    ).read_bytes()
     resources = [root / "phonebox/py.typed", root / "phonebox/config/exemplars.json"]
     resources.extend(
         path
@@ -65,6 +73,14 @@ def test_wheel_and_sdist_versions_resources_and_notices(tmp_path):
     release_docs.extend(
         path for path in (root / "docs").rglob("*") if path.suffix in {".md", ".json"}
     )
+    # Third-party patches, license texts and dependency locks that the docs
+    # cite must travel with the source distribution.
+    patches = sorted(
+        path for path in (root / "docs/patches").iterdir() if path.is_file()
+    )
+    locks = sorted((root / "docs/locks").glob("*.txt"))
+    assert patches and locks
+    release_docs.extend(patches + locks)
     extracted = tmp_path / "extracted"
     with tarfile.open(sdist, "r:gz") as archive:
         prefix = f"phonebox-{version}/"
@@ -88,7 +104,7 @@ def test_wheel_and_sdist_versions_resources_and_notices(tmp_path):
             for requirement in metadata.get_all("Requires-Dist", [])
         )
         assert metadata["Version"] == version
-        assert metadata["License-Expression"] == "BSD-2-Clause AND Unicode-3.0"
+        assert metadata["License-Expression"] == "BSD-2-Clause AND Unicode-3.0 AND MIT"
         archive.extractall(extracted, filter="data")
 
     # Exercise the archive as the wheel's source, rather than building from
@@ -109,7 +125,7 @@ def test_wheel_and_sdist_versions_resources_and_notices(tmp_path):
             for requirement in metadata.get_all("Requires-Dist", [])
         )
         assert metadata["Version"] == version
-        assert metadata["License-Expression"] == "BSD-2-Clause AND Unicode-3.0"
+        assert metadata["License-Expression"] == "BSD-2-Clause AND Unicode-3.0 AND MIT"
         dist_info = metadata_name.removesuffix("METADATA")
         for name in notices:
             assert (

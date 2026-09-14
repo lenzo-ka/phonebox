@@ -95,6 +95,17 @@ bundles together with their models. See [migration notes](docs/RELEASING.md#upgr
   `EMAlign.alignment_history`, recording actual changed counts and ratios per
   run so callers can distinguish convergence from reaching an iteration cap.
 
+### Packaging and notices
+
+- Ship the DeepPhonemizer MIT notice as `LICENSE-DEEPPHONEMIZER` in the wheel
+  and source distribution, declare it in the license expression, and record in
+  the third-party notices that the packaged neural benchmark module embeds a
+  modification of that code. Include the tracked third-party patches, license
+  texts and dependency locks in the source distribution; the packaging test
+  now checks all of them.
+- Clarify that the runtime requires only `icukit>=0.1.2`; the ICU backend pin
+  that generated the exemplar data belongs to the `dev` extra.
+
 ### Documentation and evaluation
 
 - Add shared public benchmark data preparation, model adapters, CLI commands, and

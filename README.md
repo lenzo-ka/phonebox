@@ -241,5 +241,7 @@ Phonebox is by [Kevin Lenzo](https://github.com/lenzo-ka), building on
 Source code uses the [BSD 2-Clause License](https://github.com/lenzo-ka/phonebox/blob/main/LICENSE).
 Generated ICU/CLDR locale data uses the
 [Unicode License v3](https://github.com/lenzo-ka/phonebox/blob/main/LICENSE-UNICODE).
+The embedded DeepPhonemizer training patch is a modification of
+[MIT-licensed code](https://github.com/lenzo-ka/phonebox/blob/main/LICENSE-DEEPPHONEMIZER).
 [Third-party notices](https://github.com/lenzo-ka/phonebox/blob/main/THIRD_PARTY_NOTICES.md)
 record the source, modifications, and pinned data versions.
