@@ -1,78 +1,32 @@
-# Posterior decomposition scattering: interim development result
+# Posterior decomposition scattering: complete development result
 
-The French result does not support the proposed accuracy gain under the
-prespecified unigram-q teacher and left-anchor projection. Posterior training
-has slightly higher error than the matched hard-projection control, and both
-are substantially worse than epsilon-CART. This is a retained negative result,
-not a reason to replace the original baseline or change the ongoing protocol.
+The prespecified unigram-q teacher and left-anchor CART projection do not support the proposed gain with independent-position prediction: posterior training has higher variant PER than its matched hard-projection control in all four conditions. Both remain worse than epsilon-CART. These negative results are retained; baseline settings and test predictions are unchanged.
 
-| French supervision | Development WER % | Development PER % | Admitted / skipped | Target preparation + CART fit (s) | Model bytes |
-| --- | ---: | ---: | --- | ---: | ---: |
-| Hard q-Viterbi projection | 31.9667 | 6.8780 | 78,588 / 18 | 177.07 | 193,144 |
-| Posterior q projection | 33.3333 | 6.9885 | 78,588 / 18 | 564.04 | 3,887,623 |
-| Epsilon-CART reference | 14.1221 | 2.6885 | 77,555 / 1,051 | 265.59 | 91,743 |
+| Condition | Supervision | Dev variant WER % | Dev variant PER % | Admitted / skipped | Targets + fit (s) | Model bytes |
+| --- | --- | ---: | ---: | --- | ---: | ---: |
+| french | hard-q | 31.9667 | 6.8780 | 78,588 / 18 | 177.07 | 193144 |
+| french | posterior-q | 33.3333 | 6.9885 | 78,588 / 18 | 564.04 | 3887623 |
+| french | epsilon | 14.1221 | 2.6885 | 77,555 / 1,051 | 265.59 | 91743 |
+| italian | hard-q | 25.9970 | 4.0224 | 72,448 / 20 | 129.15 | 133882 |
+| italian | posterior-q | 29.5796 | 4.6151 | 72,448 / 20 | 564.96 | 3719216 |
+| italian | epsilon | 16.7500 | 2.2452 | 70,527 / 1,941 | 177.29 | 59230 |
+| cmudict-preserved | hard-q | 61.1633 | 18.6094 | 112,032 / 42 | 211.58 | 547150 |
+| cmudict-preserved | posterior-q | 62.5506 | 19.3105 | 112,032 / 42 | 619.84 | 7441448 |
+| cmudict-preserved | epsilon | 53.6838 | 13.3886 | 109,929 / 2,145 | 197.70 | 367282 |
+| cmudict-removed | hard-q | 52.8996 | 14.7028 | 111,775 / 42 | 192.59 | 436755 |
+| cmudict-removed | posterior-q | 54.7523 | 15.2503 | 111,775 / 42 | 714.77 | 7565001 |
+| cmudict-removed | epsilon | 42.4300 | 9.7079 | 109,675 / 2,142 | 202.19 | 277800 |
 
-Posterior-minus-hard differences: **+0.1105 PER percentage points** and
-**+1.3666 WER percentage points**. No statistical-significance claim is made.
-Posterior preparation recorded 567,832 ambiguous admitted letter positions.
-Repeated pairs retain their multiplicity. The two projected models share the
-same fitted q and admission; the epsilon reference has different admission.
+Posterior-minus-hard PER changes (percentage points):
+- french: +0.1105.
+- italian: +0.5927.
+- cmudict-preserved: +0.7011.
+- cmudict-removed: +0.5475.
 
-All three metric rows were independently recomputed from their saved
-predictions on all 7,683 development spellings and matched exactly. No test
-predictions were generated. Frozen source: `000eb75`. Full settings, pinned
-preparation, hypothesis and interpretation limits are in
-[CART_DECOMPOSITION_EXPERIMENT.md](CART_DECOMPOSITION_EXPERIMENT.md).
+All 12 metric rows were independently recomputed from their saved predictions on the entire fixed development splits and matched exactly. The matched hard/posterior pair shares fitted q, preprocessing and admission within each condition. Epsilon-CART admission differs and is reported. No significance, novelty or independent test-generalization claim is made.
 
-The French lexicon preparation excludes explicitly liaison-marked variants.
-These runs provide no following-word context and do not measure contextual
-liaison prediction. Unmarked pronunciation ambiguity can remain. French is
-therefore a citation-form decomposition experiment, not a complete model of
-French pronunciation. Identical preparation keeps the hard/posterior contrast
-matched, but results should not be generalized to liaison-aware systems.
+Frozen source: `000eb75`. Shared q training is accounted separately from target preparation and CART fitting. Full settings and hypothesis are in [the experiment protocol](CART_DECOMPOSITION_EXPERIMENT.md). Raw models, predictions and receipts remain private.
 
-The alignment teacher itself already uses soft EM. This experiment concerns
-carrying its final alignment uncertainty through CART supervision, rather than
-using soft versus hard EM to estimate q. Marginal targets discard correlations
-between positions; independent CART predictions may combine targets that never
-co-occurred in one complete alignment. That is one plausible failure mechanism,
-not yet a demonstrated cause. Teacher quality, projection policy and model
-complexity remain other possible explanations.
+The teacher already estimates q using soft EM. This experiment concerns retaining its final gold-conditioned alignment uncertainty through CART targets. Marginal targets discard complete-path correlations; a failure here does not falsify averaging over complete possibilities during EM. Teacher quality, projection and leaf storage remain separate mechanisms. The runtime lattice and leaf-retention ablations have changed, explicitly declared objectives; their outcomes do not retroactively alter this independent-position hypothesis.
 
-The CMUdict stress-removed condition remains in progress. Their outcomes, including
-losses and null results, will be appended without tuning on these measurements.
-The separate lattice extension will compare coherent supported path decoding
-against the existing independent-position prediction objective.
-
-## Italian projected-target result
-
-Italian also shows a loss from posterior training. This indicates that the
-observed regression is not confined to the French condition; it does not
-identify its cause. Both projected models admit the same 72,448 pairs and
-skip 20. Metrics were recomputed exactly on all 7,397 development spellings.
-
-| Italian supervision | Development WER % | Development PER % |
-| --- | ---: | ---: |
-| hard-q | 25.9970 | 4.0224 |
-| posterior-q | 29.5796 | 4.6151 |
-| epsilon reference | 16.7500 | 2.2452 |
-
-Posterior-minus-hard PER: +0.5927 percentage points. No significance claim or test tuning.
-
-## CMUdict, stress preserved
-
-The first CMUdict condition replicates the posterior loss under this teacher
-and projection. All three saved prediction rows were independently recomputed
-on the fixed development split and matched exactly.
-
-| Supervision | Development WER % | Development PER % |
-| --- | ---: | ---: |
-| hard-q | 61.1633 | 18.6094 |
-| posterior-q | 62.5506 | 19.3105 |
-| epsilon reference | 53.6838 | 13.3886 |
-
-Posterior-minus-hard PER: +0.7011 percentage points. These are development
-results with independent-position prediction; lattice and leaf-retention
-experiments have different declared objectives and remain separate. Three
-completed conditions now show losses for the original hypothesis; no
-significance or held-out test-generalization claim is made.
+French preparation excludes explicitly liaison-marked variants and supplies no following-word context. It measures citation forms, not contextual liaison. The Italian and CMU replications show the observed regression is not confined to French; they do not identify its entire cause.
