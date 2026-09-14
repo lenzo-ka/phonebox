@@ -503,8 +503,10 @@ def run_compare(
         if not quiet:
             print(f"  done in {time.time() - t0:.1f}s", flush=True)
 
+        predictor = multigram.prepare_predictor()
+
         def mg_predict(word: str) -> list[str]:
-            pred = multigram.pronounce(word)
+            pred = predictor.pronounce(word)
             cooked = vec.cook_phones(pred)
             return cooked if cooked else pred
 
