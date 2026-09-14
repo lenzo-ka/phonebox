@@ -74,6 +74,17 @@ bundles together with their models. See [migration notes](docs/RELEASING.md#upgr
 - Keep ordinary per-position inference and epsilon training as defaults.
   Disable static locale joins in the new public workflow, reject internal
   row splits, and build dictionary corrections from admitted source pairs.
+- Add an opt-in CART-scored decomposition lattice. `prepare_decomposition_lattice`
+  and `pronounce_lattice` select a supported complete joint-unit path from
+  contextual CART target probabilities with the shared exact Viterbi decoder,
+  adding no q factor, beam, probability floor or sequence LM. Posterior-trained
+  models save their validated unit inventory; earlier artifacts can supply
+  explicit units. Fractional leaf roundoff is normalized without changing path
+  rankings.
+- Record the development-only outcomes: posterior scattering loses to hard
+  projection in all four conditions; lattice decoding lowers posterior-tree
+  PER in all four; retaining leaf alternatives improves lattice PER further
+  with unchanged point predictions. No corpus gain or test claim is made.
 
 ### Training diagnostics
 
