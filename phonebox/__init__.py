@@ -16,7 +16,7 @@ from .converter import G2P
 # Core classes (for advanced use)
 from .core.decision_tree import DecisionTree
 from .core.em_align import EMAlign
-from .core.multigram_g2p import MultigramG2P
+from .core.multigram_g2p import MultigramG2P, MultigramPredictor
 from .core.vectorizer import Vectorizer
 from .dictionary import Dictionary
 from .join_discovery import JoinCandidate, JoinDiscoveryResult, discover_joins
@@ -50,6 +50,7 @@ __all__ = [
     "DecisionTree",
     "EMAlign",
     "MultigramG2P",
+    "MultigramPredictor",
     "Vectorizer",
     "JoinCandidate",
     "JoinDiscoveryResult",

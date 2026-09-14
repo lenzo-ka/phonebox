@@ -7,23 +7,19 @@ one pass instead of greedy ``segment_letters`` + per-unit prediction.
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
+
 from .multigram_align import EPS, Unit
 from .multigram_lm import SOS, MultigramLM, decode_unit_id, unit_id
 
 
 def _index_units(q: dict[Unit, float], max_l: int) -> dict[str, list[Unit]]:
-    """Index scorable units by their first letter.
-
-    Each decode position then inspects only the handful of units that could
-    start there, instead of scanning the whole ``q`` table once per position.
-    Units with probability at or below EPS or a letter span outside ``1..max_l``
-    are dropped up front.
-    """
+    """Index supported units by first letter, preserving candidate order."""
     index: dict[str, list[Unit]] = {}
-    for (L, P), prob in q.items():
-        if prob <= EPS or not 1 <= len(L) <= max_l:
+    for (letters, phones), probability in q.items():
+        if probability <= EPS or not 1 <= len(letters) <= max_l:
             continue
-        index.setdefault(L[0], []).append((L, P))
+        index.setdefault(letters[0], []).append((letters, phones))
     return index
 
 
@@ -69,7 +65,20 @@ def joint_decode(
     if n == 0:
         return []
 
-    index = _index_units(q, max_letter_span)
+    return _decode_prepared(letters, _index_units(q, max_letter_span), lm, beam)
+
+
+def _decode_prepared(
+    letters: list[str],
+    index: Mapping[str, Sequence[Unit]],
+    lm: MultigramLM,
+    beam: int,
+    unit_ids: Mapping[Unit, str] | None = None,
+) -> list[str] | None:
+    """Decode using ordered prepared candidates and an owned language model."""
+    n = len(letters)
+    if not n:
+        return []
     ctx_width = lm.order - 1
 
     # best[i][state] = (log_score, back_position, back_state, uid_ending_here)
@@ -91,9 +100,9 @@ def joint_decode(
                 j = i + len(L)
                 if j > n or list(L) != letters[i : i + len(L)]:
                     continue
-                uid = unit_id(unit)
+                uid = unit_ids[unit] if unit_ids is not None else unit_id(unit)
                 new_state = (state + (uid,))[-ctx_width:] if ctx_width else ()
-                new_score = score + lm.log_prob(unit, history)
+                new_score = score + lm.log_prob_unit_id(uid, history)
                 prev = best[j].get(new_state)
                 if prev is None or new_score > prev[0]:
                     best[j][new_state] = (new_score, i, state, uid)

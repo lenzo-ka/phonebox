@@ -55,3 +55,34 @@ objective. Earlier model layouts require retraining; see
 [release migration](RELEASING.md#multigram-scoring-artifacts). Historical reports
 and models keep their original source, order and search settings; adding this
 capability does not rewrite their measurements.
+
+## Repeated prediction
+
+Prepare a reusable snapshot when predicting many words from one trained model:
+
+```python
+from phonebox import MultigramG2P
+
+model = MultigramG2P.load("model.g2p")
+predictor = model.prepare_predictor()
+pronunciations = [predictor.pronounce(word) for word in words]
+```
+
+`MultigramPredictor.pronounce_letters(letters, word=...)` accepts already cooked
+letter tokens, like the model method. The snapshot preserves the language model,
+ordered candidate units, preprocessing, exception lookup, and decoding beam.
+Later changes or retraining of `model` do not change existing predictors; call
+`prepare_predictor()` again to refresh. Returned phone lists can be modified
+without changing the snapshot.
+
+Preparation copies the model's inference state once and builds the candidate
+index and encoded unit IDs once. It costs additional time and memory that grow
+with model size, which can be amortized over a batch; single-word model methods
+continue to use current model state. The pronunciation CLI and the two-way
+comparison evaluator prepare once and reuse the result for their input stream.
+Preparation and prediction should be measured separately when reporting speed.
+The public `joint_decode` function remains available for direct mutable inputs.
+
+For callers already holding encoded unit IDs, `MultigramLM.log_prob_unit_id`
+uses the same probability calculation and vocabulary validation as `log_prob`,
+without encoding the unit again.

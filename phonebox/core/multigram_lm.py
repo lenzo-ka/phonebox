@@ -172,7 +172,10 @@ class MultigramLM:
         A unit outside the fixed prediction support raises ValueError. Only
         the last ``order - 1`` history ids can affect the probability.
         """
-        uid = unit_id(unit)
+        return self.log_prob_unit_id(unit_id(unit), history)
+
+    def log_prob_unit_id(self, uid: str, history: list[str]) -> float:
+        """Score an encoded unit id, with the same support check as log_prob."""
         if uid not in self._vocab:
             raise ValueError("unit is outside the declared LM prediction vocabulary")
         return self._log_prob_with_history(uid, history)
