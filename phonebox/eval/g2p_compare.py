@@ -28,6 +28,11 @@ from phonebox.experiments.normalize import apply_train_normalize
 from phonebox.experiments.split import split_lexicon
 from phonebox.lexicon import parse_dict_line
 
+EVALUATION_TIMING_NOTE = (
+    "Timings are monotonic wall-clock seconds. Training/loading exclude preparation "
+    "and evaluation; eval_s includes prediction and metric calculation."
+)
+
 PolicyFn = Callable[[str, list[str]], list[str]]
 
 if TYPE_CHECKING:
@@ -256,11 +261,13 @@ def train_baseline(
         trainer="native",
         parallel_align=False,
         max_combinations=5000,
-        use_dict_fallback=use_dict_fallback,
+        # Do not infer correction exceptions that an explicit table replaces.
+        use_dict_fallback=use_dict_fallback and exceptions is None,
     )
     dt.load_prondict(iter(train_lines))
     dt.align()
     dt.train(prune=False)
+    dt.use_dict_fallback = use_dict_fallback
     if exceptions is not None:
         dt.exceptions = exceptions
     return dt
@@ -356,7 +363,12 @@ def run_compare(
     use_exceptions: bool = False,
     quiet: bool = True,
 ) -> dict[str, object]:
-    """Run comparison; return metadata plus per-model metric dicts."""
+    """Return metadata, metrics and disjoint monotonic stage durations.
+
+    train_s measures fitting, load_s measures a supplied baseline load, prep_s
+    measures reusable predictor preparation, and eval_s includes prediction and
+    metric calculation. Shared data loading/cooking precedes these stages.
+    """
     if not lexicon.is_file():
         raise FileNotFoundError(f"lexicon not found: {lexicon}")
     if baseline_model is not None and not baseline_model.is_file():
@@ -448,7 +460,7 @@ def run_compare(
     results: list[tuple[str, float, dict[str, float]]] = []
 
     if not skip_baseline:
-        t0 = time.time()
+        t0 = time.perf_counter()
         if baseline_model is not None:
             if not quiet:
                 print("loading G2PDecisionTree (1:1)…", flush=True)
@@ -469,8 +481,10 @@ def run_compare(
                 use_dict_fallback=use_exceptions,
                 exceptions=train_exceptions,
             )
+        fit_seconds = time.perf_counter() - t0
         if not quiet:
-            print(f"  done in {time.time() - t0:.1f}s", flush=True)
+            print(f"  done in {fit_seconds:.1f}s", flush=True)
+        evaluation_started = time.perf_counter()
         m = evaluate(
             "1:1",
             predict_cooked_phones(vec, baseline.pronounce),
@@ -479,12 +493,19 @@ def run_compare(
             phone_equiv=equiv,
             quiet=quiet,
         )
-        results.append(("G2PDecisionTree", time.time() - t0, m))
+        m.update(
+            load_s=fit_seconds if baseline_model is not None else 0.0,
+            prep_s=0.0,
+            eval_s=time.perf_counter() - evaluation_started,
+        )
+        results.append(
+            ("G2PDecisionTree", 0.0 if baseline_model is not None else fit_seconds, m)
+        )
 
     if not skip_multigram:
         if not quiet:
             print("training MultigramG2P (n:m)…", flush=True)
-        t0 = time.time()
+        t0 = time.perf_counter()
         multigram_result = train_multigram(
             train_cooked,
             max_letter_span,
@@ -500,16 +521,20 @@ def run_compare(
             preprocessor=vec,
         )
         multigram = multigram_result.model
+        fit_seconds = time.perf_counter() - t0
         if not quiet:
-            print(f"  done in {time.time() - t0:.1f}s", flush=True)
+            print(f"  done in {fit_seconds:.1f}s", flush=True)
 
+        preparation_started = time.perf_counter()
         predictor = multigram.prepare_predictor()
+        preparation_seconds = time.perf_counter() - preparation_started
 
         def mg_predict(word: str) -> list[str]:
             pred = predictor.pronounce(word)
             cooked = vec.cook_phones(pred)
             return cooked if cooked else pred
 
+        evaluation_started = time.perf_counter()
         m = evaluate(
             "multigram",
             mg_predict,
@@ -518,7 +543,12 @@ def run_compare(
             phone_equiv=equiv,
             quiet=quiet,
         )
-        results.append(("MultigramG2P", time.time() - t0, m))
+        m.update(
+            load_s=0.0,
+            prep_s=preparation_seconds,
+            eval_s=time.perf_counter() - evaluation_started,
+        )
+        results.append(("MultigramG2P", fit_seconds, m))
 
     out: dict[str, object] = {
         "locale": locale,
@@ -547,7 +577,7 @@ def print_results_table(
     *,
     show_relaxed_per: bool = False,
 ) -> None:
-    hdr = f"{'model':<18} {'train_s':>8} {'WER%':>8} {'WERr%':>8} {'PER%':>8}"
+    hdr = f"{'model':<18} {'train_s':>8} {'load_s':>8} {'prep_s':>8} {'eval_s':>8} {'WER%':>8} {'WERr%':>8} {'PER%':>8}"
     if show_relaxed_per:
         hdr += f" {'PERr%':>8}"
     hdr += f" {'pos%':>8}"
@@ -556,13 +586,15 @@ def print_results_table(
     print("-" * (len(hdr) + 2))
     for name, train_s, m in results:
         row = (
-            f"{name:<18} {train_s:8.1f} {m['wer_pct']:8.2f} "
+            f"{name:<18} {train_s:8.1f} {m['load_s']:8.1f} {m['prep_s']:8.1f} "
+            f"{m['eval_s']:8.1f} {m['wer_pct']:8.2f} "
             f"{m['wer_relaxed_pct']:8.2f} {m['per_pct']:8.2f}"
         )
         if show_relaxed_per:
             row += f" {m['per_equiv_pct']:8.2f}"
         row += f" {m['pos_acc_pct']:8.2f}"
         print(row)
+    print("  " + EVALUATION_TIMING_NOTE)
     print("  WERr = any lexicon variant counts as correct")
     print("  PER% = phone edit rate; PERr% = PER with locale equiv (it_IT, pt_BR)")
     if len(results) == 2:

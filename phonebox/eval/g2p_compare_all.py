@@ -20,7 +20,7 @@ from phonebox.constants import (
     FILE_ENCODING,
 )
 from phonebox.core.multigram_g2p import MultigramG2P
-from phonebox.eval.g2p_compare import run_compare
+from phonebox.eval.g2p_compare import EVALUATION_TIMING_NOTE, run_compare
 from phonebox.eval.locale_registry import select_locale_paths
 from phonebox.experiments.equiv import equiv_for_locale
 from phonebox.experiments.metrics import G2P_METRICS_FOOTER
@@ -32,6 +32,9 @@ def _metric_row(
     cells = [
         model,
         f"{train_s:.1f}",
+        f"{m['load_s']:.1f}",
+        f"{m['prep_s']:.1f}",
+        f"{m['eval_s']:.1f}",
         f"{m['wer_pct']:.2f}",
         f"{m['wer_relaxed_pct']:.2f}",
         f"{m['per_pct']:.2f}",
@@ -168,7 +171,7 @@ def write_compare_all(
                 "",
             ]
         )
-        hdr = "| Model | train_s | WER% | WERr% | PER% |"
+        hdr = "| Model | train_s | load_s | prep_s | eval_s | WER% | WERr% | PER% |"
         if relaxed_per:
             hdr += " PERr% |"
         hdr += " pos% |"
@@ -185,7 +188,7 @@ def write_compare_all(
                 )
             )
 
-    lines.extend(["", G2P_METRICS_FOOTER, ""])
+    lines.extend(["", EVALUATION_TIMING_NOTE, "", G2P_METRICS_FOOTER, ""])
 
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(lines) + "\n", encoding=FILE_ENCODING)
