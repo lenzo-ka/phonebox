@@ -75,6 +75,10 @@ def train_g2p(
     width: int | None = None,
     store_distributions: bool = DEFAULT_STORE_DISTRIBUTIONS,
     verbose: bool = False,
+    alignment_method: str = "epsilon",
+    decomposition_iterations: int = 100,
+    max_letter_span: int = 2,
+    max_phone_span: int = 2,
     **model_options: Any,
 ) -> TrainingResult:
     """Train one decision-tree G2P from a pronunciation dictionary.
@@ -92,6 +96,17 @@ def train_g2p(
         raise ValueError(
             "model is an inference loading option, not a primary training option"
         )
+    if alignment_method not in {"epsilon", "decomposition-posterior"}:
+        raise ValueError("unknown alignment method")
+    if alignment_method == "decomposition-posterior":
+        if prune or test_split:
+            raise ValueError(
+                "decomposition training requires prune=False and test_split=0; split spellings before alignment"
+            )
+        if alignments_out is not None:
+            raise ValueError(
+                "epsilon alignment checkpoints are unavailable for posterior decomposition training"
+            )
     dictionary_path = Path(dictionary)
     if not dictionary_path.is_file():
         raise FileNotFoundError(
@@ -101,7 +116,11 @@ def train_g2p(
     alignments_path = (
         Path(alignments_out)
         if alignments_out is not None
-        else (default_alignments_path(output_path) if output_path else None)
+        else (
+            default_alignments_path(output_path)
+            if output_path and alignment_method == "epsilon"
+            else None
+        )
     )
     validate_training_paths(dictionary_path, output_path, alignments_path)
     if output_path:
@@ -121,14 +140,37 @@ def train_g2p(
         verbose=verbose,
         **model_options,
     )
-    metrics = model.train_from_dict(
-        str(dictionary_path),
-        encoding=DICT_ENCODING,
-        validation_split=validation_split if prune else 0.0,
-        test_split=test_split,
-        prune=prune,
-        alignments_path=str(alignments_path) if alignments_path else None,
-    )
+    if alignment_method == "decomposition-posterior":
+        from .eval.g2p_compare import load_lexicon
+
+        model.vectorizer.disable_config_joins()
+        pairs = []
+        for word, phones in load_lexicon(dictionary_path):
+            if any(
+                p == model.vectorizer.epsilon or model.vectorizer.join_char in p
+                for p in phones
+            ):
+                raise ValueError(
+                    "raw phone tokens contain reserved decomposition syntax"
+                )
+            letters = model.vectorizer.cook_letters(word, g2p=True)
+            phones = model.vectorizer.uncook(model.vectorizer.cook_phones(phones))
+            pairs.append((letters, phones))
+        metrics = model.train_decomposition_from_pairs(
+            pairs,
+            alignment_iterations=decomposition_iterations,
+            max_letter_span=max_letter_span,
+            max_phone_span=max_phone_span,
+        )
+    else:
+        metrics = model.train_from_dict(
+            str(dictionary_path),
+            encoding=DICT_ENCODING,
+            validation_split=validation_split if prune else 0.0,
+            test_split=test_split,
+            prune=prune,
+            alignments_path=str(alignments_path) if alignments_path else None,
+        )
     if output_path:
         model.export(str(output_path))
     return TrainingResult(model, metrics, output_path, alignments_path)
