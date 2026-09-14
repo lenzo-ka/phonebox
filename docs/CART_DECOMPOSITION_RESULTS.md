@@ -39,7 +39,7 @@ co-occurred in one complete alignment. That is one plausible failure mechanism,
 not yet a demonstrated cause. Teacher quality, projection policy and model
 complexity remain other possible explanations.
 
-Both CMU conditions and the Italian epsilon reference remain in progress. Their outcomes, including
+The CMUdict stress-removed condition remains in progress. Their outcomes, including
 losses and null results, will be appended without tuning on these measurements.
 The separate lattice extension will compare coherent supported path decoding
 against the existing independent-position prediction objective.
@@ -55,5 +55,24 @@ skip 20. Metrics were recomputed exactly on all 7,397 development spellings.
 | --- | ---: | ---: |
 | hard-q | 25.9970 | 4.0224 |
 | posterior-q | 29.5796 | 4.6151 |
+| epsilon reference | 16.7500 | 2.2452 |
 
 Posterior-minus-hard PER: +0.5927 percentage points. No significance claim or test tuning.
+
+## CMUdict, stress preserved
+
+The first CMUdict condition replicates the posterior loss under this teacher
+and projection. All three saved prediction rows were independently recomputed
+on the fixed development split and matched exactly.
+
+| Supervision | Development WER % | Development PER % |
+| --- | ---: | ---: |
+| hard-q | 61.1633 | 18.6094 |
+| posterior-q | 62.5506 | 19.3105 |
+| epsilon reference | 53.6838 | 13.3886 |
+
+Posterior-minus-hard PER: +0.7011 percentage points. These are development
+results with independent-position prediction; lattice and leaf-retention
+experiments have different declared objectives and remain separate. Three
+completed conditions now show losses for the original hypothesis; no
+significance or held-out test-generalization claim is made.
