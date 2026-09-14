@@ -323,8 +323,11 @@ def render_markdown(result: dict[str, Any]) -> str:
         f"git checkout {result['phonebox']['revision']}",
         "python -m pip install -e '.[dev]' "
         f"'cartlet=={result['runtime']['dependencies']['cartlet']}'",
-        "phonebox compare cmudict --refresh docs/cmudict-comparison.json",
-        "phonebox compare cmudict --check docs/cmudict-comparison.json docs/CMUDICT_COMPARISON.md",
+        f"phonebox compare cmudict --em-iterations {params['em_iterations']} "
+        "--refresh .cache/benchmarks/locale-cmudict.json "
+        "--markdown .cache/benchmarks/locale-cmudict.md",
+        "phonebox compare cmudict --check .cache/benchmarks/locale-cmudict.json "
+        ".cache/benchmarks/locale-cmudict.md",
         "```",
         "",
         f"Data: [CMUdict]({source['repository']}) commit `{source['commit']}`, "

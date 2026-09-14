@@ -173,10 +173,13 @@ are documented in [dictionary processing](https://github.com/lenzo-ka/phonebox/b
 CART uses spelling-context features and decision trees; multigram learns joint
 n:m spelling/phone units and decodes sequences. Their accuracy and export sizes
 depend on the lexicon, preprocessing, and training settings. The
-[reproducible CMUdict comparison](https://github.com/lenzo-ka/phonebox/blob/main/docs/CMUDICT_COMPARISON.md)
-reports both models with and without stress, held-out error rates, and exact
-snapshot provenance. It is a measurement of the recorded revision, not a claim
-that every future release has the same results.
+[measured G2P comparisons](https://github.com/lenzo-ka/phonebox/blob/main/docs/G2P_BENCHMARKS.md)
+report shared-data results for Phonebox and independent implementations,
+including CMUdict with and without stress. Each row records held-out error
+rates, training settings and source provenance. Timings across different shared
+machines are descriptive, not a speed ranking. See the
+[CMUdict workflow guide](https://github.com/lenzo-ka/phonebox/blob/main/docs/CMUDICT_COMPARISON.md)
+for the distinction between these measurements and older locale-aware snapshots.
 
 ## Documentation and help
 
@@ -204,6 +207,16 @@ pip install -e '.[dev]'
 See the [release checks](https://github.com/lenzo-ka/phonebox/blob/main/docs/RELEASING.md#release-preparation)
 for validation. Contributions should include tests for behavior changes and
 keep Python APIs, CLI help, and documentation consistent.
+
+The [methods guide](https://github.com/lenzo-ka/phonebox/blob/main/docs/G2P_METHODS.md)
+explains how the compared models learn and predict. The [developer benchmark protocol](https://github.com/lenzo-ka/phonebox/blob/main/docs/REPRODUCIBLE_BENCHMARKS.md)
+compares both Phonebox models with independently run Sequitur and Phonetisaurus
+on pinned, shared data. It records preparation, split hashes, settings, and
+source provenance so subsequent implementations can be measured again.
+Reported errors are for held-out words with dictionary lookup disabled. A
+dictionary-backed pronouncer can use stored pronunciations for covered words;
+its running-text accuracy depends on token coverage and appropriate variant
+selection, and is not measured by the held-out score alone.
 
 ## References
 

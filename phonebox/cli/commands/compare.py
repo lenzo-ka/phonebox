@@ -36,22 +36,25 @@ from phonebox.eval.locale_registry import (
 from phonebox.experiments.equiv import equiv_for_locale
 from phonebox.locale_resolution import canonical_locale
 
+from .benchmark import setup_benchmark_commands
 from .cmudict_compare import setup_cmudict_compare_command
 
 
 def setup_compare_commands(subparsers) -> None:
     parser = subparsers.add_parser(
         "compare",
-        help="Compare 1:1 G2PDecisionTree vs MultigramG2P",
+        help="Evaluate Phonebox models and reproducible external baselines",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description=(
             "Evaluate 1:1 vs n:m on a held-out lexicon slice. "
-            "Subcommands: ``locale`` (one lexicon) or ``all`` (six IPA locales). "
+            "Use benchmark for pinned data and external baselines, cmudict for the "
+            "original two-model comparison, or locale/all for supplied lexicons. "
             "See docs/G2P_EVAL.md."
         ),
     )
     sp = parser.add_subparsers(dest="compare_mode", required=True)
     setup_cmudict_compare_command(sp)
+    setup_benchmark_commands(sp)
 
     all_p = sp.add_parser(
         "all",

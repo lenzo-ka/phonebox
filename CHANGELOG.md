@@ -5,6 +5,19 @@ patch releases within a minor line are intended to remain compatible.
 
 ## 0.3.0 — Unreleased
 
+### Optional neural benchmark toolchain
+
+- Add isolated, from-scratch DeepPhonemizer autoregressive training with the
+  author's substantial configuration, shared whole-dev checkpoint selection,
+  explicit convergence accounting, and model-only held-out metrics.
+- Export the credited reproducible source patch through API/CLI; verify source,
+  patch, dependency versions and interpreter receipts without adding Torch to
+  ordinary runtime, development or CI installations.
+- Provide a one-epoch resource profile whose training worker receives no test
+  references, atomic
+  phone inference, complete partial-batch admission, unknown-input failures and
+  truncation counts. These tools alone do not claim measured neural accuracy.
+
 ### Cartlet 0.6 integration
 
 - Require `cartlet>=0.6.0,<0.7.0` for base and sklearn installations, keeping the
@@ -35,6 +48,9 @@ bundles together with their models. See [migration notes](docs/RELEASING.md#upgr
   unit IDs once for repeated inference. CLI pronunciation and comparison reuse
   snapshots; later source-model mutation cannot alter an existing predictor.
 
+- Keep finite positive add-k values scorable at floating-point extremes using
+  log-domain arithmetic when needed, without changing ordinary-range scores,
+  smoothing defaults, or the saved model format.
 - Support joint-unit LM orders 1–8 through sparse count tables shared by the
   library, training API and CLI. Keep order 2/add-k smoothing/exact search as
   defaults; document explicit approximate beam controls and higher-order costs.
@@ -52,6 +68,27 @@ bundles together with their models. See [migration notes](docs/RELEASING.md#upgr
 - Replace an unsupported historical smoothing claim with the actual scoring
   contract and use the model version in newly rendered comparisons.
 
+### Experimental CART decomposition training
+
+- Add opt-in posterior decomposition scattering: marginalize q-supported gold
+  joint-unit alignments and train the existing contextual CART on fractional
+  multi-phone/epsilon target weights. Reuse duplicate-pair posteriors and
+  spelling contexts; record admission, ambiguity, support and convergence.
+- Keep ordinary per-position inference and epsilon training as defaults.
+  Disable static locale joins in the new public workflow, reject internal
+  row splits, and build dictionary corrections from admitted source pairs.
+- Add an opt-in CART-scored decomposition lattice. `prepare_decomposition_lattice`
+  and `pronounce_lattice` select a supported complete joint-unit path from
+  contextual CART target probabilities with the shared exact Viterbi decoder,
+  adding no q factor, beam, probability floor or sequence LM. Posterior-trained
+  models save their validated unit inventory; earlier artifacts can supply
+  explicit units. Fractional leaf roundoff is normalized without changing path
+  rankings.
+- Record the development-only outcomes: posterior scattering loses to hard
+  projection in all four conditions; lattice decoding lowers posterior-tree
+  PER in all four; retaining leaf alternatives improves lattice PER further
+  with unchanged point predictions. No corpus gain or test claim is made.
+
 ### Training diagnostics
 
 - Expose defensive, JSON-serializable CART alignment iteration history through
@@ -59,6 +96,16 @@ bundles together with their models. See [migration notes](docs/RELEASING.md#upgr
   run so callers can distinguish convergence from reaching an iteration cap.
 
 ### Documentation and evaluation
+
+- Add shared public benchmark data preparation, model adapters, CLI commands, and
+  validated aggregate reporting for CART, n:m, Sequitur, and Phonetisaurus.
+  Pin dataset and toolchain sources, preserve pronunciation groups, and record
+  split hashes, licenses, training admission, and prediction failures.
+- Record the measured four-system comparison: sixteen aggregate result rows in
+  `docs/benchmarks/` and the generated `docs/G2P_BENCHMARKS.md`, pinned by an
+  artifact test to exact regeneration, shared split digests, disabled lookup,
+  full accounting and path-free provenance. The DeepPhonemizer comparison is
+  deferred to a later snapshot; the report labels it as not measured.
 
 - Refresh the pinned CMUdict CART/multigram comparison with Cartlet 0.6.0,
   retaining the exact source, dependency, data, and split provenance.

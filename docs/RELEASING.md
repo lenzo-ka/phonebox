@@ -95,11 +95,12 @@ The [changelog](../CHANGELOG.md) records the changes since `v0.1.0`.
   first spellings and dense `(2)`, `(3)`, … variants. Input and output must be
   different files. See [dictionary processing](DICTIONARY_PROCESSING.md).
 
-The [CMUdict report](CMUDICT_COMPARISON.md) is measured at its recorded source
-revision and dependency versions. Its CART benchmark helper is unpruned, unlike
-primary training's default. Updating documentation or releasing a new version does not
-make those historical metrics a measurement of the release commit. Rerunning
-on newer code creates a new snapshot.
+The [shared-data report](G2P_BENCHMARKS.md) records the measured source and
+settings for each row; regenerate its Markdown from the final aggregate JSON.
+The [archived locale-aware CMUdict pair](archive/cmudict-489097f/README.md)
+remains historical and retains its SHA-256/source-identity CI check. Updating documentation
+or releasing a version does not make old metrics current. Rerunning newer code
+creates a new snapshot; do not mix different prepared-data digests.
 
 ## Installation scope
 

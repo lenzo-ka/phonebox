@@ -1,0 +1,13 @@
+diff --git a/sequitur.py b/sequitur.py
+index fb4286e..5ef9d6d 100644
+--- a/sequitur.py
++++ b/sequitur.py
+@@ -426,7 +426,7 @@ class DefaultDiscountAdjuster:
+             previous = self.discounts[-2]
+             if previous is not None and len(previous) == order + 1:
+                 firstDirection = initialGuess - previous
+-                if not num.sometrue(num.abs(firstDirection) > 1e-4):
++                if not num.any(num.abs(firstDirection) > 1e-4):
+                     firstDirection = None
+ 
+         directions = num.identity(order + 1, dtype=num.float64)

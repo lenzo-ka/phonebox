@@ -35,7 +35,7 @@ def setup_cmudict_compare_command(subparsers) -> None:
     parser.add_argument(
         "--markdown",
         type=Path,
-        help="Rendered report path (default: docs/CMUDICT_COMPARISON.md)",
+        help="Rendered report path (default: beside refresh JSON, with .md suffix)",
     )
     action.add_argument(
         "--check",
@@ -66,7 +66,7 @@ def handle_compare_cmudict(args: argparse.Namespace) -> int:
             print(f"CMUdict comparison check failed: {exc}", file=sys.stderr)
             return 2
         return 0 if actual == expected else 1
-    markdown = args.markdown or Path("docs/CMUDICT_COMPARISON.md")
+    markdown = args.markdown or args.refresh.with_suffix(".md")
     if (status := require_distinct_output(args.refresh, markdown)) is not None:
         return status
     if args.lexicon is not None:

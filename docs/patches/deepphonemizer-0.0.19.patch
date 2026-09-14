@@ -1,0 +1,118 @@
+--- a/dp/training/trainer.py
++++ b/dp/training/trainer.py
+@@ -53,7 +53,8 @@
+     def train(self,
+               model: Model,
+               checkpoint: Dict[str, Any],
+-              store_phoneme_dict_in_model: bool = True) -> None:
++              store_phoneme_dict_in_model: bool = True,
++              epoch_callback=None) -> None:
+         """
+         Performs training of a transformer model.
+ 
+@@ -87,7 +88,7 @@
+             g['lr'] = config['training']['learning_rate']
+ 
+         train_loader = new_dataloader(dataset_file=data_dir / 'train_dataset.pkl', use_ddp=self.use_ddp,
+-                                      drop_last=True, batch_size=config['training']['batch_size'])
++                                      drop_last=False, batch_size=config['training']['batch_size'])
+ 
+         if self.rank == 0:
+             val_loader = new_dataloader(dataset_file=data_dir / 'val_dataset.pkl', use_ddp=False,
+@@ -107,6 +108,9 @@
+         best_per = math.inf
+         if 'step' not in checkpoint:
+             checkpoint['step'] = 0
++        checkpoint.setdefault("optimizer_updates", 0)
++        checkpoint.setdefault("entries_visited", 0)
++        checkpoint.setdefault("nonfinite_batches", 0)
+         start_epoch = checkpoint['step'] // len(train_loader)
+ 
+         for epoch in range(start_epoch + 1, config['training']['epochs'] + 1):
+@@ -123,15 +127,23 @@
+                 pbar.set_description(desc=f'Rank: {self.rank} | Epoch: {epoch} | Step {step} '
+                                           f'| Loss: {avg_loss:#.4}', refresh=True)
+ 
++                checkpoint["entries_visited"] += batch["text"].size(0)
+                 pred = model(batch)
+                 loss = criterion(pred, batch)
+ 
+                 if not (torch.isnan(loss) or torch.isinf(loss)):
+                     optimizer.zero_grad()
+                     loss.backward()
+-                    torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
++                    norm = torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
++                    if not torch.isfinite(norm):
++                        checkpoint["nonfinite_batches"] += 1
++                        raise ValueError("Nonfinite gradient norm; optimizer update refused")
+                     optimizer.step()
++                    checkpoint["optimizer_updates"] += 1
+                     losses.append(loss.item())
++                else:
++                    checkpoint["nonfinite_batches"] += 1
++                    raise ValueError("Nonfinite training loss; no target may be silently skipped")
+ 
+                 self.writer.add_scalar('Loss/train', loss.item(), global_step=step)
+                 self.writer.add_scalar('Params/batch_size', config['training']['batch_size'],
+@@ -139,7 +151,7 @@
+                 self.writer.add_scalar('Params/learning_rate', [g['lr'] for g in optimizer.param_groups][0],
+                                        global_step=step)
+ 
+-                if self.rank == 0:
++                if self.rank == 0 and epoch_callback is None:
+                     if step % config['training']['validate_steps'] == 0:
+                         val_loss = self._validate(model, val_batches)
+                         self.writer.add_scalar('Loss/val', val_loss, global_step=step)
+@@ -154,6 +166,7 @@
+                                               n_generate_samples=config['training']['n_generate_samples'],
+                                               step=step)
+                         if eval_result['mean_per'] is not None and eval_result['mean_per'] < best_per:
++                            best_per = eval_result['mean_per']
+                             self._save_model(model=model, optimizer=optimizer, checkpoint=checkpoint,
+                                              path=self.checkpoint_dir / f'best_model.pt')
+                             self._save_model(model=model, optimizer=None, checkpoint=checkpoint,
+@@ -165,10 +178,15 @@
+                         self._save_model(model=model, optimizer=optimizer, checkpoint=checkpoint,
+                                          path=self.checkpoint_dir / f'model_step_{step}k.pt')
+ 
++            stop = False
++            if epoch_callback is not None:
++                stop = epoch_callback(epoch, model, checkpoint, optimizer, scheduler)
+             losses = []
+             if self.rank == 0:
+                 self._save_model(model=model, optimizer=optimizer, checkpoint=checkpoint,
+                                  path=self.checkpoint_dir / 'latest_model.pt')
++            if stop:
++                break
+ 
+     def _validate(self, model: Model, val_batches: List[dict]) -> float:
+         device = next(model.parameters()).device
+--- a/dp/training/dataset.py
++++ b/dp/training/dataset.py
+@@ -51,7 +51,7 @@
+             self.random.shuffle(this_bin)
+             bins += [this_bin]
+         self.random.shuffle(bins)
+-        binned_idx = np.stack(bins).reshape(-1)
++        binned_idx = np.stack(bins).reshape(-1) if bins else np.array([], dtype=np.int64)
+         if len(binned_idx) < len(idx):
+             last_bin = idx[len(binned_idx):]
+             self.random.shuffle(last_bin)
+--- a/dp/model/predictor.py
++++ b/dp/model/predictor.py
+@@ -4,6 +4,7 @@
+ from torch.nn.utils.rnn import pad_sequence
+ 
+ from dp import Prediction
++from dp.utils.io import to_device
+ from dp.model.model import load_checkpoint
+ from dp.model.utils import _get_len_util_stop
+ from dp.preprocessing.text import Preprocessor
+@@ -106,6 +107,7 @@
+                 'text_len': lens_batch,
+                 'start_index': start_inds
+             }
++            batch = to_device(batch, next(self.model.parameters()).device)
+             with torch.no_grad():
+                 output_batch, probs_batch = self.model.generate(batch)
+             output_batch, probs_batch = output_batch.cpu(), probs_batch.cpu()

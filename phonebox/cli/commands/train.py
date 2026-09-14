@@ -134,6 +134,15 @@ def setup_train_command(subparsers):
         "--norm-xlit", action=argparse.BooleanOptionalAction, default=None
     )
     parser.add_argument("--max-iterations", type=int, default=None)
+    parser.add_argument(
+        "--alignment-method",
+        choices=["epsilon", "decomposition-posterior"],
+        default=None,
+        help="Alignment targets; posterior decomposition requires --no-prune",
+    )
+    parser.add_argument("--decomposition-iterations", type=int, default=None)
+    parser.add_argument("--max-letter-span", type=int, default=None)
+    parser.add_argument("--max-phone-span", type=int, default=None)
     parser.add_argument("-v", "--verbose", action="store_true", default=None)
     parser.set_defaults(func=handle_train)
 
@@ -172,6 +181,10 @@ def handle_train(args) -> int:
         "cased": args.cased,
         "norm_xlit": args.norm_xlit,
         "max_iterations": args.max_iterations,
+        "alignment_method": getattr(args, "alignment_method", None),
+        "decomposition_iterations": getattr(args, "decomposition_iterations", None),
+        "max_letter_span": getattr(args, "max_letter_span", None),
+        "max_phone_span": getattr(args, "max_phone_span", None),
         "verbose": args.verbose,
     }
     config.update({key: value for key, value in overrides.items() if value is not None})

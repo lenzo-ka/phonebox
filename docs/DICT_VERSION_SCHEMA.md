@@ -41,7 +41,7 @@ Keep the source repository and revision, a full file digest, training options,
 Phonebox revision, and dependency versions in a separate build record.
 `dict_hash` is useful for comparing loaded input identifiers, but its short
 digest does not replace that record. See the pinned source and environment
-record in [the CMUdict comparison](CMUDICT_COMPARISON.md).
+record in [the shared-data G2P comparisons](G2P_BENCHMARKS.md).
 
 Dictionary download manifests are separate from model metadata. Creating a
 manifest does not make the model loader copy its source revision into

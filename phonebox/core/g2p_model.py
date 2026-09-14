@@ -298,6 +298,90 @@ class G2PDecisionTree:
             prune=prune,
         )
 
+    def train_decomposition_from_pairs(
+        self,
+        pairs,
+        *,
+        aligner=None,
+        max_letter_span=2,
+        max_phone_span=2,
+        alignment_iterations=100,
+    ) -> dict[str, Any]:
+        """Train CART on all q-supported gold decompositions with posterior weights.
+
+        Pairs contain already cooked letter and atomic phone tokens. A supplied
+        aligner must already be fitted; otherwise fit one on these pairs only.
+        No row-level validation/test split is made: alternative labels for the
+        same spelling must not cross a held-out boundary. Runtime remains the
+        ordinary per-position CART predictor, without a sequence lattice.
+        """
+        from .decomposition import prepare_decomposition_vectors
+        from .multigram_align import MultigramAligner
+
+        pairs = list(pairs)
+        if not pairs:
+            raise ValueError("empty decomposition lexicon")
+        if aligner is None:
+            aligner = MultigramAligner(
+                max_letter_span=max_letter_span,
+                max_phone_span=max_phone_span,
+                min_phone_span=0,
+                max_iterations=alignment_iterations,
+                parallel=False,
+            )
+            aligner.fit(pairs)
+        preparation = prepare_decomposition_vectors(pairs, self.vectorizer, aligner)
+        self.load_vectors_data(preparation.X, preparation.y, preparation.counts)
+        metrics = self.train(exception_pairs=preparation.admitted_pairs)
+        self.decomposition_metadata = preparation.metadata
+        from .multigram_align import EPS
+
+        self.decomposition_units = tuple(
+            unit for unit, probability in aligner.q.items() if probability > EPS
+        )
+        self.prepare_decomposition_lattice()
+        metrics["decomposition"] = preparation.metadata
+        return metrics
+
+    def prepare_decomposition_lattice(self, units=None):
+        """Prepare reusable supported boundaries for CART-scored path search.
+
+        Explicit units also permit exploration with earlier posterior-trained
+        artifacts that did not save an inventory. No teacher q weights or
+        language-model scores are introduced into the prediction objective.
+        """
+        from .cart_lattice import CartDecompositionLattice
+
+        if units is None:
+            units = getattr(self, "decomposition_units", None)
+        if units is None:
+            raise ValueError("model has no saved decomposition unit inventory")
+        return CartDecompositionLattice(
+            units,
+            join_char=self.vectorizer.join_char,
+            epsilon=self.vectorizer.epsilon,
+        )
+
+    def pronounce_lattice(self, word: str, *, lattice=None) -> list[str]:
+        """Choose one supported decomposition from contextual CART scores.
+
+        Reuse a prepared lattice across words. Dictionary policy matches
+        pronounce(); with lookup disabled, unsupported paths return no phones.
+        """
+        exception = self._lookup_exception(word)
+        if exception is not None:
+            return list(exception)
+        if lattice is None:
+            lattice = self.prepare_decomposition_lattice()
+        if (lattice.join_char, lattice.epsilon) != (
+            self.vectorizer.join_char,
+            self.vectorizer.epsilon,
+        ):
+            raise ValueError("lattice target codec does not match model")
+        letters = self.vectorizer.cook_letters(word, g2p=True)
+        result = lattice.decode(letters, self._predict_distributions(word))
+        return result if result is not None else []
+
     def save_alignments(self, path: str) -> None:
         """Save alignments to file for reuse.
 
@@ -406,6 +490,8 @@ class G2PDecisionTree:
         validation_split: float = 0.0,
         test_split: float = 0.0,
         prune: bool = False,
+        *,
+        exception_pairs=None,
     ) -> dict[str, Any]:
         """
         Train the model.
@@ -445,10 +531,10 @@ class G2PDecisionTree:
         )
 
         # Build exceptions dictionary from all data for complete coverage
-        if self.use_dict_fallback and self.em:
+        if self.use_dict_fallback and (exception_pairs is not None or self.em):
             if self.verbose:
                 logger.info("Building exceptions dictionary...")
-            self.exceptions = self.build_exceptions_dict()
+            self.exceptions = self.build_exceptions_dict(exception_pairs)
             if self.verbose:
                 logger.info("Found %d exception words", len(self.exceptions))
 
@@ -829,6 +915,11 @@ class G2PDecisionTree:
             "width": self.vectorizer.width,
         }
 
+        if hasattr(self, "decomposition_metadata"):
+            metadata["training_config"]["decomposition"] = self.decomposition_metadata
+        if hasattr(self, "decomposition_units"):
+            metadata["decomposition_units"] = self.decomposition_units
+
         metadata["export_time"] = export_time.strftime("%Y-%m-%d %H:%M:%S %Z")
         metadata["g2p_version"] = self.VERSION
 
@@ -903,6 +994,12 @@ class G2PDecisionTree:
             v = self.vectorizer
             metadata = config.get("metadata", {})
 
+            decomposition = metadata.get("training_config", {}).get("decomposition")
+            if decomposition is not None:
+                if not isinstance(decomposition, dict):
+                    raise ValueError("malformed decomposition training metadata")
+                self.decomposition_metadata = decomposition
+
             def pick(key, default):
                 if key in metadata:
                     return metadata[key]
@@ -972,6 +1069,18 @@ class G2PDecisionTree:
                     )
 
             # Load dictionary hash
+            if "decomposition_units" in metadata:
+                units = metadata["decomposition_units"]
+                if not isinstance(units, list):
+                    raise ValueError("malformed decomposition unit inventory")
+                try:
+                    self.decomposition_units = self.prepare_decomposition_lattice(
+                        units
+                    ).units
+                except (TypeError, ValueError) as error:
+                    raise ValueError(
+                        "malformed decomposition unit inventory"
+                    ) from error
             self.dict_hash = pick("dict_hash", None)
             if self.dict_hash and self.verbose:
                 logger.info("Model trained from dictionary: %s", self.dict_hash)

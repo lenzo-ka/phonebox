@@ -3,7 +3,7 @@
 Phonebox reports two very different things, and it matters which one you mean.
 
 For a reproducible public-data snapshot with explicit splitting and variant
-reference policies, see [CMUdict comparison](CMUDICT_COMPARISON.md). The
+reference policies, see [the shared-data G2P comparisons](G2P_BENCHMARKS.md). The
 figures below are historical and are not measurements of each new release.
 
 ## Pure G2P (generalization)

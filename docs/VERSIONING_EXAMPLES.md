@@ -49,5 +49,5 @@ the embedded `dict_hash`.
 
 For each model, also retain the Phonebox revision, dependency versions,
 phoneset, optional stress setting, preprocessing options, and training options.
-The [CMUdict benchmark snapshot](CMUDICT_COMPARISON.md) demonstrates this
+The [shared-data benchmark report](G2P_BENCHMARKS.md) demonstrates this
 separate provenance record.

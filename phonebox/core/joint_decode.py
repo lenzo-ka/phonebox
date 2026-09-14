@@ -7,7 +7,8 @@ one pass instead of greedy ``segment_letters`` + per-unit prediction.
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+import math
+from collections.abc import Callable, Mapping, Sequence
 
 from .multigram_align import EPS, Unit
 from .multigram_lm import SOS, MultigramLM, decode_unit_id, unit_id
@@ -71,15 +72,16 @@ def joint_decode(
 def _decode_prepared(
     letters: list[str],
     index: Mapping[str, Sequence[Unit]],
-    lm: MultigramLM,
+    lm: MultigramLM | None,
     beam: int,
     unit_ids: Mapping[Unit, str] | None = None,
+    edge_score: Callable[[int, Unit], float] | None = None,
 ) -> list[str] | None:
     """Decode using ordered prepared candidates and an owned language model."""
     n = len(letters)
     if not n:
         return []
-    ctx_width = lm.order - 1
+    ctx_width = lm.order - 1 if lm is not None else 0
 
     # best[i][state] = (log_score, back_position, back_state, uid_ending_here)
     best: list[dict[_State, _Cell]] = [{} for _ in range(n + 1)]
@@ -102,14 +104,25 @@ def _decode_prepared(
                     continue
                 uid = unit_ids[unit] if unit_ids is not None else unit_id(unit)
                 new_state = (state + (uid,))[-ctx_width:] if ctx_width else ()
-                new_score = score + lm.log_prob_unit_id(uid, history)
+                new_score = score
+                if lm is not None:
+                    new_score += lm.log_prob_unit_id(uid, history)
+                if edge_score is not None:
+                    new_score += edge_score(i, unit)
+                    if new_score == -math.inf:
+                        continue
                 prev = best[j].get(new_state)
                 if prev is None or new_score > prev[0]:
                     best[j][new_state] = (new_score, i, state, uid)
 
     if not best[n]:
         return None
-    end_state = max(best[n], key=lambda s: best[n][s][0] + lm.log_end_prob(list(s)))
+    end_state = max(
+        best[n],
+        key=lambda s: (
+            best[n][s][0] + (lm.log_end_prob(list(s)) if lm is not None else 0.0)
+        ),
+    )
 
     phones: list[str] = []
     i, state = n, end_state
