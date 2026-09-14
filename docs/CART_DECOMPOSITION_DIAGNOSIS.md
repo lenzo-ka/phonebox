@@ -89,7 +89,6 @@ Soft EM already estimates the alignment teacher. These findings concern how its
 uncertainty survives projection, tree storage and decoding; they do not falsify
 averaging over complete possibilities during EM.
 
-Private reproducibility artifacts: `/private/tmp/phonebox-decomposition-diagnostics-full`
-(gold oracle and fixed-tree lattice), `/private/tmp/phonebox-cart-backoff-diagnostics`
-(sample alpha sweep), and `/private/tmp/phonebox-cart-backoff-diagnostics-full`
-(full-development backoff). Frozen corrected decoder: `3af505a`.
+Private reproducibility artifacts are retained outside the repository: the
+gold oracle and fixed-tree lattice diagnostics, the sample alpha sweep, and the
+full-development backoff run. Frozen corrected decoder: `3af505a`.

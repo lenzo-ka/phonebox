@@ -21,8 +21,8 @@ Across all four conditions, lattice decoding lowers posterior-tree variant PER r
 | cmudict-removed | posterior-q | independent | 54.7523 | 15.2503 | — |
 | cmudict-removed | posterior-q | lattice | 50.9263 | 13.9462 | 96 |
 
-All16 saved prediction metric rows independently recomputed exactly. Runtime scoring multiplies projected per-position CART probabilities on legal joint-unit paths; no q factor, LM, beam or support floor is added. Zero-probability labels can prevent any complete path. Best-path selection is not pronunciation-level probability aggregation or recovery of full alignment correlations.
+All 16 saved prediction metric rows independently recomputed exactly. Runtime scoring multiplies projected per-position CART probabilities on legal joint-unit paths; no q factor, LM, beam or support floor is added. Zero-probability labels can prevent any complete path. Best-path selection is not pronunciation-level probability aggregation or recovery of full alignment correlations.
 
-Frozen corrected source`3af505a`. Support from earlier native unit artifacts matched prepared data, aligner source, observed EM trace and inventory size; the original weighted teacher q was not persisted, so bitwise original q identity is not independently established. This limitation is retained. Raw artifacts remain private at `/private/tmp/phonebox-cart-lattice-dev-corrected-20260913`. No test prediction, significance or novelty claim.
+Frozen corrected source `3af505a`. Support from earlier native unit artifacts matched prepared data, aligner source, observed EM trace and inventory size; the original weighted teacher q was not persisted, so bitwise original q identity is not independently established. This limitation is retained. Raw artifacts remain private. No test prediction, significance or novelty claim.
 
 See [the mechanism diagnosis](CART_DECOMPOSITION_DIAGNOSIS.md) and [the controlled leaf-retention result](CART_LEAF_RETENTION_RESULTS.md) for the separate coverage/backoff probes.
