@@ -106,6 +106,10 @@ bundles together with their models. See [migration notes](docs/RELEASING.md#upgr
   artifact test to exact regeneration, shared split digests, disabled lookup,
   full accounting and path-free provenance. The DeepPhonemizer comparison is
   deferred to a later snapshot; the report labels it as not measured.
+- Guard the tracked rows with the benchmark receipt validator and a named
+  identity denylist, witness the split-overlap guard independently of the
+  recorded counts, and test that a generated standalone bundle imports only
+  the standard library and runs under `python -S`.
 
 - Refresh the pinned CMUdict CART/multigram comparison with Cartlet 0.6.0,
   retaining the exact source, dependency, data, and split provenance.

@@ -5,6 +5,9 @@ import re
 from pathlib import Path
 from typing import Any
 
+import pytest
+
+from phonebox.eval.benchmark import _validate_receipt
 from phonebox.eval.benchmark_report import render_benchmark_report
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -13,7 +16,13 @@ REPORT = ROOT / "docs" / "G2P_BENCHMARKS.md"
 MEASURED_SYSTEMS = {"cart", "multigram", "sequitur", "phonetisaurus"}
 NATIVE_REVISION = "de8fbc3f966c191eee59ff48d3f0347c65ee55ef"
 EXTERNAL_REVISION = "a7bfbeb7ae9e84bdd47f5ba8f1c260430148c3ef"
-LOCAL_PATH = re.compile(r"/Users/|/private/|/home/|/tmp/")
+# The structural guard is the benchmark receipt validator applied to the whole
+# row: absolute POSIX or Windows paths anywhere, and a fixed set of identity
+# keys. It is a shape check; an identity under an unlisted key, or a hostname
+# written into prose, is not detectable by shape. This denylist names the
+# identities of the machines that produced the tracked rows, so those specific
+# leaks fail even under an unlisted key. It is enumerated, not a property.
+KNOWN_IDENTITIES = re.compile(r"lenzo|shrub|/Users/|/private/|/home/|/tmp/", re.I)
 
 
 def load_rows() -> list[dict[str, Any]]:
@@ -22,9 +31,22 @@ def load_rows() -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for path in paths:
         text = path.read_text(encoding="utf-8")
-        assert not LOCAL_PATH.search(text), f"{path.name} carries a local path"
-        rows.append(json.loads(text))
+        assert not KNOWN_IDENTITIES.search(text), f"{path.name} names a local identity"
+        row = json.loads(text)
+        _validate_receipt(row)
+        rows.append(row)
     return rows
+
+
+def test_row_guard_rejects_absolute_paths_and_identity_keys():
+    for construction in (
+        {"provenance": {"note": "/opt/cache/run"}},
+        {"settings": {"work": "D:\\data\\bench"}},
+        {"timings": {"cwd": "relative/still-an-identity-key"}},
+        {"training": {"hostname": "x"}},
+    ):
+        with pytest.raises(ValueError):
+            _validate_receipt(construction)
 
 
 def test_snapshot_is_the_complete_four_system_matrix():
