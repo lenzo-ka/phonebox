@@ -7,8 +7,11 @@ from collections.abc import Mapping
 from datetime import UTC, datetime
 from pathlib import Path
 
+from phonebox.core.joint_decode import validate_decode_beam
+from phonebox.core.multigram_lm import validate_lm_order
 from phonebox.core.vectorizer import Vectorizer
 from phonebox.eval.g2p_compare import (
+    EVALUATION_TIMING_NOTE,
     build_gold_variants,
     cook_pair,
     evaluate,
@@ -40,6 +43,7 @@ def run_g2p_sweep(
     locales: list[str],
     letter_spans: list[int],
     lm_orders: list[int],
+    decode_beam: int = 0,
     seed: int = 42,
     max_test: int = 2000,
     em_iterations: int = 15,
@@ -48,6 +52,9 @@ def run_g2p_sweep(
     relaxed_locales: frozenset[str] = frozenset(),
 ) -> dict[str, dict[tuple[int, int], dict[str, float]]]:
     """Train and evaluate every requested locale/span/order combination."""
+    for order in lm_orders:
+        validate_lm_order(order)
+    validate_decode_beam(decode_beam)
     lexicons = select_locale_paths(lexicons, locales)
     locales = list(lexicons)
     relaxed_locales = frozenset(canonical_locales(list(relaxed_locales)))
@@ -59,7 +66,7 @@ def run_g2p_sweep(
         rows[locale] = {}
         for span in letter_spans:
             for order in lm_orders:
-                started = time.time()
+                started = time.perf_counter()
                 model = train_multigram(
                     train,
                     span,
@@ -68,14 +75,21 @@ def run_g2p_sweep(
                     parallel_align=parallel_align,
                     parallel_viterbi=parallel_align,
                     lm_order=order,
+                    decode_beam=decode_beam,
                 ).model
 
-                def predict(word: str, _model=model, _vec=vec) -> list[str]:
+                training_seconds = time.perf_counter() - started
+                preparation_started = time.perf_counter()
+                predictor = model.prepare_predictor()
+                preparation_seconds = time.perf_counter() - preparation_started
+
+                def predict(word: str, _model=predictor, _vec=vec) -> list[str]:
                     phones = _model.pronounce_letters(
                         _vec.cook_letters(word, g2p=True), word=word
                     )
                     return _vec.cook_phones(phones) or phones
 
+                evaluation_started = time.perf_counter()
                 metrics = evaluate(
                     "n:m",
                     predict,
@@ -85,7 +99,12 @@ def run_g2p_sweep(
                     if locale in relaxed_locales
                     else None,
                 )
-                metrics["train_s"] = time.time() - started
+                metrics.update(
+                    train_s=training_seconds,
+                    load_s=0.0,
+                    prep_s=preparation_seconds,
+                    eval_s=time.perf_counter() - evaluation_started,
+                )
                 rows[locale][(span, order)] = metrics
     return rows
 
@@ -95,6 +114,7 @@ def format_g2p_sweep(
     *,
     letter_spans: list[int],
     lm_orders: list[int],
+    decode_beam: int = 0,
     seed: int = 42,
     max_test: int = 2000,
     em_iterations: int = 15,
@@ -114,6 +134,7 @@ def format_g2p_sweep(
         f"- Locales: {', '.join(rows)}",
         f"- Letter spans: {letter_spans}",
         f"- LM orders: {lm_orders}",
+        f"- Decode beam: {decode_beam} (0 exact; positive approximate)",
         "",
         "Each cell shows ``WER% / PER%`` (lower is better). PER is primary.",
         "",
@@ -132,7 +153,19 @@ def format_g2p_sweep(
                     else f"{value['wer_pct']:.2f} / {value['per_pct']:.2f}"
                 )
             lines.append("| " + " | ".join(cells) + " |")
+        lines.extend(
+            [
+                "",
+                "| Letter span | LM order | train_s | prep_s | eval_s |",
+                "|---|---|---|---|---|",
+            ]
+        )
+        for (span, order), value in sorted(values.items()):
+            lines.append(
+                f"| {span} | {order} | {value['train_s']:.3f} | {value['prep_s']:.3f} | {value['eval_s']:.3f} |"
+            )
         lines.append("")
+    lines.extend([EVALUATION_TIMING_NOTE, ""])
     return "\n".join(lines) + "\n"
 
 

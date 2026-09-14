@@ -16,7 +16,12 @@ from phonebox.constants import (
     DEFAULT_TEST_FRACTION,
     DEFAULT_TRAINER,
 )
-from phonebox.eval.g2p_compare import print_results_table, run_compare
+from phonebox.core.multigram_lm import SUPPORTED_LM_ORDERS
+from phonebox.eval.g2p_compare import (
+    EVALUATION_TIMING_NOTE,
+    print_results_table,
+    run_compare,
+)
 from phonebox.eval.g2p_compare_all import (
     CompareAllConfig,
     run_compare_all,
@@ -54,6 +59,7 @@ def setup_compare_commands(subparsers) -> None:
     all_p = sp.add_parser(
         "all",
         help="All six IPA locales (writes docs/G2P_COMPARE*.md)",
+        epilog=EVALUATION_TIMING_NOTE,
     )
     all_p.add_argument("--lexicon-dir", type=Path, default=None)
     all_p.add_argument("--g2p-dir", type=Path, default=None)
@@ -67,7 +73,7 @@ def setup_compare_commands(subparsers) -> None:
     all_p.add_argument("--locales", nargs="*")
     all_p.set_defaults(func=handle_compare_all)
 
-    loc_p = sp.add_parser("locale", help="Single locale")
+    loc_p = sp.add_parser("locale", help="Single locale", epilog=EVALUATION_TIMING_NOTE)
     loc_p.add_argument("--lexicon", required=True, type=Path)
     loc_p.add_argument("--locale", required=True)
     loc_p.add_argument("--phoneset", default=DEFAULT_MULTIGRAM_PHONESET)
@@ -77,8 +83,13 @@ def setup_compare_commands(subparsers) -> None:
     loc_p.add_argument("--max-letter-span", type=int, default=2)
     loc_p.add_argument("--max-phone-span", type=int, default=2)
     loc_p.add_argument("--em-iterations", type=int, default=15)
-    loc_p.add_argument("--lm-order", type=int, default=2, choices=[1, 2, 3])
-    loc_p.add_argument("--decode-beam", type=int, default=0)
+    loc_p.add_argument("--lm-order", type=int, default=2, choices=SUPPORTED_LM_ORDERS)
+    loc_p.add_argument(
+        "--decode-beam",
+        type=int,
+        default=0,
+        help="0 searches exactly (default); positive beams approximate by limiting expanded histories.",
+    )
     loc_p.add_argument("--parallel-align", action="store_true")
     loc_p.add_argument("--parallel-viterbi", action="store_true")
     loc_p.add_argument("-v", "--verbose", action="store_true")
@@ -92,7 +103,9 @@ def setup_compare_commands(subparsers) -> None:
     loc_p.add_argument("--no-config-joins", action="store_true")
     loc_p.set_defaults(func=handle_compare_locale)
 
-    sweep = sp.add_parser("sweep", help="Sweep multigram span and LM order")
+    sweep = sp.add_parser(
+        "sweep", help="Sweep multigram span and LM order", epilog=EVALUATION_TIMING_NOTE
+    )
     sweep.add_argument(
         "--lexicon-dir",
         type=Path,
@@ -117,9 +130,16 @@ def setup_compare_commands(subparsers) -> None:
     sweep.add_argument(
         "--lm-orders",
         type=int,
+        choices=SUPPORTED_LM_ORDERS,
         nargs="*",
         default=[2, 3],
         help="Language-model orders to evaluate",
+    )
+    sweep.add_argument(
+        "--decode-beam",
+        type=int,
+        default=0,
+        help="0 searches exactly (default); positive beams approximate by limiting expanded histories.",
     )
     sweep.add_argument("--seed", type=int, default=42)
     sweep.add_argument("--max-test", type=int, default=2000)
@@ -380,6 +400,7 @@ def handle_compare_sweep(args) -> int:
             locales=locales,
             letter_spans=args.letter_spans,
             lm_orders=args.lm_orders,
+            decode_beam=args.decode_beam,
             seed=args.seed,
             max_test=args.max_test,
             em_iterations=args.em_iterations,
@@ -399,6 +420,7 @@ def handle_compare_sweep(args) -> int:
             rows,
             letter_spans=args.letter_spans,
             lm_orders=args.lm_orders,
+            decode_beam=args.decode_beam,
             seed=args.seed,
             max_test=args.max_test,
             em_iterations=args.em_iterations,

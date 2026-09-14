@@ -94,6 +94,18 @@ model's saved preprocessing remains authoritative.
 
 ## Metrics (compare scripts)
 
+Current comparison rows report separate monotonic wall-clock durations in seconds:
+`train_s` for fitting, `load_s` for loading a supplied baseline, `prep_s` for
+preparing a reusable multigram predictor, and `eval_s` for prediction plus metric
+calculation. A loaded baseline has zero training time. Shared lexicon loading,
+splitting and cooking happen before these stages. These timings describe the
+observed run and are not an end-to-end throughput measurement. Sweep reports
+include a separate timing table alongside their accuracy matrix.
+
+Older checked-in comparison snapshots labeled the entire fitting-and-evaluation
+interval `train_s`; those historical values must not be interpreted as isolated
+training measurements. Newly produced reports use the stage boundaries above.
+
 | Column | Meaning |
 |--------|---------|
 | **WER%** | Word error: predicted cooked phones ≠ gold (strict) |

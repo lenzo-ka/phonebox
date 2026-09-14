@@ -63,28 +63,39 @@ def decode_unit_id(uid: str) -> tuple[tuple[str, ...], tuple[str, ...]]:
     return letters, phones
 
 
-class MultigramLM:
-    """Add-k smoothed n-gram LM over multigram unit ids (order 1–3)."""
+SUPPORTED_LM_ORDERS = range(1, 9)
 
-    VERSION = 2
+
+def validate_lm_order(order: int) -> int:
+    """Validate the shared explicit order range for training and comparisons."""
+    if type(order) is not int or order not in SUPPORTED_LM_ORDERS:
+        raise ValueError(
+            f"order must be an integer from 1 to {SUPPORTED_LM_ORDERS.stop - 1}"
+        )
+    return order
+
+
+class MultigramLM:
+    """Sparse add-k joint-unit LM with explicit orders 1–8 and suffix backoff."""
+
+    VERSION = 3
 
     def __init__(self, order: int = 2, add_k: float = 0.1) -> None:
-        if order < 1 or order > 3:
-            raise ValueError("order must be 1, 2, or 3")
-        if not math.isfinite(add_k) or add_k <= 0:
+        validate_lm_order(order)
+        if type(add_k) not in (int, float) or not math.isfinite(add_k) or add_k <= 0:
             raise ValueError("add_k must be finite and positive")
         self.order = order
         self.add_k = add_k
-        self.uni: dict[str, int] = defaultdict(int)
-        self.bi: dict[tuple[str, str], int] = defaultdict(int)
-        self.tri: dict[tuple[str, str, str], int] = defaultdict(int)
+        self._counts: list[dict[tuple[str, ...], int]] = [{} for _ in range(order)]
+        self._context_totals: list[dict[tuple[str, ...], int]] = [
+            {} for _ in range(order)
+        ]
         self._vocab: set[str] = set()
-        self._uni_total = 0
         self._trained = False
 
     @property
     def is_trained(self) -> bool:
-        """Whether the model has been trained (has a non-empty vocabulary)."""
+        """Whether at least one nonempty unit sequence has been counted."""
         return self._trained
 
     @property
@@ -98,31 +109,35 @@ class MultigramLM:
         *,
         vocabulary: Iterable[tuple[tuple[str, ...], tuple[str, ...]]] = (),
     ) -> None:
-        """Count aligned paths over observed and declared inference units.
+        """Count observed paths at each requested order, including terminal EOS.
 
-        ``vocabulary`` includes units available to the decoder even when no
-        Viterbi training path selected them. Unknown prediction units raise
-        ValueError; they are not assigned an implicit extra smoothing event.
-        Empty training sequences are skipped.
+        ``vocabulary`` declares additional decoder units, including silent-phone
+        units absent from Viterbi paths. SOS occurs once as context only. Empty
+        paths are skipped; each call replaces the previous counts and support.
         """
-        self.uni.clear()
-        self.bi.clear()
-        self.tri.clear()
+        self._counts = [{} for _ in range(self.order)]
         self._vocab = {unit_id(unit) for unit in vocabulary}
         for units in unit_sequences:
             if not units:
                 continue
-            ids = [unit_id(u) for u in units]
+            ids = [unit_id(unit) for unit in units]
             self._vocab.update(ids)
-            seq = [SOS, *ids, EOS]
-            for i, tok in enumerate(seq):
-                self.uni[tok] += 1
-                if i > 0:
-                    self.bi[(seq[i - 1], tok)] += 1
-                if i > 1:
-                    self.tri[(seq[i - 2], seq[i - 1], tok)] += 1
-        self._uni_total = sum(count for uid, count in self.uni.items() if uid != SOS)
-        self._trained = bool(self._vocab)
+            sequence = (SOS, *ids, EOS)
+            for end in range(1, len(sequence)):
+                for size in range(1, min(self.order, end + 1) + 1):
+                    gram = sequence[end - size + 1 : end + 1]
+                    counts = self._counts[size - 1]
+                    counts[gram] = counts.get(gram, 0) + 1
+        self._refresh_context_totals()
+
+    def _refresh_context_totals(self) -> None:
+        self._context_totals = []
+        for counts in self._counts:
+            totals: dict[tuple[str, ...], int] = defaultdict(int)
+            for gram, count in counts.items():
+                totals[gram[:-1]] += count
+            self._context_totals.append(dict(totals))
+        self._trained = bool(self._counts[0])
 
     def supports_unit(self, unit: tuple[tuple[str, ...], tuple[str, ...]]) -> bool:
         """Whether a unit belongs to the fixed prediction event vocabulary."""
@@ -131,8 +146,15 @@ class MultigramLM:
     def log_prob(
         self, unit: tuple[tuple[str, ...], tuple[str, ...]], history: list[str]
     ) -> float:
-        """``log P(unit | last units in history)`` with backoff."""
-        uid = unit_id(unit)
+        """Log probability given prior unit ids; unseen contexts back off.
+
+        A unit outside the fixed prediction support raises ValueError. Only
+        the last ``order - 1`` history ids can affect the probability.
+        """
+        return self.log_prob_unit_id(unit_id(unit), history)
+
+    def log_prob_unit_id(self, uid: str, history: list[str]) -> float:
+        """Score an encoded unit id, with the same support check as log_prob."""
         if uid not in self._vocab:
             raise ValueError("unit is outside the declared LM prediction vocabulary")
         return self._log_prob_with_history(uid, history)
@@ -144,108 +166,116 @@ class MultigramLM:
     def _log_prob_with_history(self, uid: str, history: list[str]) -> float:
         if not self._trained:
             return 0.0
-        ctx = [SOS, *history][-(self.order - 1) :]
-        return self._log_prob_id(uid, tuple(ctx))
+        context = (SOS, *history)
+        return self._log_prob_id(uid, context)
 
-    def _log_prob_id(self, uid: str, ctx: tuple[str, ...]) -> float:
-        # Katz-style backoff: use the highest order whose context was actually
-        # observed (denominator d > 0); otherwise fall through to a shorter
-        # context rather than condition on an unseen history. add-k smoothing
-        # (k over a vocab of size v) keeps every probability non-zero.
-        k = self.add_k
-        v = len(self._vocab) + 1  # EOS is a predicted event; SOS is context-only.
-
-        if self.order >= 3 and len(ctx) >= 2:
-            c = self.tri.get((ctx[-2], ctx[-1], uid), 0)
-            d = self.bi.get((ctx[-2], ctx[-1]), 0)
-            if d > 0:
-                return math.log((c + k) / (d + k * v))
-        if self.order >= 2 and len(ctx) >= 1:
-            c = self.bi.get((ctx[-1], uid), 0)
-            d = self.uni.get(ctx[-1], 0)
-            if d > 0:
-                return math.log((c + k) / (d + k * v))
-        c = self.uni.get(uid, 0)
-        return math.log((c + k) / (self._uni_total + k * v))
+    def _log_prob_id(self, uid: str, context: tuple[str, ...]) -> float:
+        vocabulary_size = len(self._vocab) + 1  # EOS is predicted; SOS is not.
+        for width in range(min(self.order - 1, len(context)), -1, -1):
+            suffix = context[-width:] if width else ()
+            total = self._context_totals[width].get(suffix, 0)
+            if total:
+                count = self._counts[width].get((*suffix, uid), 0)
+                return math.log(
+                    (count + self.add_k) / (total + self.add_k * vocabulary_size)
+                )
+        return 0.0  # No observations: neutral score, as for log_end_prob.
 
     def to_dict(self) -> dict:
+        """Serialize sparse requested-order counts; context totals are derived."""
         return {
             "version": self.VERSION,
             "order": self.order,
             "add_k": self.add_k,
-            "uni": dict(self.uni),
-            "bi": {"\t".join(k): v for k, v in self.bi.items()},
-            "tri": {"\t".join(k): v for k, v in self.tri.items()},
+            "counts": [
+                [[list(gram), count] for gram, count in sorted(level.items())]
+                for level in self._counts
+            ],
             "events": sorted(self._vocab | {EOS}),
         }
 
     def _validate_counts(self) -> None:
         events = self._vocab | {EOS}
-        contexts = self._vocab | {SOS}
-        for counts in (self.uni, self.bi, self.tri):
-            if any(type(count) is not int or count < 0 for count in counts.values()):
-                raise ValueError("invalid multigram LM counts")
-        outgoing: dict[str, int] = defaultdict(int)
-        incoming: dict[str, int] = defaultdict(int)
-        for key, count in self.bi.items():
-            if len(key) != 2 or key[0] not in contexts or key[1] not in events:
-                raise ValueError("invalid multigram LM bigram event or context")
-            outgoing[key[0]] += count
-            incoming[key[1]] += count
-        for uid in contexts:
-            if outgoing[uid] != self.uni.get(uid, 0):
+        for size, counts in enumerate(self._counts, 1):
+            for gram, count in counts.items():
+                if type(count) is not int or count <= 0:
+                    raise ValueError("invalid multigram LM counts")
+                if (
+                    len(gram) != size
+                    or gram[-1] not in events
+                    or any(uid not in self._vocab for uid in gram[1:-1])
+                    or (size > 1 and gram[0] not in self._vocab | {SOS})
+                ):
+                    raise ValueError("invalid multigram LM event or context")
+            if size == 1:
+                continue
+            lower = self._counts[size - 2]
+            expected_outgoing = {
+                gram: count for gram, count in lower.items() if gram[-1] != EOS
+            }
+            if size == 2 and lower.get((EOS,), 0):
+                expected_outgoing[(SOS,)] = lower[(EOS,)]
+            if self._context_totals[size - 1] != expected_outgoing:
                 raise ValueError("inconsistent multigram LM context counts")
-        for uid in events:
-            if incoming[uid] != self.uni.get(uid, 0):
+            incoming: dict[tuple[str, ...], int] = defaultdict(int)
+            for gram, count in counts.items():
+                incoming[gram[1:]] += count
+            expected_incoming = {
+                gram: count for gram, count in lower.items() if gram[0] != SOS
+            }
+            if dict(incoming) != expected_incoming:
                 raise ValueError("inconsistent multigram LM event counts")
-        tri_outgoing: dict[tuple[str, str], int] = defaultdict(int)
-        for trigram, count in self.tri.items():
-            if (
-                len(trigram) != 3
-                or trigram[0] not in contexts
-                or trigram[1] not in self._vocab
-                or trigram[2] not in events
-            ):
-                raise ValueError("invalid multigram LM trigram event or context")
-            tri_outgoing[(trigram[0], trigram[1])] += count
-        for context in set(self.bi) | set(tri_outgoing):
-            if context[1] != EOS and tri_outgoing[context] != self.bi.get(context, 0):
-                raise ValueError("inconsistent multigram LM trigram context counts")
 
     @classmethod
     def from_dict(cls, data: dict) -> MultigramLM:
-        if data.get("version") != cls.VERSION:
+        if not isinstance(data, dict) or data.get("version") != cls.VERSION:
             raise ValueError(
                 "unsupported multigram LM scoring version; retrain and export"
             )
         events = data.get("events")
-        if not isinstance(events, list) or not all(
-            isinstance(uid, str) for uid in events
+        if (
+            not isinstance(events, list)
+            or not all(isinstance(uid, str) for uid in events)
+            or EOS not in events
+            or SOS in events
+            or len(set(events)) != len(events)
         ):
             raise ValueError("invalid multigram LM prediction events")
-        if EOS not in events or SOS in events or len(set(events)) != len(events):
-            raise ValueError("invalid multigram LM prediction events")
-        inst = cls(order=data["order"], add_k=data["add_k"])
-        inst.uni = defaultdict(int, data["uni"])
-        inst.bi = defaultdict(
-            int,
-            {tuple(k.split("\t")): v for k, v in data["bi"].items()},
-        )
-        inst.tri = defaultdict(
-            int,
-            {tuple(k.split("\t")): v for k, v in data["tri"].items()},
-        )
+        inst = cls(order=data.get("order"), add_k=data.get("add_k"))
+        levels = data.get("counts")
+        if not isinstance(levels, list) or len(levels) != inst.order:
+            raise ValueError("invalid multigram LM count levels")
         inst._vocab = set(events) - {EOS}
-        if set(inst.uni) - {SOS, EOS} - inst._vocab:
-            raise ValueError("multigram LM counts contain undeclared prediction events")
+        for level_index, records in enumerate(levels):
+            if not isinstance(records, list):
+                raise ValueError("invalid multigram LM count records")
+            for record in records:
+                if (
+                    not isinstance(record, list)
+                    or len(record) != 2
+                    or not isinstance(record[0], list)
+                    or not all(isinstance(uid, str) for uid in record[0])
+                ):
+                    raise ValueError("invalid multigram LM count record")
+                if type(record[1]) is not int or record[1] <= 0:
+                    raise ValueError("invalid multigram LM counts")
+                gram = tuple(record[0])
+                if (
+                    not gram
+                    or len(gram) != level_index + 1
+                    or gram in inst._counts[level_index]
+                ):
+                    raise ValueError("invalid or duplicate multigram LM ngram")
+                inst._counts[level_index][gram] = record[1]
+        inst._refresh_context_totals()
         inst._validate_counts()
-        inst._uni_total = sum(count for uid, count in inst.uni.items() if uid != SOS)
-        inst._trained = bool(inst._vocab)
         return inst
 
 
 __all__ = [
     "MultigramLM",
+    "SUPPORTED_LM_ORDERS",
+    "validate_lm_order",
     "SOS",
     "EOS",
     "LETTER_JOIN",

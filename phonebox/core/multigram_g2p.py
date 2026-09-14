@@ -19,8 +19,11 @@ from __future__ import annotations
 
 import json
 from collections import defaultdict
+from collections.abc import Mapping
+from dataclasses import dataclass
 from pathlib import Path
 from time import time
+from types import MappingProxyType
 from typing import TYPE_CHECKING, Any
 
 from ..constants import (
@@ -32,14 +35,20 @@ from ..constants import (
 from ..lexicon import parse_dict_line
 from ..utils.io import is_dict_comment
 from ..utils.logging_config import get_logger
-from .joint_decode import joint_decode
-from .multigram_align import MultigramAligner
+from .joint_decode import (
+    _decode_prepared,
+    _index_units,
+    joint_decode,
+    validate_decode_beam,
+)
+from .multigram_align import MultigramAligner, Unit
 from .multigram_lm import (
     LETTER_JOIN,
     PHONE_JOIN,
     MultigramLM,
     encode_phones,
     encode_unit_letters,
+    unit_id,
 )
 
 logger = get_logger(__name__)
@@ -60,7 +69,7 @@ def decode_phones(target: str) -> list[str]:
 class MultigramG2P:
     """n:m G2P: EM unit model + unit n-gram LM + joint Viterbi decode."""
 
-    VERSION = "6"
+    VERSION = "7"
     SCORING = "unit-lm-with-eos"
 
     def __init__(
@@ -93,7 +102,7 @@ class MultigramG2P:
         self.lm = MultigramLM(order=lm_order)
         self.verbose = verbose
         self.parallel_viterbi = parallel_viterbi
-        self.decode_beam = decode_beam
+        self.decode_beam = validate_decode_beam(decode_beam)
         self._max_l = max_letter_span
         self.use_dict_fallback = False
         self.exceptions: dict[str, list[str]] = {}
@@ -225,6 +234,44 @@ class MultigramG2P:
         )
         return self.pronounce_letters(letters, word=word)
 
+    def prepare_predictor(self) -> MultigramPredictor:
+        """Snapshot this model once for repeated prediction.
+
+        The returned predictor owns its language model, candidates, preprocessing,
+        exceptions, and beam. Later mutation or retraining of this model does not
+        change it; call this method again to prepare a refreshed snapshot.
+        Preparation takes additional time and memory that grow with model size,
+        once per predictor, rather than once per word.
+        """
+        if not self.lm.is_trained:
+            raise RuntimeError("MultigramG2P not trained / loaded")
+        beam = validate_decode_beam(self.decode_beam)
+        preprocessor = None
+        if self.preprocessor is not None:
+            from .vectorizer import Vectorizer
+
+            preprocessor = Vectorizer(
+                locale=self.preprocessor.locale,
+                phoneset_name=self.phoneset_name or "ipa",
+                letter_preprocessing=self.preprocessor.export_letter_preprocessing(),
+            )
+            preprocessor.policy_locale = self.preprocessor.policy_locale
+        index = _index_units(self.aligner.q, self._max_l)
+        return MultigramPredictor(
+            MappingProxyType({letter: tuple(units) for letter, units in index.items()}),
+            MappingProxyType(
+                {unit: unit_id(unit) for units in index.values() for unit in units}
+            ),
+            MultigramLM.from_dict(self.lm.to_dict()),
+            beam,
+            preprocessor,
+            MappingProxyType(
+                {word: tuple(phones) for word, phones in self.exceptions.items()}
+                if self.use_dict_fallback
+                else {}
+            ),
+        )
+
     # ----------- save/load
 
     @staticmethod
@@ -297,7 +344,7 @@ class MultigramG2P:
             max_letter_span=meta["max_letter_span"],
             max_phone_span=meta["max_phone_span"],
             min_phone_span=meta["min_phone_span"],
-            lm_order=meta.get("lm_order", 2),
+            lm_order=meta.get("lm_order"),
             decode_beam=meta.get("decode_beam", 0),
         )
         inst.aligner.q = {(tuple(L), tuple(P)): prob for (L, P, prob) in meta["units"]}
@@ -310,6 +357,8 @@ class MultigramG2P:
         inst.lm = MultigramLM.from_dict(
             json.loads(lm_path.read_text(encoding=FILE_ENCODING))
         )
+        if inst.lm.order != meta["lm_order"]:
+            raise ValueError("multigram model and LM orders differ")
         if any(not inst.lm.supports_unit(unit) for unit in inst.aligner.q):
             raise ValueError(
                 "multigram decoder units are outside the LM prediction vocabulary"
@@ -340,8 +389,47 @@ class MultigramG2P:
         return inst
 
 
+@dataclass(frozen=True, slots=True, repr=False)
+class MultigramPredictor:
+    """Reusable prediction snapshot created by MultigramG2P.prepare_predictor.
+
+    No mutable model state is exposed. Prepare a new instance after changing the
+    source model when those changes should affect predictions.
+    """
+
+    _index: Mapping[str, tuple[Unit, ...]]
+    _unit_ids: Mapping[Unit, str]
+    _lm: MultigramLM
+    _beam: int
+    _preprocessor: Vectorizer | None
+    _exceptions: Mapping[str, tuple[str, ...]]
+
+    def pronounce_letters(
+        self, letters: list[str], *, word: str | None = None
+    ) -> list[str]:
+        """Predict phones from already cooked letter tokens."""
+        if word is not None:
+            exception = self._exceptions.get(word.lower())
+            if exception is not None:
+                return list(exception)
+        result = _decode_prepared(
+            letters, self._index, self._lm, self._beam, self._unit_ids
+        )
+        return result if result is not None else []
+
+    def pronounce(self, word: str) -> list[str]:
+        """Predict a raw word using the snapshot's saved preprocessing."""
+        letters = (
+            self._preprocessor.cook_letters(word, g2p=True)
+            if self._preprocessor is not None
+            else list(word.lower())
+        )
+        return self.pronounce_letters(letters, word=word)
+
+
 __all__ = [
     "MultigramG2P",
+    "MultigramPredictor",
     "encode_unit_letters",
     "encode_phones",
     "decode_phones",

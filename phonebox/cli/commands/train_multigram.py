@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import sys
 
+from ...core.multigram_lm import SUPPORTED_LM_ORDERS
 from ._common import expected_input_errors
 
 
@@ -46,8 +47,19 @@ def setup_train_multigram_command(subparsers) -> None:
     parser.add_argument("--max-letter-span", type=int, default=None)
     parser.add_argument("--max-phone-span", type=int, default=None)
     parser.add_argument("--em-iterations", type=int, default=15)
-    parser.add_argument("--lm-order", type=int, default=2, choices=[1, 2, 3])
-    parser.add_argument("--decode-beam", type=int, default=0)
+    parser.add_argument(
+        "--lm-order",
+        type=int,
+        default=2,
+        choices=SUPPORTED_LM_ORDERS,
+        help="Joint-unit n-gram order (default: 2); higher orders use more memory and decoding states.",
+    )
+    parser.add_argument(
+        "--decode-beam",
+        type=int,
+        default=0,
+        help="Hypotheses expanded per input position: 0 is exact (default); positive values use approximate beam search.",
+    )
     parser.add_argument("--parallel-align", action="store_true")
     parser.add_argument(
         "--no-config-joins",

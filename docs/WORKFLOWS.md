@@ -55,7 +55,15 @@ Prepared files do not automatically carry the full primary workflow's settings.
 
 `train_multigram` returns a `MultigramTrainingResult` with model, training metrics,
 effective spans, and exported sidecar paths when output is requested. Without
-output, paths are `None`. `discover_joins` returns candidate/settings/history
+output, paths are `None`. Both `train_multigram(..., lm_order=8, decode_beam=64)`
+and `phonebox train-multigram --lm-order 8 --decode-beam 64` support joint-unit
+orders 1–8. The default remains order 2 and `decode_beam=0` (exact search).
+A positive beam expands only the best histories per input position and may
+exclude the optimal pronunciation. Higher orders increase sparse count memory
+and decoding states; choose order and beam on development data, then freeze
+them before evaluating the test set. See [multigram modeling](MULTIGRAM.md).
+
+`discover_joins` returns candidate/settings/history
 results; it discovers joins from raw spelling rather than model-cooked spelling.
 Neither workflow invents a pronunciation inventory or fetches training data.
 

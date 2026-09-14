@@ -37,6 +37,17 @@ bundles together with their models. See [migration notes](docs/RELEASING.md#upgr
 
 ### Multigram scoring
 
+- Separate training, model loading, predictor preparation and evaluation timing
+  in locale comparisons and multigram sweeps; historical `train_s` incorrectly
+  included evaluation. Report monotonic durations and label metric work explicitly.
+
+- Add reusable multigram predictor snapshots that prepare candidate indexes and
+  unit IDs once for repeated inference. CLI pronunciation and comparison reuse
+  snapshots; later source-model mutation cannot alter an existing predictor.
+
+- Support joint-unit LM orders 1–8 through sparse count tables shared by the
+  library, training API and CLI. Keep order 2/add-k smoothing/exact search as
+  defaults; document explicit approximate beam controls and higher-order costs.
 - Score complete multigram sequences with the unit LM alone. Alignment q still
   defines candidate units, but is no longer multiplied into the LM score again.
   Save the explicit `unit-lm-with-eos` objective; older q-plus-LM models require
@@ -46,7 +57,7 @@ bundles together with their models. See [migration notes](docs/RELEASING.md#upgr
 - Normalize the unit LM over its declared inference units and end-of-sequence
   event, with the start marker used only as context. Preserve alignment units
   absent from Viterbi paths, including silent-phone units.
-- Version new multigram models as 6 and their LM scoring as 2. Reject older
+- Version new multigram models as 7 and their LM count format as 3. Reject older
   artifacts with a clear retraining instruction; CART formats are unchanged.
 - Replace an unsupported historical smoothing claim with the actual scoring
   contract and use the model version in newly rendered comparisons.

@@ -21,6 +21,9 @@ def test_sweep_accepts_explicit_lexicon_mapping(monkeypatch, tmp_path):
             return phones
 
     class Model:
+        def prepare_predictor(self):
+            return self
+
         def pronounce_letters(self, letters, word=None):
             return ["x"]
 
@@ -362,6 +365,9 @@ def test_compare_report_names_supplied_baseline_model(tmp_path):
             {
                 "model": name,
                 "train_s": 0.0,
+                "load_s": 0.0,
+                "prep_s": 0.0,
+                "eval_s": 0.0,
                 "wer_pct": 0.0,
                 "wer_relaxed_pct": 0.0,
                 "per_pct": 0.0,
