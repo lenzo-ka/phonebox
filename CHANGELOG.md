@@ -43,14 +43,9 @@ bundles together with their models. See [migration notes](docs/RELEASING.md#upgr
 - Separate training, model loading, predictor preparation and evaluation timing
   in locale comparisons and multigram sweeps; historical `train_s` incorrectly
   included evaluation. Report monotonic durations and label metric work explicitly.
-
 - Add reusable multigram predictor snapshots that prepare candidate indexes and
   unit IDs once for repeated inference. CLI pronunciation and comparison reuse
   snapshots; later source-model mutation cannot alter an existing predictor.
-
-- Keep finite positive add-k values scorable at floating-point extremes using
-  log-domain arithmetic when needed, without changing ordinary-range scores,
-  smoothing defaults, or the saved model format.
 - Support joint-unit LM orders 1–8 through sparse count tables shared by the
   library, training API and CLI. Keep order 2/add-k smoothing/exact search as
   defaults; document explicit approximate beam controls and higher-order costs.
