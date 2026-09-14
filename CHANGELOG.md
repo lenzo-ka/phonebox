@@ -65,6 +65,16 @@ bundles together with their models. See [migration notes](docs/RELEASING.md#upgr
 - Replace an unsupported historical smoothing claim with the actual scoring
   contract and use the model version in newly rendered comparisons.
 
+### Experimental CART decomposition training
+
+- Add opt-in posterior decomposition scattering: marginalize q-supported gold
+  joint-unit alignments and train the existing contextual CART on fractional
+  multi-phone/epsilon target weights. Reuse duplicate-pair posteriors and
+  spelling contexts; record admission, ambiguity, support and convergence.
+- Keep ordinary per-position inference and epsilon training as defaults.
+  Disable static locale joins in the new public workflow, reject internal
+  row splits, and build dictionary corrections from admitted source pairs.
+
 ### Training diagnostics
 
 - Expose defensive, JSON-serializable CART alignment iteration history through

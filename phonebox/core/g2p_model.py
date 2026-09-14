@@ -298,6 +298,45 @@ class G2PDecisionTree:
             prune=prune,
         )
 
+    def train_decomposition_from_pairs(
+        self,
+        pairs,
+        *,
+        aligner=None,
+        max_letter_span=2,
+        max_phone_span=2,
+        alignment_iterations=100,
+    ) -> dict[str, Any]:
+        """Train CART on all q-supported gold decompositions with posterior weights.
+
+        Pairs contain already cooked letter and atomic phone tokens. A supplied
+        aligner must already be fitted; otherwise fit one on these pairs only.
+        No row-level validation/test split is made: alternative labels for the
+        same spelling must not cross a held-out boundary. Runtime remains the
+        ordinary per-position CART predictor, without a sequence lattice.
+        """
+        from .decomposition import prepare_decomposition_vectors
+        from .multigram_align import MultigramAligner
+
+        pairs = list(pairs)
+        if not pairs:
+            raise ValueError("empty decomposition lexicon")
+        if aligner is None:
+            aligner = MultigramAligner(
+                max_letter_span=max_letter_span,
+                max_phone_span=max_phone_span,
+                min_phone_span=0,
+                max_iterations=alignment_iterations,
+                parallel=False,
+            )
+            aligner.fit(pairs)
+        preparation = prepare_decomposition_vectors(pairs, self.vectorizer, aligner)
+        self.load_vectors_data(preparation.X, preparation.y, preparation.counts)
+        metrics = self.train(exception_pairs=preparation.admitted_pairs)
+        self.decomposition_metadata = preparation.metadata
+        metrics["decomposition"] = preparation.metadata
+        return metrics
+
     def save_alignments(self, path: str) -> None:
         """Save alignments to file for reuse.
 
@@ -406,6 +445,8 @@ class G2PDecisionTree:
         validation_split: float = 0.0,
         test_split: float = 0.0,
         prune: bool = False,
+        *,
+        exception_pairs=None,
     ) -> dict[str, Any]:
         """
         Train the model.
@@ -445,10 +486,10 @@ class G2PDecisionTree:
         )
 
         # Build exceptions dictionary from all data for complete coverage
-        if self.use_dict_fallback and self.em:
+        if self.use_dict_fallback and (exception_pairs is not None or self.em):
             if self.verbose:
                 logger.info("Building exceptions dictionary...")
-            self.exceptions = self.build_exceptions_dict()
+            self.exceptions = self.build_exceptions_dict(exception_pairs)
             if self.verbose:
                 logger.info("Found %d exception words", len(self.exceptions))
 
@@ -829,6 +870,9 @@ class G2PDecisionTree:
             "width": self.vectorizer.width,
         }
 
+        if hasattr(self, "decomposition_metadata"):
+            metadata["training_config"]["decomposition"] = self.decomposition_metadata
+
         metadata["export_time"] = export_time.strftime("%Y-%m-%d %H:%M:%S %Z")
         metadata["g2p_version"] = self.VERSION
 
@@ -902,6 +946,12 @@ class G2PDecisionTree:
         if config:
             v = self.vectorizer
             metadata = config.get("metadata", {})
+
+            decomposition = metadata.get("training_config", {}).get("decomposition")
+            if decomposition is not None:
+                if not isinstance(decomposition, dict):
+                    raise ValueError("malformed decomposition training metadata")
+                self.decomposition_metadata = decomposition
 
             def pick(key, default):
                 if key in metadata:
