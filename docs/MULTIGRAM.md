@@ -25,6 +25,10 @@ k * number of events)`. An unseen context backs off to its shorter suffix.
 The default remains `k=0.1`; extending the order does not change this smoothing
 method. In particular, this is not modified Kneser–Ney smoothing. Each event
 probability and the EOS probability use the same normalized event support.
+Extreme finite positive `k` values use log-domain arithmetic when a direct
+probability would overflow or underflow. Scores remain finite even when their
+exponentiated probabilities are too small for a floating-point number; smoothing
+values are not clamped and the saved count format is unchanged.
 
 Higher orders increase the number and size of sparse count keys. Memory grows
 with the distinct observed n-grams, not with a fully enumerated vocabulary
