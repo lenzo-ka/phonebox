@@ -5,6 +5,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 from phonebox import G2P
 from phonebox.bundler import bundle_g2p
 
@@ -23,17 +25,36 @@ def _imported_modules(source: str) -> set[str]:
     return names
 
 
-def test_generated_bundle_import_closure_is_standard_library_only(tmp_path):
-    dictionary = tmp_path / "words.dict"
-    dictionary.write_text(
+CASES = {
+    # Plain ASCII letters, CMU phones: the simplest portable path.
+    "en": (
         "cat K AE T\nbat B AE T\nfat F AE T\nhat HH AE T\nrat R AE T\n"
         "mat M AE T\nsat S AE T\npat P AE T\n",
-        encoding="utf-8",
-    )
+        "cmu",
+        "cat",
+        ["K", "AE", "T"],
+    ),
+    # Accented letters and locale letter joins exercise the portable
+    # normalization branches of the emitted bundle.
+    "es_MX": (
+        "hacia a s j a\nhacía a s i a\ncontinuo k o n t i n w o\n"
+        "continúo k o n t i n u o\n",
+        "ipa",
+        "hacía",
+        ["a", "s", "i", "a"],
+    ),
+}
+
+
+@pytest.mark.parametrize("locale", sorted(CASES))
+def test_generated_bundle_import_closure_is_standard_library_only(tmp_path, locale):
+    text, phoneset, word, phones = CASES[locale]
+    dictionary = tmp_path / "words.dict"
+    dictionary.write_text(text, encoding="utf-8")
     g2p = G2P.train(
         dictionary,
-        locale="en",
-        phoneset="cmu",
+        locale=locale,
+        phoneset=phoneset,
         prune=False,
         use_dict_fallback=False,
         verbose=False,
@@ -53,13 +74,13 @@ def test_generated_bundle_import_closure_is_standard_library_only(tmp_path):
 
     # No site-packages, no user site, no environment: the bundle must still run.
     result = subprocess.run(
-        [sys.executable, "-I", "-S", str(bundle_path), "cat"],
+        [sys.executable, "-I", "-S", str(bundle_path), word],
         capture_output=True,
         text=True,
         check=True,
         timeout=60,
     )
-    assert result.stdout.strip().partition("\t")[2].split() == ["K", "AE", "T"]
+    assert result.stdout.strip().partition("\t")[2].split() == phones
     assert not any(
         name in {"phonebox", "cartlet", "icukit", "icu"} for name in imported
     )

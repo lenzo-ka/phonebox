@@ -136,9 +136,18 @@ is the better lens; treat pos% as informative only there.
 ## Measured CMUdict results (1:1 decision tree)
 
 Pure G2P — **no** exceptions dictionary — `G2PDecisionTree` trained on a
-133,166-entry train split of CMUdict and evaluated on a held-out 2,000-word
-slice (`seed 42`, single best pronunciation). Inline `#` comments are stripped
+133,166-entry train split of CMUdict and evaluated on a 2,000-pair test slice
+(`seed 42`, single best pronunciation). Inline `#` comments are stripped
 by `parse_dict_line`.
+
+**Disclosure:** these historical numbers were produced with the earlier
+pair-level split, which shuffled individual dictionary pairs. Pronunciation
+variants of one spelling could therefore land on both sides, so some test
+spellings had been seen in training and the scores are optimistic. The current
+`phonebox compare` splits whole spelling groups (every variant and case alias
+together), so the command below no longer reproduces this table. The
+release comparison in [`G2P_BENCHMARKS.md`](G2P_BENCHMARKS.md) was never
+affected; it used the grouped split from the start.
 
 | Phones | PER% | WER% | pos% |
 |--------|-----:|-----:|-----:|

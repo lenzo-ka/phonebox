@@ -206,7 +206,12 @@ def _invalid_constant(value: str) -> Any:
 
 
 def _validate_receipt(value: Any) -> None:
-    """Reject deployment identities while allowing source URLs and relative filenames."""
+    """Reject a known set of identity keys and any absolute path.
+
+    This is a shape check: the fixed key set below and absolute POSIX or Windows
+    paths in any string. An identity under an unlisted key, or a machine name
+    written into prose, passes. Source URLs and relative filenames are allowed.
+    """
     if isinstance(value, dict):
         forbidden = {
             "path",

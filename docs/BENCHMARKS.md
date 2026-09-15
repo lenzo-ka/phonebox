@@ -8,8 +8,11 @@ they are not measurements of the current release.
 ## Historical measured results
 
 CMUdict, 1:1 `G2PDecisionTree`, **pure g2p** (no exceptions dictionary), trained
-on a 133,166-entry split and evaluated on a held-out 2,000-word test, single
-best pronunciation (`seed 42`). Full method and reproduce command in
+on a 133,166-entry split and evaluated on a 2,000-pair test slice, single
+best pronunciation (`seed 42`). That slice came from the earlier pair-level
+split, so pronunciation variants of one spelling could straddle train and test
+and these scores are optimistic; the current command splits whole spelling
+groups and does not reproduce them. Full method in
 [`G2P_EVAL.md`](G2P_EVAL.md#measured-cmudict-results-11-decision-tree).
 
 | Phones | PER% | WER% | pos% |

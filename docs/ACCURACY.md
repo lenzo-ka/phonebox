@@ -13,8 +13,9 @@ in training — i.e. how well it generalizes grapheme→phoneme patterns.
 
 **How:** disable the exceptions dictionary and predict from the tree only.
 
-**Measured on CMUdict** (`G2PDecisionTree`, 133k-entry train split, held-out
-2,000-word test, single best pronunciation; see
+**Measured on CMUdict** (`G2PDecisionTree`, 133k-entry train split, 2,000-pair
+test slice from the earlier pair-level split, single best pronunciation; variants
+of one spelling could straddle the split, so these are optimistic; see
 [`G2P_EVAL.md`](G2P_EVAL.md#measured-cmudict-results-11-decision-tree)):
 
 | Phones | PER% | pos% |

@@ -113,6 +113,12 @@ bundles together with their models. See [migration notes](docs/RELEASING.md#upgr
   exact regeneration, shared split digests, disabled lookup, full accounting
   and path-free provenance. The three remaining DeepPhonemizer conditions are
   owed to a later snapshot; the report labels them as not measured.
+- Split whole spelling groups in `phonebox compare`, sweeps, unit experiments
+  and the experiment runners: every pronunciation variant and case alias of a
+  spelling now lands on one side of the train/test split. The earlier pair-level
+  shuffle let variants straddle the split; the historical seed-42 CMUdict tables
+  are now labeled as produced that way and as optimistic. The release
+  comparison was never affected.
 - Guard the tracked rows with the benchmark receipt validator and a named
   identity denylist, witness the split-overlap guard independently of the
   recorded counts, and test that a generated standalone bundle imports only
