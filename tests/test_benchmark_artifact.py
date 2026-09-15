@@ -13,7 +13,9 @@ from phonebox.eval.benchmark_report import render_benchmark_report
 ROOT = Path(__file__).resolve().parents[1]
 ROWS_DIR = ROOT / "docs" / "benchmarks"
 REPORT = ROOT / "docs" / "G2P_BENCHMARKS.md"
-MEASURED_SYSTEMS = {"cart", "multigram", "sequitur", "phonetisaurus"}
+CLASSICAL_SYSTEMS = {"cart", "multigram", "sequitur", "phonetisaurus"}
+# The neural comparison is complete for one condition; the other three are owed.
+NEURAL_CONDITIONS = {("cmudict", False)}
 NATIVE_REVISION = "de8fbc3f966c191eee59ff48d3f0347c65ee55ef"
 EXTERNAL_REVISION = "a7bfbeb7ae9e84bdd47f5ba8f1c260430148c3ef"
 # The structural guard is the benchmark receipt validator applied to the whole
@@ -27,7 +29,7 @@ KNOWN_IDENTITIES = re.compile(r"lenzo|shrub|/Users/|/private/|/home/|/tmp/", re.
 
 def load_rows() -> list[dict[str, Any]]:
     paths = sorted(ROWS_DIR.glob("*.json"))
-    assert len(paths) == 16
+    assert len(paths) == 16 + len(NEURAL_CONDITIONS)
     rows: list[dict[str, Any]] = []
     for path in paths:
         text = path.read_text(encoding="utf-8")
@@ -61,8 +63,11 @@ def test_snapshot_is_the_complete_four_system_matrix():
         ("french", False),
         ("italian", False),
     }
-    for rows in conditions.values():
-        assert {row["system"] for row in rows} == MEASURED_SYSTEMS
+    for key, rows in conditions.items():
+        expected = CLASSICAL_SYSTEMS | (
+            {"deepphonemizer"} if key in NEURAL_CONDITIONS else set()
+        )
+        assert {row["system"] for row in rows} == expected
         reference = rows[0]["dataset"]
         assert reference["counts"]["train"]["words"] > 50_000
         assert reference["counts"]["test"]["words"] > 5_000
@@ -83,9 +88,19 @@ def test_rows_are_model_only_with_full_accounting_and_pinned_provenance():
         assert settings["dictionary_lookup"] is False
         assert settings["evaluation_scope"].startswith("held-out spellings; model only")
         assert row["metrics"]["prediction_errors"] == 0
-        assert training["supplied_entries"] > 50_000
         assert training["model_bytes"] > 0
         assert provenance["dirty"] is False
+        if row["system"] == "deepphonemizer":
+            # From-scratch author-protocol training on the native source;
+            # selection used the full shared development split only.
+            assert provenance["revision"] == NATIVE_REVISION
+            assert training["retained_entries"] > 50_000
+            assert training["dev_entries"] > 5_000
+            assert training["dictionary_entries"] == 0
+            assert training["nonfinite_batches"] == 0
+            assert 0 < training["selected_epoch"] <= training["completed_epochs"]
+            continue
+        assert training["supplied_entries"] > 50_000
         if row["system"] in {"cart", "multigram"}:
             assert settings["use_dict_fallback"] is False
             assert provenance["revision"] == NATIVE_REVISION
@@ -103,8 +118,7 @@ def test_rows_are_model_only_with_full_accounting_and_pinned_provenance():
 def test_report_is_the_exact_rendering_and_defers_the_neural_comparison():
     rendered = render_benchmark_report(load_rows())
     assert rendered == REPORT.read_text(encoding="utf-8")
-    assert (
-        rendered.count("Not measured in this artifact: DeepPhonemizer autoregressive.")
-        == 4
-    )
-    assert "DeepPhonemizer autoregressive |" not in rendered
+    assert rendered.count(
+        "Not measured in this artifact: DeepPhonemizer autoregressive."
+    ) == 4 - len(NEURAL_CONDITIONS)
+    assert rendered.count("| DeepPhonemizer autoregressive |") == len(NEURAL_CONDITIONS)

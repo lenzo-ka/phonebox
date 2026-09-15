@@ -14,8 +14,7 @@ Train/dev/test words: 104,447 / 11,605 / 10,000.
 | Phonebox n:m | 54.55 | 15.24 | 0 | 295.04 | 121.08 | 14937665 |
 | Sequitur | 51.56 | 13.79 | 0 | 16307.39 | 76.33 | 1605862 |
 | Phonetisaurus | 33.69 | 8.88 | 0 | 107.28 | 4.11 | 40716873 |
-
-Not measured in this artifact: DeepPhonemizer autoregressive.
+| DeepPhonemizer autoregressive | 26.25 | 6.92 | 0 | 87983.48 | 25.06 | 105017810 |
 
 Prepared split SHA-256:
 

@@ -210,9 +210,10 @@ belong in the public results snapshot.
 
 ## Measured snapshot
 
-The tracked results are the sixteen aggregate rows in [`benchmarks/`](benchmarks/):
+The tracked results are the seventeen aggregate rows in [`benchmarks/`](benchmarks/):
 four conditions (CMUdict stress preserved, CMUdict stress removed, French,
-Italian) for Phonebox CART, Phonebox n:m, Sequitur and Phonetisaurus.
+Italian) for Phonebox CART, Phonebox n:m, Sequitur and Phonetisaurus, plus the
+DeepPhonemizer autoregressive row for CMUdict stress preserved.
 [`G2P_BENCHMARKS.md`](G2P_BENCHMARKS.md) is generated from those rows by the
 renderer, and the artifact test regenerates it exactly:
 
@@ -229,10 +230,15 @@ validator's identity keys, and additionally refuses the names of the machines
 that produced these rows. That is a shape check plus an enumerated denylist; an
 identity written under some other key would not be caught by it.
 
-The DeepPhonemizer autoregressive comparison is deferred. Its optional toolchain
-and adapter are included, but no neural row is in this snapshot, and the report
-labels it as not measured. A later snapshot will add those rows when the full
-four-condition runs complete under the same protocol, without changing these.
+The DeepPhonemizer autoregressive comparison is complete for one condition.
+Its row records from-scratch training on the same native source revision with
+the author's substantial configuration, checkpoint selection on the full shared
+development split only, and every visited training entry; it stopped by
+development early stopping after 217 epochs with epoch 187 selected. Its
+training time, about 24 hours on one GPU, is not comparable with the classical
+rows' times. The CMUdict stress-removed, French and Italian neural rows are
+owed: the report labels them as not measured, and a later snapshot will add
+them under the same protocol without changing the rows already recorded.
 
 ## Interpreting and replicating results
 

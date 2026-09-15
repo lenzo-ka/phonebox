@@ -1,0 +1,236 @@
+{
+  "schema_version": 1,
+  "dataset": {
+    "locale": "en_US",
+    "phoneset": "cmu",
+    "sources": {
+      "lexicon": {
+        "filename": "cmudict.dict",
+        "url": "https://raw.githubusercontent.com/cmusphinx/cmudict/74790861f652b15e4ac49015a90074ad62a27690/cmudict.dict",
+        "sha256": "81917843c7f44ce2b094ac63873c2c7a4cf802040792c455ba3ca406891c3d22",
+        "revision": "74790861f652b15e4ac49015a90074ad62a27690",
+        "license": "BSD-2-Clause",
+        "license_url": "https://github.com/cmusphinx/cmudict/blob/74790861f652b15e4ac49015a90074ad62a27690/LICENSE",
+        "citations": [
+          "CMU Pronouncing Dictionary, Carnegie Mellon University and contributors, https://github.com/cmusphinx/cmudict"
+        ]
+      }
+    },
+    "preparation": {
+      "spelling": "NFC; lowercase",
+      "phones": "original tokens",
+      "remove_stress": false
+    },
+    "split": {
+      "method": "complete NFC lowercase spelling groups",
+      "seed": 1729,
+      "test_fraction": 0.1,
+      "max_test_words": 10000,
+      "dev_fraction_of_remaining_groups": 0.1,
+      "rounding": "floor; minimum one held-out group per split; reject empty train"
+    },
+    "schema_version": 1,
+    "deduplication": "NFC spelling and full transformed phone sequence; stable first occurrence within each split",
+    "counts": {
+      "train": {
+        "source_entries": 112076,
+        "prepared_entries": 112074,
+        "words": 104447,
+        "duplicates_removed": 2
+      },
+      "dev": {
+        "source_entries": 12426,
+        "prepared_entries": 12426,
+        "words": 11605,
+        "duplicates_removed": 0
+      },
+      "test": {
+        "source_entries": 10664,
+        "prepared_entries": 10664,
+        "words": 10000,
+        "duplicates_removed": 0
+      }
+    },
+    "prepared_sha256": {
+      "train": "1e354b709ae151e8a2ad259e44e212c555531a443f6195a5304ba469c96d6a91",
+      "dev": "7e2b6b3e0efde4284806dc7876e3ec52d096ada3cfc5acba8e66ba3906897566",
+      "test": "356328cf3a8b87ce01cc087c0f129f6eff41b2ebddce6351a6fb64f862b86dfc"
+    },
+    "prepared_hash_encoding": "UTF-8 compact JSON ordered [spelling, phone-token-list] pairs; no newline",
+    "spelling_overlap": {
+      "train_dev": 0,
+      "train_test": 0,
+      "dev_test": 0
+    },
+    "name": "cmudict"
+  },
+  "system": "deepphonemizer",
+  "settings": {
+    "d_model": 512,
+    "d_fft": 1024,
+    "layers": 4,
+    "heads": 4,
+    "dropout": 0.1,
+    "batch_size": 32,
+    "learning_rate": 0.0001,
+    "warmup_steps": 10000,
+    "max_epochs": 500,
+    "plateau_patience": 10,
+    "stop_patience": 30,
+    "seed": 1729,
+    "threads": 1,
+    "model_type": "author autoregressive Transformer",
+    "encoder_layers": 4,
+    "decoder_layers": 4,
+    "device": "mps",
+    "deterministic_algorithms_requested": false,
+    "bit_deterministic_across_platforms": false,
+    "sampler_seed": 42,
+    "drop_last": false,
+    "max_decode_steps": 100,
+    "selection": "full shared dev PER/WER/earliest",
+    "plateau_factor": 0.5,
+    "letter_preprocessing": {
+      "version": 1,
+      "source": {
+        "norm_rules": null,
+        "g2p_rules": null
+      },
+      "join_char": "₊",
+      "letter_joins": [],
+      "cased": true,
+      "remove_accents": false,
+      "filter_non_letters": false,
+      "spelling_rewrites": {}
+    },
+    "phone_mapping": null,
+    "dictionary_lookup": false,
+    "evaluation_scope": "held-out spellings; model only; dictionary lookup disabled",
+    "remove_stress": false
+  },
+  "metrics": {
+    "wer_pct": 28.500000000000004,
+    "wer_relaxed_pct": 26.249999999999996,
+    "per_pct": 7.453846638523093,
+    "per_reference_pct": 7.486986377228929,
+    "per_reference_edits": 4732,
+    "reference_phones": 63203,
+    "per_variant_pct": 6.917890605216511,
+    "per_variant_edits": 4371,
+    "per_variant_reference_phones": 63184,
+    "per_equiv_pct": 7.453846638523093,
+    "pos_acc_pct": 90.39443009262176,
+    "n_test": 10000,
+    "prediction_errors": 0,
+    "empty_predictions": 0
+  },
+  "training": {
+    "supplied_entries": 112074,
+    "retained_entries": 112074,
+    "optimizer_updates": 760151,
+    "entries_visited": 24320058,
+    "nonfinite_batches": 0,
+    "dropped_entries": 0,
+    "encoded_dev_loss_entries": 12426,
+    "dev_entries": 12426,
+    "completed_epochs": 217,
+    "selected_epoch": 187,
+    "stop_reason": "dev early stopping after warmup",
+    "parameter_count": 26241098,
+    "dictionary_entries": 0,
+    "model_bytes": 105017810
+  },
+  "timings": {
+    "training_seconds": 87982.520398125,
+    "prediction_seconds": 25.060733000005712,
+    "export_seconds": 0.9608577079925453,
+    "training_scope": "fit and full shared dev selection; export excluded"
+  },
+  "provenance": {
+    "revision": "de8fbc3f966c191eee59ff48d3f0347c65ee55ef",
+    "dirty": false,
+    "code_sha256": "00d268858cdbe18807eeaccac4df6bad670a17551615214ee3b7f170cc23d93b",
+    "python": "3.12.12",
+    "system": "Darwin",
+    "machine": "arm64",
+    "dependencies": {
+      "phonebox": "0.1.0",
+      "cartlet": "0.5.0",
+      "icukit": "0.1.2"
+    },
+    "neural_toolchain": {
+      "source_revision": "5dce7e27556aef4426f5623baf6351d266a30a73",
+      "source_version": "0.0.19",
+      "patch_sha256": "459b1a4595b8ff8950a71f392e5f9610a80463e478ddb03c763e0b7eb63e8b81",
+      "installed_source_sha256": "20daf65f8e6de3890d554098a8b45d405cbfa87752dee80287a18b936ef72fb7",
+      "dependencies": {
+        "deep-phonemizer": "0.0.19",
+        "torch": "2.5.1",
+        "numpy": "1.26.4"
+      },
+      "installed_distributions": {
+        "phonebox": "0.3.0",
+        "filelock": "3.32.6",
+        "packaging": "26.3",
+        "iniconfig": "2.3.0",
+        "Pygments": "2.21.0",
+        "grpcio": "1.83.1",
+        "networkx": "3.6.1",
+        "icukit": "0.4.0",
+        "tqdm": "4.67.1",
+        "numpy": "1.26.4",
+        "fsspec": "2026.7.0",
+        "absl-py": "2.5.0",
+        "pip": "25.0.1",
+        "icukit-pyicu": "78.3.0",
+        "setuptools": "80.9.0",
+        "mpmath": "1.3.0",
+        "PyYAML": "6.0.3",
+        "torch": "2.5.1",
+        "pytest": "8.4.2",
+        "cartlet": "0.6.0",
+        "tensorboard": "2.20.0",
+        "certifi": "2026.7.22",
+        "deep-phonemizer": "0.0.19",
+        "Jinja2": "3.1.6",
+        "wheel": "0.45.1",
+        "Markdown": "3.10.3",
+        "MarkupSafe": "3.0.3",
+        "Werkzeug": "3.1.8",
+        "pluggy": "1.6.0",
+        "sympy": "1.13.1",
+        "typing_extensions": "4.16.0",
+        "tensorboard-data-server": "0.7.2",
+        "pillow": "12.3.0",
+        "protobuf": "7.36.1"
+      },
+      "python": "3.12.12",
+      "system": "Darwin",
+      "machine": "arm64",
+      "phonebox": {
+        "revision": "de8fbc3f966c191eee59ff48d3f0347c65ee55ef",
+        "dirty": false,
+        "code_sha256": "00d268858cdbe18807eeaccac4df6bad670a17551615214ee3b7f170cc23d93b"
+      },
+      "interpreter_receipt": {
+        "executable": "python3.12",
+        "sha256": "7b237c0b6070402a535a9a05a9f361bf4bbc73f5b0355dd0aeebbfae3e543eb9",
+        "version": "0.0.19",
+        "source_revision": "5dce7e27556aef4426f5623baf6351d266a30a73",
+        "build": {
+          "executable_sha256": "7b237c0b6070402a535a9a05a9f361bf4bbc73f5b0355dd0aeebbfae3e543eb9",
+          "patch_sha256": "459b1a4595b8ff8950a71f392e5f9610a80463e478ddb03c763e0b7eb63e8b81",
+          "source_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "source_dirty": false,
+          "source_head_tree": "c654e228338ba88912c65c7a3a2a03096d9d3dec",
+          "version_origin": "caller-declared source version"
+        },
+        "receipt_binary_binding_verified": true
+      }
+    },
+    "neural_test_diagnostics": {
+      "unsupported_inputs": 0,
+      "truncated_predictions": 0
+    }
+  }
+}
