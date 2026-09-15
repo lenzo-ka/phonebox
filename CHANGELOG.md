@@ -107,11 +107,12 @@ bundles together with their models. See [migration notes](docs/RELEASING.md#upgr
   validated aggregate reporting for CART, n:m, Sequitur, and Phonetisaurus.
   Pin dataset and toolchain sources, preserve pronunciation groups, and record
   split hashes, licenses, training admission, and prediction failures.
-- Record the measured four-system comparison: sixteen aggregate result rows in
-  `docs/benchmarks/` and the generated `docs/G2P_BENCHMARKS.md`, pinned by an
-  artifact test to exact regeneration, shared split digests, disabled lookup,
-  full accounting and path-free provenance. The DeepPhonemizer comparison is
-  deferred to a later snapshot; the report labels it as not measured.
+- Record the measured comparison: sixteen classical aggregate result rows plus
+  the DeepPhonemizer row for CMUdict stress preserved in `docs/benchmarks/`,
+  and the generated `docs/G2P_BENCHMARKS.md`, pinned by an artifact test to
+  exact regeneration, shared split digests, disabled lookup, full accounting
+  and path-free provenance. The three remaining DeepPhonemizer conditions are
+  owed to a later snapshot; the report labels them as not measured.
 - Guard the tracked rows with the benchmark receipt validator and a named
   identity denylist, witness the split-overlap guard independently of the
   recorded counts, and test that a generated standalone bundle imports only
