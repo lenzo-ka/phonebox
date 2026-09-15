@@ -3,7 +3,7 @@
 Phonebox is an alpha library. Each `0.X.0` release may break APIs and workflows;
 patch releases within a minor line are intended to remain compatible.
 
-## 0.3.0 — Unreleased
+## 0.3.0 — 2026-09-15
 
 ### Optional neural benchmark toolchain
 
